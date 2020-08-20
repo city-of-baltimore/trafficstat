@@ -170,7 +170,7 @@ CREATE TABLE [dbo].[acrs_ems] (
     [EMSUNITNUMBER] char(5),
     [INJUREDTAKENBY] VARCHAR(MAX),
     [INJUREDTAKENTO] VARCHAR(MAX),
-    [REPORTNUMBER] NCHAR(12) NOT NULL
+    [REPORTNUMBER] NCHAR(12) NOT NULL /* Refers to primary key in main ACRS table */
 );
 
 /*********************
