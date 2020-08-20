@@ -55,7 +55,7 @@ class CrashDataReader:
                 self.read_crash_data(os.path.join(path, acrs_file), processed_folder)
 
     def _read_file(self, file_name):
-        with open(file_name) as acrs_file:
+        with open(file_name, encoding='utf-8') as acrs_file:
             crash_file = acrs_file.read()
 
         # Some of these files have non ascii at the beginning that causes parse errors
