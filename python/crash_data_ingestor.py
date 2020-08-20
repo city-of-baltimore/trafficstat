@@ -2,7 +2,6 @@
 # pylint:disable=too-many-lines
 import logging
 import os
-import pickle
 import shutil
 import traceback
 from collections import OrderedDict
@@ -27,23 +26,11 @@ class CrashDataReader:
         conn = pyodbc.connect(
             r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
         self.cursor = conn.cursor()
-        self.processed_files = []
-        self.pickle_filename = 'PROCESSED.pickle'
 
-    def __enter__(self):
-        if os.path.exists(self.pickle_filename):
-            with open(self.pickle_filename, 'rb') as pkl:
-                self.processed_files = pickle.load(pkl)
-
-    def __exit__(self, *a):
-        with open(self.pickle_filename, 'wb') as proc_files:
-            pickle.dump(self.processed_files, proc_files)
-
-    def read_directory(self, path='//balt-fileld-srv.baltimore.city/GIS/DOT-BPD', force=False):
+    def read_directory(self, path='//balt-fileld-srv.baltimore.city/GIS/DOT-BPD'):
         """
         Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
         :param path: Path to search for XML files
-        :param force: If true, it will reprocess all files, even if they were previously processed
         :return:
         """
         processed_folder = os.path.join(path, 'processed')
@@ -51,7 +38,7 @@ class CrashDataReader:
             os.mkdir(processed_folder)
 
         for acrs_file in os.listdir(path):
-            if acrs_file not in self.processed_files or force:
+            if acrs_file.endswith(".xml"):
                 self.read_crash_data(os.path.join(path, acrs_file), processed_folder)
 
     def _read_file(self, file_name):
@@ -70,10 +57,6 @@ class CrashDataReader:
         :param file_name: Full path to the file to process
         :return: True if the file was inserted into the database, false if there was an error
         """
-        if file_name in self.processed_files:
-            self.log.debug('Skipping previously processed file: %s', file_name)
-            return True
-
         self.log.info('Processing %s', file_name)
         self._read_file(file_name)
 
@@ -99,7 +82,6 @@ class CrashDataReader:
         else:
             self.log.info("REMAINING ELEMENTS: %s", self.crash_dict)
 
-        self.processed_files.append(file_name)
         shutil.move(file_name, processed_dir)
         return True
 
@@ -1351,6 +1333,4 @@ class CrashDataReader:
 
 if __name__ == '__main__':
     cls = CrashDataReader()
-    with cls:
-        cls.read_directory()
-        # cls.read_crash_data(r'//balt-fileld-srv.baltimore.city/GIS/DOT-BPD\BALTIMORE_acrs_ADI2840032.xml')
+    cls.read_directory()
