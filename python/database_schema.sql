@@ -56,7 +56,7 @@ CREATE TABLE [dbo].[acrs_crashes](
     [STATEGOVERNMENTPROPERTYNAME] varchar(max),
     [SUPERVISORUSERNAME] varchar(50),
     [SUPERVISORYDATE] datetime2 NOT NULL,
-    [SURFACECONDITION] int NOT NULL,
+    [SURFACECONDITION] varchar(10) NOT NULL,
     [TRAFFICCONTROL] int,
     [TRAFFICCONTROLFUNCTIONING] bit,
     [UPDATEDATE] datetime2 NOT NULL,
@@ -127,7 +127,7 @@ CREATE TABLE [dbo].[acrs_crash_diagrams] (
 *********************/
 DROP TABLE [dbo].[acrs_commercial_vehicles];
 CREATE TABLE [dbo].[acrs_commercial_vehicles] (
-    [BODYTYPE] int,
+    [BODYTYPE] varchar(10),
     [BUSUSE] int,
     [CARRIERCLASSIFICATION] int,
     [CITY] varchar(50),
