@@ -133,7 +133,7 @@ CREATE TABLE [dbo].[acrs_commercial_vehicles] (
     [CITY] varchar(50),
     [CONFIGURATION] int,
     [COUNTRY] varchar(50),
-    [DOTNUMBER] bigint,
+    [DOTNUMBER] varchar(20),
     [GVW] int,
     [HAZMATCLASS] varchar(50),
     [HAZMATNAME] varchar(50),
@@ -221,7 +221,7 @@ CREATE TABLE [dbo].[acrs_person] (
     [REPORTNUMBER] NCHAR(12) NOT NULL,  /* Refers to primary key in main ACRS table */
     [SEX] varchar(5),
     [STATE] char(2),
-    [ZIP] varchar(5)
+    [ZIP] varchar(max)
 );
 
 /*********************

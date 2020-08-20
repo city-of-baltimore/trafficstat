@@ -3,6 +3,7 @@
 import logging
 import os
 import pickle
+import shutil
 import traceback
 from collections import OrderedDict
 from datetime import datetime
@@ -45,9 +46,13 @@ class CrashDataReader:
         :param force: If true, it will reprocess all files, even if they were previously processed
         :return:
         """
+        processed_folder = os.path.join(path, 'processed')
+        if not os.path.exists(processed_folder):
+            os.mkdir(processed_folder)
+
         for acrs_file in os.listdir(path):
             if acrs_file not in self.processed_files or force:
-                self.read_crash_data(os.path.join(path, acrs_file))
+                self.read_crash_data(os.path.join(path, acrs_file), processed_folder)
 
     def _read_file(self, file_name):
         with open(file_name) as acrs_file:
@@ -58,9 +63,10 @@ class CrashDataReader:
         self.root = xmltodict.parse(crash_file[offset:])
         self.crash_dict = self.root['REPORT']
 
-    def read_crash_data(self, file_name):
+    def read_crash_data(self, file_name, processed_dir):
         """
         Reads the ACRS crash data files
+        :param processed_dir: Directory to move the ACRS file after being processed
         :param file_name: Full path to the file to process
         :return: True if the file was inserted into the database, false if there was an error
         """
@@ -94,6 +100,7 @@ class CrashDataReader:
             self.log.info("REMAINING ELEMENTS: %s", self.crash_dict)
 
         self.processed_files.append(file_name)
+        shutil.move(file_name, processed_dir)
         return True
 
     def _read_main_crash_data(self):
