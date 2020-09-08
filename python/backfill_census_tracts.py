@@ -5,6 +5,7 @@ dashboards to generate maps of hotspots
 """
 import pyodbc
 
+from tqdm import tqdm
 from geocoder import Geocoder  # pylint:disable=import-error
 
 GAPI = ['cef4a88adf83653e4664895545fa4ccddae4553',
@@ -30,22 +31,26 @@ GAPI = ['cef4a88adf83653e4664895545fa4ccddae4553',
         '5e56056e74e6f45e554ffe6fe066ef56e60e66f',
         'f55db94d6e4656cc5556ecbb65f556455bf5aed']
 
-geocoder = Geocoder(GAPI)
-
 conn = pyodbc.connect(r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
 cursor = conn.cursor()
 
-cursor.execute("""SELECT [REPORT_NO], [X_COORDINATES], [Y_COORDINATES] FROM [acrs_roadway_sanitized]""")
+cursor.execute("""
+SELECT [REPORT_NO], [X_COORDINATES], [Y_COORDINATES] 
+FROM [acrs_roadway_sanitized]
+WHERE [CENSUS_TRACT] IS NULL
+""")
 
-for row in cursor.fetchall():
-    geocode_result = geocoder.reverse_geocode(row[1], row[2])
+geocoder = Geocoder(GAPI)
+with geocoder:
+    for row in tqdm(cursor.fetchall()):
+        geocode_result = geocoder.reverse_geocode(row[1], row[2])
 
-    if geocode_result is None:
-        continue
+        if geocode_result is None:
+            continue
 
-    cursor.execute("""
-        UPDATE [acrs_roadway_sanitized]
-        SET CENSUS_TRACT = ?
-        WHERE REPORT_NO = ?
-        """, geocode_result.get('Census Tract'), row[0])
-    cursor.commit()
+        cursor.execute("""
+                UPDATE [acrs_roadway_sanitized]
+                SET CENSUS_TRACT = ?
+                WHERE REPORT_NO = ?
+                """, geocode_result.get('Census Tract'), row[0])
+        cursor.commit()
