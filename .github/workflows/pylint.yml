@@ -9,12 +9,12 @@ jobs:
       - name: Lint with pylint
         run: |
           pip install -U pylint -r requirements.txt
-          pylint python
+          pylint trafficstat
       - name: Lint with flake8
         run : |
           pip install -U flake8 -r requirements.txt
-          flake8 --config=.flake8 python
+          flake8 --config=.flake8 trafficstat
       - name: Look for security issues with Bandit
         run: |
           pip install -U bandit -r requirements.txt
-          bandit python
+          bandit trafficstat
