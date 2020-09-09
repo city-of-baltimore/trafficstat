@@ -283,7 +283,8 @@ CREATE TABLE [dbo].[acrs_roadway] (
     [ROAD_NAME] varchar(max),
     [ROUTE_NUMBER] char(10),
     [ROUTE_SUFFIX] char(10),
-    [ROUTE_TYPE] char(10)
+    [ROUTE_TYPE] char(10),
+    [CENSUS_TRACT] varchar(20)
 );
 
 /*********************
