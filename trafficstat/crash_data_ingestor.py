@@ -82,7 +82,10 @@ class CrashDataReader:
         else:
             self.log.info("REMAINING ELEMENTS: %s", self.crash_dict)
 
-        shutil.move(file_name, processed_dir)
+        try:
+            shutil.move(file_name, processed_dir)
+        except shutil.Error:
+            self.log.error("Error moving file. It will not be moved to the processed directory: %s", file_name)
         return True
 
     def _read_main_crash_data(self):
@@ -1329,8 +1332,3 @@ class CrashDataReader:
 
         if len(data.get(tag)) == 0:
             data.pop(tag)
-
-
-if __name__ == '__main__':
-    cls = CrashDataReader()
-    cls.read_directory()
