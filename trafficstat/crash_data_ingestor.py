@@ -82,10 +82,20 @@ class CrashDataReader:
         else:
             self.log.info("REMAINING ELEMENTS: %s", self.crash_dict)
 
-        try:
-            shutil.move(file_name, processed_dir)
-        except shutil.Error:
-            self.log.error("Error moving file. It will not be moved to the processed directory: %s", file_name)
+        i = 0
+        while i < 5:
+            # retry copy operation up to 5 times
+            try:
+                if i == 0:
+                    shutil.move(file_name, processed_dir)
+                else:
+                    dst_filename = "{}_{}".format(os.path.join(processed_dir, os.path.basename(file_name)), i)
+                    shutil.move(file_name, dst_filename)
+                break
+            except shutil.Error:
+                i += 1
+                if i >= 5:
+                    self.log.error("Error moving file. It will not be moved to the processed directory: %s", file_name)
         return True
 
     def _read_main_crash_data(self):
