@@ -8,9 +8,9 @@ CENSUS_TRACT (nvarchar(25)),
 ROAD_NAME_CLEAN (nvarchar(50)),
 REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
+import re
 from tqdm import tqdm
 import pyodbc
-import re
 
 from bcgeocoder import Geocoder  # pylint:disable=import-error
 from .creds import GAPI
@@ -118,8 +118,19 @@ def clean_road_names():
 def _word_replacer(address):
     """Does some standard address cleanup"""
     address = address.upper()
-    for orig, repl in [(" CONNECOR", " CONNECTOR"), (" STREET", " ST"), (" PARKWAY", " PKWY"), (" WAY", " WY"),
-                       ("LANE", "LN"), (".", "")]:
+    for orig, repl in [(" CONNECOR", " CONNECTOR"),
+                       (" STREET", " ST"),
+                       (" PARKWAY", " PKWY"),
+                       (" WAY", " WY"),
+                       (" LANE", " LN"),
+                       (" AVENUE", " AVE"),
+                       (" ROAD", " RD"),
+                       (".", ""),
+                       ("UNIT BLK OF", ""), ("UNIT BLOCK OF", ""),
+                       ("UNIT BLK", ""), ("UNIT BLOCK", ""),
+                       ("BLK OF", ""), ("BLOCK OF", ""),
+                       ("BLK", ""), ("BLOCK", "")
+                       ]:
         address = address.replace(orig, repl)
 
     return address.strip()
