@@ -12,7 +12,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: city-of-baltimore/Geocoder
-          ref: mypy
           path: geocoder-repo
       - name: Install dependencies
         run: |
