@@ -30,4 +30,4 @@ jobs:
           bandit trafficstat
       - name: Type checking
         run: |
-          mypy python
+          mypy trafficstat
