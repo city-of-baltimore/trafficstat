@@ -1,9 +1,9 @@
 """Creates data files that MS2 can use to import data"""
 import datetime
 import uuid
-import xlsxwriter
+import xlsxwriter  # type: ignore
 
-import pyodbc
+import pyodbc  # type: ignore
 
 SEX = {
     '01': 'Male',

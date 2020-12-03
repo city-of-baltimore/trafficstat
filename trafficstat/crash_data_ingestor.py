@@ -7,8 +7,8 @@ import traceback
 from collections import OrderedDict
 from datetime import datetime
 
-import xmltodict
-import pyodbc
+import xmltodict  # type: ignore
+import pyodbc  # type: ignore
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
