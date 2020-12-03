@@ -1,20 +1,33 @@
-name: Towing post commit steps
+name: Trafficstat post commit steps
 on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-python@v1
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+      - name: Checkout bcgeocoder repo
+        uses: actions/checkout@v2
+        with:
+          repository: city-of-baltimore/Geocoder
+          ref: mypy
+          path: geocoder-repo
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip wheel pylint flake8 bandit mypy wheel
+          pip install --upgrade ./geocoder-repo
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Lint with pylint
         run: |
-          pip install -U pylint -r requirements.txt
           pylint trafficstat
       - name: Lint with flake8
         run : |
-          pip install -U flake8 -r requirements.txt
           flake8 --config=.flake8 trafficstat
       - name: Look for security issues with Bandit
         run: |
-          pip install -U bandit -r requirements.txt
           bandit trafficstat
+      - name: Type checking
+        run: |
+          mypy python

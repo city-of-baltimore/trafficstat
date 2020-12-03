@@ -9,10 +9,10 @@ ROAD_NAME_CLEAN (nvarchar(50)),
 REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
 import re
-from tqdm import tqdm
-import pyodbc
+from tqdm import tqdm  # type: ignore
+import pyodbc  # type: ignore
 
-from bcgeocoder import Geocoder  # pylint:disable=import-error
+from bcgeocoder import Geocoder
 from .creds import GAPI
 
 conn = pyodbc.connect(r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')

@@ -36,4 +36,4 @@ ADD ROAD_NAME_CLEAN nvarchar(50);
 ALTER TABLE acrs_roadway_sanitized
 ADD REFERENCE_ROAD_NAME_CLEAN nvarchar(50);
 
-Then run the data enricher with `main.py -e'
+Then run the data enricher with `main.py -e`
