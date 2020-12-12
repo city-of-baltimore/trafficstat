@@ -6,14 +6,16 @@ yearly dump of ACRS data is ingested into the _sanitized databases. The census t
 dashboards to generate maps of hotspots
 
 
-To import data from an aacdb file:
-# Open the aacdb file in Access and save the file as an mdb file.
-# Open Sql Server Management server, and right click the database that the data will be inserted into
-# Select Microsoft Access as the data source and select the file
-# Select Microsoft OLE DB Driver for Sql Server as the destination and click properties
-## Server name: balt-sql311-prd
-## Authentication: Windows Authentication
-## Select the database: <database to use>
+## To import data from an aacdb file:
+This applies to the sanitized data that the State Highway Administration
+
+1. Open the aacdb file in Access and save the file as an mdb file.
+2. Open Sql Server Management server, and right click the database that the data will be inserted into
+3. Select Microsoft Access as the data source and select the file
+4. Select Microsoft OLE DB Driver for Sql Server as the destination and click properties
+* Server name: balt-sql311-prd
+* Authentication: Windows Authentication
+* Select the database: <database to use>
 
 Table names:
 [dbo].[acrs_crash_sanitized]
@@ -37,3 +39,7 @@ ALTER TABLE acrs_roadway_sanitized
 ADD REFERENCE_ROAD_NAME_CLEAN nvarchar(50);
 
 Then run the data enricher with `main.py -e`
+
+# Unsanitized data table creation
+
+To create the tables used in `crash_data_ingestor.py`, use the create table statements in test_crash_data_ingestor.py

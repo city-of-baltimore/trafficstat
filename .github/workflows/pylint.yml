@@ -20,13 +20,13 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Lint with pylint
         run: |
-          pylint trafficstat
+          pylint src main.py
       - name: Lint with flake8
         run : |
-          flake8 --config=.flake8 trafficstat
+          flake8 --config=.flake8 src main.py
       - name: Look for security issues with Bandit
         run: |
-          bandit trafficstat
+          bandit src main.py
       - name: Type checking
         run: |
-          mypy trafficstat
+          mypy src main.py

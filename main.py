@@ -1,9 +1,9 @@
 """Main driver for the traffic stat scripts"""
 import argparse
 
-from trafficstat.enrich_data import geocode_acrs, geocode_acrs_sanitized, clean_road_names
-from trafficstat.crash_data_ingestor import CrashDataReader
-from trafficstat.ms2generator import WorksheetMaker
+from src.enrich_data import geocode_acrs, geocode_acrs_sanitized, clean_road_names
+from src.crash_data_ingestor import CrashDataReader
+from src.ms2generator import WorksheetMaker
 
 parser = argparse.ArgumentParser(description='Traffic Data Parser')
 parser.add_argument('-e', '--enrich', action='store_true',
