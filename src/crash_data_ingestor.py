@@ -14,9 +14,7 @@ import xmltodict  # type: ignore
 from . import crash_data_types
 
 # The 'unsubscriptable-object' disable is because of issue https://github.com/PyCQA/pylint/issues/3882 with subscripting
-# Optional. When thats fixed, we can remove those disables. We also need the following to deal with the long lines
-# caused by those disables
-# pylint:disable=line-too-long
+# Optional. When thats fixed, we can remove those disables.
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)-8s %(message)s',
@@ -1367,7 +1365,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return (len(element) == 1) and \
             isinstance(element, OrderedDict) and \
-            element.get('@i:nil') == 'true'  # pylist:disable=isinstance-second-argument-not-valid-type ; see comment at top
+            element.get('@i:nil') == 'true'  # pylist:disable=isinstance-second-argument-not-valid-type ; see comment
 
     @staticmethod
     def _convert_to_date(val: str) -> str:
@@ -1398,13 +1396,16 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
             return None
         return uid
 
-    def _safe_sql_execute(self, query: str, data: crash_data_types.sql_execute_type) -> bool:
+    def _safe_sql_execute(self, query: str, data: crash_data_types.SqlExecuteType) -> bool:
         return self._safe_sql(query, data, False)
 
-    def _safe_sql_executemany(self, query: str, data: crash_data_types.sql_execute_type) -> bool:
+    def _safe_sql_executemany(self, query: str, data: crash_data_types.SqlExecuteType) -> bool:
         return self._safe_sql(query, data, True)
 
-    def _safe_sql(self, query: str, data: Sequence[Union[Tuple[Any], Any]], many: bool) -> bool:
+    def _safe_sql(self,
+                  query: str,
+                  data: Sequence[Union[Tuple[Any], Any]],  # pylint:disable=unsubscriptable-object ; see comment at top
+                  many: bool) -> bool:
         """
         Executes a sql query and checks for things that normally error out
         :param query: The query to run
@@ -1432,7 +1433,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
     def get_single_attr(self,
                         tag: str,
-                        crash_data: Union[None, OrderedDict, str]
+                        crash_data: Union[None, OrderedDict, str]  # pylint:disable=unsubscriptable-object ; see comment at top
                         ) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Gets a single element from the XML document we loaded. It errors if there are more that one of those type of tag
@@ -1450,7 +1451,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         return crash_data.get(tag)
 
     @staticmethod
-    def get_multiple_attr(tag: str, crash_data: crash_data_types.attr_dicts) -> crash_data_types.multiple_attr_elements:
+    def get_multiple_attr(tag: str, crash_data: crash_data_types.AttrElement) -> crash_data_types.MultipleAttrElement:
         """
         Generator that processes a one or many tag so that we can easily insert it into a database
         :param tag: string or list of tag to parse. List should have hierarchy of tags relative to the crash_data
