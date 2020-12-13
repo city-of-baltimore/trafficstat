@@ -1,16 +1,26 @@
-from typing import Any, List, Optional, OrderedDict, Sequence, Tuple, TypedDict, Union
+"""Types used in src/crash_data_ingestor.py"""
+from collections import OrderedDict
+from typing import Any, List, Optional, Sequence, Tuple, TypedDict, Union
 from datetime import date, datetime
 from uuid import UUID
 
+# The 'unsubscriptable-object' disable is because of issue https://github.com/PyCQA/pylint/issues/3882 with subscripting
+# Optional. When thats fixed, we can remove those disables.
+# pylint:disable=unsubscriptable-object
+
+# The 'E0239: Inheriting 'TypedDict', which is not a class. (inherit-non-class)' is because of issue
+# https://github.com/PyCQA/pylint/issues/3876. When that's fixed, we can remove those disables
+
+# pylint:disable=too-few-public-methods
 
 # definitions for typing
-single_attr_element = OrderedDict[str, Optional[str]]
-multiple_attr_elements = List[single_attr_element]
-attr_dicts = OrderedDict[str, Union[single_attr_element, multiple_attr_elements]]
-sql_execute_type = Sequence[Union[Tuple[Any], Any]]
+SingleAttrElement = OrderedDict[str, Optional[str]]
+MultipleAttrElement = List[SingleAttrElement]
+AttrElement = OrderedDict[str, Union[SingleAttrElement, MultipleAttrElement]]
+SqlExecuteType = Sequence[Union[Tuple[Any], Any]]
 
 
-class CrashDataType(TypedDict):
+class CrashDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_crashes"""
     ACRSREPORTTIMESTAMP: datetime
     AGENCYIDENTIFIER: Optional[str]
@@ -78,7 +88,7 @@ class CrashDataType(TypedDict):
     WEATHER: Optional[str]
 
 
-class ApprovalDataType(TypedDict):
+class ApprovalDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_approval"""
     AGENCY: Optional[str]
     APPROVALDATE: datetime
@@ -99,7 +109,7 @@ class ApprovalDataType(TypedDict):
     UNIT_CODE: str
 
 
-class CircumstancesType(TypedDict):
+class CircumstancesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_circumstances"""
     CIRCUMSTANCECODE: str
     CIRCUMSTANCEID: int
@@ -109,21 +119,21 @@ class CircumstancesType(TypedDict):
     VEHICLEID: Optional[UUID]
 
 
-class CitationType(TypedDict):
+class CitationType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_citation_codes"""
     CITATIONNUMBER: str
     PERSONID: UUID
     REPORTNUMBER: str
 
 
-class CrashDiagramType(TypedDict):
+class CrashDiagramType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_crash_diagrams"""
     CRASHDIAGRAM: Optional[str]
     CRASHDIAGRAMNATIVE: Optional[str]
     REPORTNUMBER: Optional[str]
 
 
-class CommercialVehiclesType(TypedDict):
+class CommercialVehiclesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_commercial_vehicles"""
     BODYTYPE: Optional[str]
     BUSUSE: Optional[int]
@@ -149,14 +159,14 @@ class CommercialVehiclesType(TypedDict):
     WEIGHTUNIT: Optional[str]
 
 
-class DamagedAreasType(TypedDict):
+class DamagedAreasType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_damaged_areas_table"""
     DAMAGEID: int
     IMPACTTYPE: int
     VEHICLEID: UUID
 
 
-class EmsType(TypedDict):
+class EmsType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_ems"""
     EMSTRANSPORTATIONTYPE: Optional[str]
     EMSUNITNUMBER: Optional[str]
@@ -165,7 +175,7 @@ class EmsType(TypedDict):
     REPORTNUMBER: str
 
 
-class EventType(TypedDict):
+class EventType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_events"""
     EVENTID: int
     EVENTSEQUENCE: Optional[int]
@@ -173,7 +183,7 @@ class EventType(TypedDict):
     VEHICLEID: UUID
 
 
-class PdfReportData(TypedDict):
+class PdfReportData(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for acrs_pdf_report"""
     CHANGEDBY: Optional[str]
     DATESTATUSCHANGED: datetime
@@ -183,7 +193,7 @@ class PdfReportData(TypedDict):
     STATUS: str
 
 
-class PersonType(TypedDict):
+class PersonType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for acrs_person"""
     ADDRESS: Optional[str]
     CITY: Optional[str]
@@ -207,7 +217,7 @@ class PersonType(TypedDict):
     ZIP: Optional[str]
 
 
-class PersonInfoType(TypedDict):
+class PersonInfoType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for acrs_person_info"""
     AIRBAGDEPLOYED: Optional[int]
     ALCOHOLTESTINDICATOR: Optional[int]
@@ -243,16 +253,15 @@ class PersonInfoType(TypedDict):
     VEHICLEID: Optional[UUID]
 
 
-class ReportDocument(TypedDict):
-    """There is not an example of this data, so this is just a stub for now"""
-    pass
-
-
-class ReportPhoto(TypedDict):
+class ReportDocument(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """There is not an example of this data, so this is just a stub for now"""
 
 
-class RoadwayType(TypedDict):
+class ReportPhoto(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """There is not an example of this data, so this is just a stub for now"""
+
+
+class RoadwayType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_roadway"""
     COUNTY: Optional[int]
     LOGMILE_DIR: Optional[str]
@@ -271,7 +280,7 @@ class RoadwayType(TypedDict):
     ROUTE_TYPE: Optional[str]
 
 
-class VehicleType(TypedDict):
+class VehicleType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_vehicles"""
     COMMERCIALVEHICLE: Optional[str]
     CONTINUEDIRECTION: str
@@ -308,7 +317,7 @@ class VehicleType(TypedDict):
     VIN: Optional[int]
 
 
-class TowedUnitType(TypedDict):
+class TowedUnitType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_towed_unit"""
     INSURANCEPOLICYNUMBER: Optional[str]
     INSURER: Optional[str]
@@ -324,14 +333,14 @@ class TowedUnitType(TypedDict):
     VIN: Optional[str]
 
 
-class VehicleUseType(TypedDict):
+class VehicleUseType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_vehicle_uses"""
     ID: int
     VEHICLEID: UUID
     VEHICLEUSECODE: int
 
 
-class WitnessType(TypedDict):
+class WitnessType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_witnesses"""
     PERSONID: UUID
     REPORTNUMBER: str

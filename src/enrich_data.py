@@ -37,7 +37,8 @@ def geocode_acrs() -> None:
     with geocoder:
         for row in tqdm(cursor.fetchall()):
             if row[2] != '':
-                geocode_result: Optional[GeocodeResult] = geocoder.geocode("{} and {}, Baltimore, Maryland".format(row[1], row[2]))
+                geocode_result: Optional[GeocodeResult] = geocoder.geocode("{} and {}, Baltimore, Maryland".format(
+                    row[1], row[2]))
             else:
                 geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
 
@@ -99,6 +100,8 @@ def clean_road_names() -> None:
 
     data: List[Tuple[str, str, str]] = []
     for row in tqdm(cursor.fetchall()):
+        road_name_clean = None
+        ref_road_name_clean = None
         if isinstance(row[1], str):
             road = re.search(r'(\d+\s+)?([NnEeSsWw](\.\s|\s|\.))?([^(]*)?', row[1])
             road_name_clean = _word_replacer(road.group(4)) if road is not None else ''

@@ -10,3 +10,4 @@ pytest
 mypy
 pylint
 flake8
+pandas
