@@ -9,9 +9,10 @@ ROAD_NAME_CLEAN (nvarchar(50)),
 REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
 import re
-from tqdm import tqdm  # type: ignore
-import pyodbc  # type: ignore
 from typing import List, Optional, Tuple
+
+import pyodbc  # type: ignore
+from tqdm import tqdm  # type: ignore
 
 from bcgeocoder.geocoder import Geocoder
 from bcgeocoder.geocodio_types import GeocodeResult
@@ -37,8 +38,8 @@ def geocode_acrs() -> None:
     with geocoder:
         for row in tqdm(cursor.fetchall()):
             if row[2] != '':
-                geocode_result: Optional[GeocodeResult] = geocoder.geocode("{} and {}, Baltimore, Maryland".format(
-                    row[1], row[2]))
+                geocode_result: Optional[GeocodeResult] = geocoder.geocode(  # pylint:disable=unsubscriptable-object ; see comment at top
+                    "{} and {}, Baltimore, Maryland".format(row[1], row[2]))
             else:
                 geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
 
@@ -71,7 +72,8 @@ def geocode_acrs_sanitized() -> None:
     geocoder: Geocoder = Geocoder(GAPI)
     with geocoder:
         for row in tqdm(cursor.fetchall()):
-            geocode_result: Optional[GeocodeResult] = geocoder.reverse_geocode(row[1], row[2])
+            geocode_result: Optional[GeocodeResult] = geocoder.reverse_geocode(  # pylint:disable=unsubscriptable-object ; see comment at top
+                row[1], row[2])
 
             if geocode_result is None:
                 continue
