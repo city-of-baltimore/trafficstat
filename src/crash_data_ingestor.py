@@ -7,7 +7,7 @@ import traceback
 from collections import OrderedDict
 from typing import Optional, List, Sequence, Union, Tuple, Any
 
-from pandas import to_datetime
+from pandas import to_datetime  # type: ignore
 import pyodbc  # type: ignore
 import xmltodict  # type: ignore
 
@@ -1390,9 +1390,9 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         return int(bool(val == 'y'))
 
     @staticmethod
-    def _validate_uniqueidentifier(uid: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _validate_uniqueidentifier(uid: Optional[str]) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         """Checks for null uniqueidentifiers"""
-        if uid == '':
+        if not uid:
             return None
         return uid
 
