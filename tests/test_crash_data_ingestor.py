@@ -6,10 +6,8 @@ import pytest
 from . import constants_test_data
 
 
-def test_read_crash_data(crash_data_reader, acrs_crashes_table, cursor):
+def test_read_crash_data(crash_data_reader, acrs_crashes_table, cursor):  # pylint:disable=unused-argument
     """Testing the elements in the REPORTS tag"""
-    _pytest_fixtures = [acrs_crashes_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_main_crash_data(  # pylint:disable=protected-access
         crash_dict=constants_test_data.crash_test_input_data)
 
@@ -21,10 +19,8 @@ def test_read_crash_data(crash_data_reader, acrs_crashes_table, cursor):
         assert constants_test_data.crash_test_exp_data[0][i] == records[0][i]
 
 
-def test_read_approval_data(crash_data_reader, acrs_approval_table, cursor):
+def test_read_approval_data(crash_data_reader, acrs_approval_table, cursor):  # pylint:disable=unused-argument
     """Testing the elements in the APPROVALDATA tag"""
-    _pytest_fixtures = [acrs_approval_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_approval_data(  # pylint:disable=protected-access
         approval_dict=constants_test_data.approval_input_data)
 
@@ -36,10 +32,8 @@ def test_read_approval_data(crash_data_reader, acrs_approval_table, cursor):
         assert constants_test_data.approval_exp_data[0][i] == records[0][i]
 
 
-def test_read_circumstance_data(crash_data_reader, acrs_circumstances_table, cursor):
+def test_read_circumstance_data(crash_data_reader, acrs_circumstances_table, cursor):  # pylint:disable=unused-argument
     """Testing the elements in the CIRCUMSTANCES tag"""
-    _pytest_fixtures = [acrs_circumstances_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_circumstance_data(  # pylint:disable=protected-access
         circumstance_dict=constants_test_data.circum_input_data)
 
@@ -52,10 +46,8 @@ def test_read_circumstance_data(crash_data_reader, acrs_circumstances_table, cur
             assert constants_test_data.circum_exp_data[i][j] == records[i][j]
 
 
-def test_read_citation_data(crash_data_reader, acrs_citation_codes_table, cursor):
+def test_read_citation_data(crash_data_reader, acrs_citation_codes_table, cursor):  # pylint:disable=unused-argument
     """Testing the elements in the CITATIONCODES tag"""
-    _pytest_fixtures = [acrs_citation_codes_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_citation_data(  # pylint:disable=protected-access
         citation_dict=constants_test_data.citation_input_data.get('CITATIONCODEs'))
 
@@ -67,10 +59,8 @@ def test_read_citation_data(crash_data_reader, acrs_citation_codes_table, cursor
         assert constants_test_data.citation_exp_data[0][i] == records[0][i]
 
 
-def test_read_crash_diagrams_data(crash_data_reader, acrs_crash_diagrams_table, cursor):
+def test_read_crash_diagrams_data(crash_data_reader, acrs_crash_diagrams_table, cursor):  # pylint:disable=unused-argument
     """Testing the elements in the DIAGRAM tag"""
-    _pytest_fixtures = [acrs_crash_diagrams_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_crash_diagrams_data(  # pylint:disable=protected-access
         crash_diagram_dict=constants_test_data.crash_input_data)
 
@@ -82,10 +72,8 @@ def test_read_crash_diagrams_data(crash_data_reader, acrs_crash_diagrams_table, 
         assert constants_test_data.crash_exp_data[0][i] == records[0][i]
 
 
-def test_read_commercial_vehicle_data(crash_data_reader, acrs_commercial_vehicle_table, cursor):
+def test_read_commercial_vehicle_data(crash_data_reader, acrs_commercial_vehicle_table, cursor):  # pylint:disable=unused-argument
     """Testing the OrderedDict from the COMMERCIALVEHICLE tag"""
-    _pytest_fixtures = [acrs_commercial_vehicle_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_commercial_vehicle_data(  # pylint:disable=protected-access
         commvehicle_dict=constants_test_data.commveh_input_data)
 
@@ -97,10 +85,8 @@ def test_read_commercial_vehicle_data(crash_data_reader, acrs_commercial_vehicle
         assert constants_test_data.commveh_exp_data[0][i] == records[0][i]
 
 
-def test_read_damaged_areas_data(crash_data_reader, acrs_damaged_areas_table, cursor):
+def test_read_damaged_areas_data(crash_data_reader, acrs_damaged_areas_table, cursor):  # pylint:disable=unused-argument
     """Testing the OrderedDict from the DAMAGEDAREAs tag"""
-    _pytest_fixtures = [acrs_damaged_areas_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_damaged_areas_data(  # pylint:disable=protected-access
         damaged_dict=constants_test_data.damaged_input_data)
 
@@ -112,10 +98,8 @@ def test_read_damaged_areas_data(crash_data_reader, acrs_damaged_areas_table, cu
         assert constants_test_data.damaged_exp_data[0][i] == records[0][i]
 
 
-def test_read_ems_data(crash_data_reader, acrs_ems_table, cursor):
+def test_read_ems_data(crash_data_reader, acrs_ems_table, cursor):  # pylint:disable=unused-argument
     """Testing the ordereddict from the EMSes tag"""
-    _pytest_fixtures = [acrs_ems_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_ems_data(  # pylint:disable=protected-access
         ems_dict=constants_test_data.ems_input_data.get('EMSes'))
 
@@ -127,10 +111,8 @@ def test_read_ems_data(crash_data_reader, acrs_ems_table, cursor):
         assert constants_test_data.ems_exp_data[0][i] == records[0][i]
 
 
-def test_read_event_data(crash_data_reader, acrs_events_table, cursor):
+def test_read_event_data(crash_data_reader, acrs_events_table, cursor):  # pylint:disable=unused-argument
     """Testing the ordereddict from the EVENTS tag"""
-    _pytest_fixtures = [acrs_events_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_event_data(  # pylint:disable=protected-access
         event_dict=constants_test_data.event_input_data)
 
@@ -142,10 +124,8 @@ def test_read_event_data(crash_data_reader, acrs_events_table, cursor):
         assert constants_test_data.event_exp_data[0][i] == records[0][i]
 
 
-def test_read_pdf_data(crash_data_reader, acrs_pdf_report_table, cursor):
+def test_read_pdf_data(crash_data_reader, acrs_pdf_report_table, cursor):  # pylint:disable=unused-argument
     """Testing the ordereddict from the PDFREPORTs tag"""
-    _pytest_fixtures = [acrs_pdf_report_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_pdf_data(  # pylint:disable=protected-access
         pdfreport_dict=constants_test_data.pdf_input_data.get('PDFREPORTs'))
 
@@ -157,10 +137,8 @@ def test_read_pdf_data(crash_data_reader, acrs_pdf_report_table, cursor):
         assert constants_test_data.pdf_exp_data[0][i] == records[0][i]
 
 
-def test_read_acrs_person_data(crash_data_reader, acrs_person_table, acrs_citation_codes_table, cursor):
+def test_read_acrs_person_data(crash_data_reader, acrs_person_table, acrs_citation_codes_table, cursor):  # pylint:disable=unused-argument
     """Tests the ordereddict from the PERSON/OWNER tag"""
-    _pytest_fixtures = [acrs_person_table, acrs_citation_codes_table]  # noqa: F841; for pylint
-
     for person in constants_test_data.person_input_data.get('ACRSPERSON'):
         assert crash_data_reader._read_acrs_person_data(person_dict=person)  # pylint:disable=protected-access
 
@@ -182,11 +160,9 @@ def test_read_acrs_person_data(crash_data_reader, acrs_person_table, acrs_citati
         assert constants_test_data.person_citation_exp_data[0][i] == citation_records[0][i]
 
 
-def test_read_person_info_data_driver(crash_data_reader, acrs_person_info_table, acrs_person_table,
-                                      acrs_citation_codes_table, cursor):
+def test_read_person_info_data_driver(crash_data_reader, cursor,
+                                      acrs_person_info_table, acrs_person_table, acrs_citation_codes_table):  # pylint:disable=unused-argument
     """Tests the ordereddict from the DRIVERs tag"""
-    _pytest_fixtures = [acrs_person_info_table, acrs_person_table, acrs_citation_codes_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_person_info_data(  # pylint:disable=protected-access
         person_dict=constants_test_data.person_info_driver_input_data.get('DRIVERs'),
         tag='DRIVER')
@@ -216,10 +192,8 @@ def test_read_person_info_data_driver(crash_data_reader, acrs_person_info_table,
         assert constants_test_data.person_info_driver_citations_exp_data[0][i] == citation_records[0][i]
 
 
-def test_read_person_info_data_passenger(crash_data_reader, acrs_person_info_table, acrs_person_table, cursor):
+def test_read_person_info_data_passenger(crash_data_reader, acrs_person_info_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
     """Tests the ordereddict from the PASSENGERs tag"""
-    _pytest_fixtures = [acrs_person_info_table, acrs_person_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_person_info_data(  # pylint:disable=protected-access
         person_dict=constants_test_data.person_info_pass_input_data.get('PASSENGERs'), tag='PASSENGER')
 
@@ -241,11 +215,9 @@ def test_read_person_info_data_passenger(crash_data_reader, acrs_person_info_tab
             assert constants_test_data.person_info_person_pass_exp_data[i][j] == person_records[i][j]
 
 
-def test_read_person_info_data_passenger_multiple(crash_data_reader, acrs_person_info_table, acrs_person_table,
+def test_read_person_info_data_passenger_multiple(crash_data_reader, acrs_person_info_table, acrs_person_table,  # pylint:disable=unused-argument
                                                   cursor):
     """Tests the OrderedDict that comes from the PASSENGERs tag. This tests the multiple """
-    _pytest_fixtures = [acrs_person_table, acrs_person_info_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_person_info_data(  # pylint:disable=protected-access
         person_dict=constants_test_data.person_info_pass_mult_input_data.get('PASSENGERs'), tag='PASSENGER')
 
@@ -267,10 +239,8 @@ def test_read_person_info_data_passenger_multiple(crash_data_reader, acrs_person
             assert constants_test_data.person_info_person_mult_pass_exp_data[i][j] == person_records[i][j]
 
 
-def test_read_person_info_data_nonmotorist(crash_data_reader, acrs_person_info_table, acrs_person_table, cursor):
+def test_read_person_info_data_nonmotorist(crash_data_reader, acrs_person_info_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
     """Tests the ordereddict that comes from the NONMOTORSTs tag"""
-    _pytest_fixtures = [acrs_person_info_table, acrs_person_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_person_info_data(  # pylint:disable=protected-access
         person_dict=constants_test_data.person_info_nonmotorist_input_data.get('NONMOTORISTs'), tag='NONMOTORIST')
 
@@ -292,10 +262,8 @@ def test_read_person_info_data_nonmotorist(crash_data_reader, acrs_person_info_t
             assert constants_test_data.person_info_records_nonmotorist_input_data[i][j] == person_records[i][j]
 
 
-def test_read_roadway_data(crash_data_reader, acrs_roadway_table, cursor):
+def test_read_roadway_data(crash_data_reader, acrs_roadway_table, cursor):  # pylint:disable=unused-argument
     """Tests the ordereddict from ROADWAY tag"""
-    _pytest_fixtures = [acrs_roadway_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_roadway_data(  # pylint:disable=protected-access
         roadway_dict=constants_test_data.roadway_input_data)
 
@@ -307,10 +275,8 @@ def test_read_roadway_data(crash_data_reader, acrs_roadway_table, cursor):
         assert constants_test_data.roadway_exp_data[0][i] == records[0][i]
 
 
-def test_read_towed_vehicle_data(crash_data_reader, acrs_towed_unit_table, cursor):
+def test_read_towed_vehicle_data(crash_data_reader, acrs_towed_unit_table, cursor):  # pylint:disable=unused-argument
     """Tests the ordereddict from TOWEDUNITs tag"""
-    _pytest_fixtures = [acrs_towed_unit_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_towed_vehicle_data(  # pylint:disable=protected-access
         towed_dict=constants_test_data.towed_input_data.get('TOWEDUNITs'))
 
@@ -322,10 +288,8 @@ def test_read_towed_vehicle_data(crash_data_reader, acrs_towed_unit_table, curso
         assert constants_test_data.towed_exp_data[0][i] == records[0][i]
 
 
-def test_read_acrs_vehicle_data(crash_data_reader, acrs_vehicles_table, cursor):
+def test_read_acrs_vehicle_data(crash_data_reader, acrs_vehicles_table, cursor):  # pylint:disable=unused-argument
     """Tests the ordereddict from ACRSVEHICLE"""
-    _pytest_fixtures = [acrs_vehicles_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_acrs_vehicle_data(  # pylint:disable=protected-access
         vehicle_dict=constants_test_data.vehicle_input_data.get('VEHICLEs'))
 
@@ -339,10 +303,8 @@ def test_read_acrs_vehicle_data(crash_data_reader, acrs_vehicles_table, cursor):
             assert constants_test_data.vehicle_exp_data[i][j] == records[i][j]
 
 
-def test_read_acrs_vehicle_use_data(crash_data_reader, acrs_vehicle_use_table, cursor):
+def test_read_acrs_vehicle_use_data(crash_data_reader, acrs_vehicle_use_table, cursor):  # pylint:disable=unused-argument
     """Testing the ordereddict contained in VEHICLEUSEs"""
-    _pytest_fixtures = [acrs_vehicle_use_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_acrs_vehicle_use_data(  # pylint:disable=protected-access
         vehicleuse_dict=constants_test_data.vehicle_use_input_data.get(
             'VEHICLEUSEs'))
@@ -355,10 +317,8 @@ def test_read_acrs_vehicle_use_data(crash_data_reader, acrs_vehicle_use_table, c
         assert constants_test_data.vehicle_use_exp_data[0][i] == records[0][i]
 
 
-def test_read_witness_data(crash_data_reader, acrs_witnesses_table, acrs_person_table, cursor):
+def test_read_witness_data(crash_data_reader, acrs_witnesses_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
     """Testing the ordereddict contained in WITNESSes"""
-    _pytest_fixtures = [acrs_witnesses_table, acrs_person_table]  # noqa: F841; for pylint
-
     assert crash_data_reader._read_witness_data(  # pylint:disable=protected-access
         witness_dict=constants_test_data.witness_input_data.get('WITNESSes'))
 

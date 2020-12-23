@@ -34,7 +34,7 @@ def geocode_acrs() -> None:
     """)
 
     data: List[Tuple[str, str]] = []
-    geocoder: Geocoder = Geocoder(GAPI)
+    geocoder: Geocoder = Geocoder(geocodio_api_key=GAPI)
     with geocoder:
         for row in tqdm(cursor.fetchall()):
             if row[2] != '':

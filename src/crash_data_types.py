@@ -20,74 +20,6 @@ AttrElement = OrderedDict[str, Union[SingleAttrElement, MultipleAttrElement]]
 SqlExecuteType = Sequence[Union[Tuple[Any], Any]]
 
 
-class CrashDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
-    """Data for table acrs_crashes"""
-    ACRSREPORTTIMESTAMP: datetime
-    AGENCYIDENTIFIER: Optional[str]
-    AGENCYNAME: Optional[str]
-    AREA: Optional[str]
-    COLLISIONTYPE: int
-    CONMAINCLOSURE: Optional[int]
-    CONMAINLOCATION: Optional[int]
-    CONMAINWORKERSPRESENT: Optional[bool]
-    CONMAINZONE: Optional[str]
-    CRASHDATE: date
-    CRASHTIME: datetime
-    CURRENTASSIGNMENT: Optional[str]
-    CURRENTGROUP: int
-    DEFAULTASSIGNMENT: str
-    DEFAULTGROUP: int
-    DOCTYPE: Optional[str]
-    FIXEDOBJECTSTRUCK: str
-    HARMFULEVENTONE: str
-    HARMFULEVENTTWO: str
-    HITANDRUN: bool
-    INSERTDATE: datetime
-    INTERCHANGEAREA: int
-    INTERCHANGEIDENTIFICATION: Optional[str]
-    INTERSECTIONTYPE: int
-    INVESTIGATINGOFFICERUSERNAME: Optional[str]
-    INVESTIGATOR: Optional[str]
-    JUNCTION: str
-    LANEDIRECTION: Optional[str]
-    LANENUMBER: int
-    LANETYPE: Optional[int]
-    LATITUDE: Optional[float]
-    LIGHT: str
-    LOCALCASENUMBER: str
-    LOCALCODES: Optional[str]
-    LONGITUDE: Optional[float]
-    MILEPOINTDIRECTION: Optional[str]
-    MILEPOINTDISTANCE: float
-    MILEPOINTDISTANCEUNITS: Optional[str]
-    NARRATIVE: Optional[str]
-    NONTRAFFIC: bool
-    NUMBEROFLANES: int
-    OFFROADDESCRIPTION: Optional[str]
-    PHOTOSTAKEN: Optional[bool]
-    RAMP: Optional[str]
-    REPORTCOUNTYLOCATION: int
-    REPORTNUMBER: str
-    REPORTTYPE: str
-    ROADALIGNMENT: int
-    ROADCONDITION: int
-    ROADDIVISION: str
-    ROADGRADE: int
-    ROADID: Optional[str]
-    SCHOOLBUSINVOLVEMENT: int
-    STATEGOVERNMENTPROPERTYNAME: Optional[str]
-    SUPERVISOR: Optional[str]
-    SUPERVISORUSERNAME: Optional[str]
-    SUPERVISORYDATE: datetime
-    SURFACECONDITION: str
-    TRAFFICCONTROL: Optional[int]
-    TRAFFICCONTROLFUNCTIONING: Optional[bool]
-    UPDATEDATE: datetime
-    UPLOADVERSION: Optional[str]
-    VERSIONNUMBER: int
-    WEATHER: Optional[str]
-
-
 class ApprovalDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_approval"""
     AGENCY: Optional[str]
@@ -196,6 +128,7 @@ class PdfReportData(TypedDict):  # pylint:disable=inherit-non-class ; See commen
 class PersonType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for acrs_person"""
     ADDRESS: Optional[str]
+    CITATIONCODES: Optional[CitationType]
     CITY: Optional[str]
     COMPANY: Optional[str]
     COUNTRY: Optional[str]
@@ -225,7 +158,9 @@ class PersonInfoType(TypedDict):  # pylint:disable=inherit-non-class ; See comme
     ATFAULT: Optional[bool]
     BAC: Optional[str]
     CONDITION: Optional[str]
+    COMMERCIALVEHICLE: Optional[CommercialVehiclesType]
     CONTINUEDIRECTION: Optional[str]
+    DAMAGEDAREAS: Optional[List[DamagedAreasType]]
     DRIVERDISTRACTEDBY: Optional[int]
     DRUGTESTINDICATOR: Optional[int]
     DRUGTESTRESULT: Optional[str]
@@ -254,7 +189,7 @@ class PersonInfoType(TypedDict):  # pylint:disable=inherit-non-class ; See comme
 
 
 class ReportDocument(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
-    """There is not an example of this data, so this is just a stub for now"""
+    """There is not an example of this data, so this is just a stub for now. For the REPORTDOCUMENTS tag."""
 
 
 class ReportPhoto(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
@@ -278,43 +213,6 @@ class RoadwayType(TypedDict):  # pylint:disable=inherit-non-class ; See comment 
     ROUTE_NUMBER: Optional[str]
     ROUTE_SUFFIX: Optional[str]
     ROUTE_TYPE: Optional[str]
-
-
-class VehicleType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
-    """Data for table acrs_vehicles"""
-    COMMERCIALVEHICLE: Optional[str]
-    CONTINUEDIRECTION: str
-    DAMAGEEXTENT: Optional[int]
-    DRIVERLESSVEHICLE: Optional[bool]
-    EMERGENCYMOTORVEHICLEUSE: Optional[bool]
-    FIRE: Optional[bool]
-    FIRSTIMPACT: Optional[int]
-    GOINGDIRECTION: Optional[str]
-    HITANDRUN: Optional[bool]
-    INSURANCEPOLICYNUMBER: Optional[str]
-    INSURER: Optional[str]
-    LICENSEPLATENUMBER: Optional[str]
-    LICENSEPLATESTATE: Optional[str]
-    MAINIMPACT: Optional[int]
-    MOSTHARMFULEVENT: Optional[str]
-    OWNERID: Optional[UUID]
-    PARKEDVEHICLE: Optional[bool]
-    REGISTRATIONEXPIRATIONYEAR: Optional[int]
-    REPORTNUMBER: str
-    SFVEHICLEINTRANSPORT: Optional[int]
-    SPEEDLIMIT: Optional[int]
-    TOWEDUNITTYPE: Optional[int]
-    UNITNUMBER: Optional[str]
-    VEHICLEBODYTYPE: Optional[str]
-    VEHICLEID: UUID
-    VEHICLEMAKE: Optional[int]
-    VEHICLEMODEL: Optional[int]
-    VEHICLEMOVEMENT: Optional[float]
-    VEHICLEREMOVEDBY: Optional[int]
-    VEHICLEREMOVEDTO: Optional[int]
-    VEHICLETOWEDAWAY: Optional[int]
-    VEHICLEYEAR: Optional[int]
-    VIN: Optional[int]
 
 
 class TowedUnitType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
@@ -344,3 +242,125 @@ class WitnessType(TypedDict):  # pylint:disable=inherit-non-class ; See comment 
     """Data for table acrs_witnesses"""
     PERSONID: UUID
     REPORTNUMBER: str
+
+
+class VehicleType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Data for table acrs_vehicles"""
+    COMMERCIALVEHICLE: Optional[str]
+    CONTINUEDIRECTION: str
+    DAMAGEEXTENT: Optional[int]
+    DRIVERLESSVEHICLE: Optional[bool]
+    DRIVERs: Optional[List[PersonInfoType]]
+    EMERGENCYMOTORVEHICLEUSE: Optional[bool]
+    EVENTS: Optional[List[EventType]]
+    FIRE: Optional[bool]
+    FIRSTIMPACT: Optional[int]
+    GOINGDIRECTION: Optional[str]
+    HITANDRUN: Optional[bool]
+    INSURANCEPOLICYNUMBER: Optional[str]
+    INSURER: Optional[str]
+    LICENSEPLATENUMBER: Optional[str]
+    LICENSEPLATESTATE: Optional[str]
+    MAINIMPACT: Optional[int]
+    MOSTHARMFULEVENT: Optional[str]
+    OWNERID: Optional[UUID]
+    PARKEDVEHICLE: Optional[bool]
+    PASSENGERs: Optional[List[PersonInfoType]]
+    REGISTRATIONEXPIRATIONYEAR: Optional[int]
+    REPORTNUMBER: str
+    SFVEHICLEINTRANSPORT: Optional[int]
+    SPEEDLIMIT: Optional[int]
+    TOWEDUNITTYPE: Optional[int]
+    TOWEDUNITs: Optional[List[TowedUnitType]]
+    UNITNUMBER: Optional[str]
+    VEHICLEBODYTYPE: Optional[str]
+    VEHICLEID: UUID
+    VEHICLEMAKE: Optional[int]
+    VEHICLEMODEL: Optional[int]
+    VEHICLEMOVEMENT: Optional[float]
+    VEHICLEREMOVEDBY: Optional[int]
+    VEHICLEREMOVEDTO: Optional[int]
+    VEHICLETOWEDAWAY: Optional[int]
+    VEHICLEUSEs: Optional[List[VehicleUseType]]
+    VEHICLEYEAR: Optional[int]
+    VIN: Optional[int]
+
+
+class CrashDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Data for table acrs_crashes"""
+    ACRSREPORTTIMESTAMP: datetime
+    AGENCYIDENTIFIER: Optional[str]
+    AGENCYNAME: Optional[str]
+    APPROVALDATA: Optional[ApprovalDataType]
+    AREA: Optional[str]
+    CIRCUMSTANCES: Optional[CircumstancesType]
+    COLLISIONTYPE: int
+    CONMAINCLOSURE: Optional[int]
+    CONMAINLOCATION: Optional[int]
+    CONMAINWORKERSPRESENT: Optional[bool]
+    CONMAINZONE: Optional[str]
+    CRASHDATE: date
+    CRASHTIME: datetime
+    CURRENTASSIGNMENT: Optional[str]
+    CURRENTGROUP: int
+    DEFAULTASSIGNMENT: str
+    DEFAULTGROUP: int
+    DIAGRAM: Optional[CrashDiagramType]
+    DOCTYPE: Optional[str]
+    EMSes: Optional[List[EmsType]]
+    FIXEDOBJECTSTRUCK: str
+    HARMFULEVENTONE: str
+    HARMFULEVENTTWO: str
+    HITANDRUN: bool
+    INSERTDATE: datetime
+    INTERCHANGEAREA: int
+    INTERCHANGEIDENTIFICATION: Optional[str]
+    INTERSECTIONTYPE: int
+    INVESTIGATINGOFFICERUSERNAME: Optional[str]
+    INVESTIGATOR: Optional[str]
+    JUNCTION: str
+    LANEDIRECTION: Optional[str]
+    LANENUMBER: int
+    LANETYPE: Optional[int]
+    LATITUDE: Optional[float]
+    LIGHT: str
+    LOCALCASENUMBER: str
+    LOCALCODES: Optional[str]
+    LONGITUDE: Optional[float]
+    MILEPOINTDIRECTION: Optional[str]
+    MILEPOINTDISTANCE: float
+    MILEPOINTDISTANCEUNITS: Optional[str]
+    NARRATIVE: Optional[str]
+    NONMOTORISTs: Optional[List[PersonInfoType]]
+    NONTRAFFIC: bool
+    NUMBEROFLANES: int
+    OFFROADDESCRIPTION: Optional[str]
+    PDFREPORTs: Optional[List[PdfReportData]]
+    PHOTOSTAKEN: Optional[bool]
+    People: Optional[List[PersonType]]
+    RAMP: Optional[str]
+    REPORTCOUNTYLOCATION: int
+    REPORTDOCUMENTs: Optional[List[ReportDocument]]
+    REPORTNUMBER: str
+    REPORTPHOTOes: Optional[List[ReportPhoto]]
+    REPORTTYPE: str
+    ROADALIGNMENT: int
+    ROADCONDITION: int
+    ROADDIVISION: str
+    ROADGRADE: int
+    ROADID: Optional[str]
+    ROADWAY: Optional[RoadwayType]
+    SCHOOLBUSINVOLVEMENT: int
+    STATEGOVERNMENTPROPERTYNAME: Optional[str]
+    SUPERVISOR: Optional[str]
+    SUPERVISORUSERNAME: Optional[str]
+    SUPERVISORYDATE: datetime
+    SURFACECONDITION: str
+    TRAFFICCONTROL: Optional[int]
+    TRAFFICCONTROLFUNCTIONING: Optional[bool]
+    UPDATEDATE: datetime
+    UPLOADVERSION: Optional[str]
+    VEHICLEs: Optional[List[VehicleType]]
+    VERSIONNUMBER: int
+    WEATHER: Optional[str]
+    WITNESSes: Optional[List[WitnessType]]
