@@ -18,4 +18,4 @@ flake8
 pandas
 bandit
 
-git+https://github.com/city-of-baltimore/Geocoder#egg=bcgeocoder
+git+https://github.com/city-of-baltimore/Geocoder#egg=balt-geocoder
