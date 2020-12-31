@@ -23,6 +23,3 @@ jobs:
       - name: Type checking
         run: |
           mypy src main.py
-      - name: Pytest
-        run: |
-          pytest
