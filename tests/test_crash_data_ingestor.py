@@ -6,6 +6,41 @@ import pytest
 from . import constants_test_data
 
 
+def check_database_rows(cursor, table_name: str, expected_rows: int):
+    """Does a simple check that the number of rows in the table is what we expect"""
+    cursor.execute('SELECT * FROM {}'.format(table_name))
+    records = cursor.fetchall()
+    assert len(records) == expected_rows
+
+
+def test_read_crash_data_file(crash_data_reader, acrs_crashes_table, acrs_approval_table, acrs_circumstances_table,
+                              acrs_citation_codes_table, acrs_crash_diagrams_table, acrs_commercial_vehicle_table,
+                              acrs_damaged_areas_table, acrs_ems_table, acrs_events_table, acrs_pdf_report_table,
+                              acrs_person_table, acrs_person_info_table, acrs_report_docs_table,
+                              acrs_report_photos_table, acrs_roadway_table, acrs_towed_unit_table, acrs_vehicles_table,
+                              acrs_vehicle_use_table, acrs_witnesses_table, cursor):
+    crash_data_reader.read_crash_data('C:/Users/brian.seel/Desktop/tmp/testfiles/BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml', '')
+    check_database_rows(cursor, 'acrs_test_approval', 1)
+    check_database_rows(cursor, 'acrs_test_circumstances', 3)
+    check_database_rows(cursor, 'acrs_test_citation_codes', 0)
+    check_database_rows(cursor, 'acrs_test_crash_diagrams', 1)
+    check_database_rows(cursor, 'acrs_test_crashes', 1)
+    check_database_rows(cursor, 'acrs_test_commercial_vehicles', 1)
+    check_database_rows(cursor, 'acrs_test_damaged_areas', 1)
+    check_database_rows(cursor, 'acrs_test_ems', 1)
+    check_database_rows(cursor, 'acrs_test_events', 1)
+    check_database_rows(cursor, 'acrs_test_pdf_report', 1)
+    check_database_rows(cursor, 'acrs_test_person', 5)
+    check_database_rows(cursor, 'acrs_test_person_info', 2)
+    check_database_rows(cursor, 'acrs_test_roadway', 1)
+    check_database_rows(cursor, 'acrs_test_towed_unit', 1)
+    check_database_rows(cursor, 'acrs_test_vehicles', 1)
+    check_database_rows(cursor, 'acrs_test_vehicle_uses', 1)
+    check_database_rows(cursor, 'acrs_test_witnesses', 1)
+
+    # crash_data_reader.read_crash_data('C:/Users/brian.seel/Desktop/tmp/testfiles/BALTIMORE_acrs_ADK378000C.xml', '')
+
+
 def test_read_crash_data(crash_data_reader, acrs_crashes_table, cursor):  # pylint:disable=unused-argument
     """Testing the elements in the REPORTS tag"""
     assert crash_data_reader._read_main_crash_data(  # pylint:disable=protected-access
@@ -49,7 +84,7 @@ def test_read_circumstance_data(crash_data_reader, acrs_circumstances_table, cur
 def test_read_citation_data(crash_data_reader, acrs_citation_codes_table, cursor):  # pylint:disable=unused-argument
     """Testing the elements in the CITATIONCODES tag"""
     assert crash_data_reader._read_citation_data(  # pylint:disable=protected-access
-        citation_dict=constants_test_data.citation_input_data.get('CITATIONCODEs'))
+        citation_dict=constants_test_data.citation_input_data)
 
     cursor.execute('SELECT * FROM acrs_test_citation_codes')
     records = cursor.fetchall()
@@ -99,9 +134,9 @@ def test_read_damaged_areas_data(crash_data_reader, acrs_damaged_areas_table, cu
 
 
 def test_read_ems_data(crash_data_reader, acrs_ems_table, cursor):  # pylint:disable=unused-argument
-    """Testing the ordereddict from the EMSes tag"""
+    """Testing the OrderedDict from the EMSes tag"""
     assert crash_data_reader._read_ems_data(  # pylint:disable=protected-access
-        ems_dict=constants_test_data.ems_input_data.get('EMSes'))
+        ems_dict=constants_test_data.ems_input_data)
 
     cursor.execute('SELECT * FROM acrs_test_ems')
     records = cursor.fetchall()
@@ -112,7 +147,7 @@ def test_read_ems_data(crash_data_reader, acrs_ems_table, cursor):  # pylint:dis
 
 
 def test_read_event_data(crash_data_reader, acrs_events_table, cursor):  # pylint:disable=unused-argument
-    """Testing the ordereddict from the EVENTS tag"""
+    """Testing the OrderedDict from the EVENTS tag"""
     assert crash_data_reader._read_event_data(  # pylint:disable=protected-access
         event_dict=constants_test_data.event_input_data)
 
@@ -125,9 +160,9 @@ def test_read_event_data(crash_data_reader, acrs_events_table, cursor):  # pylin
 
 
 def test_read_pdf_data(crash_data_reader, acrs_pdf_report_table, cursor):  # pylint:disable=unused-argument
-    """Testing the ordereddict from the PDFREPORTs tag"""
+    """Testing the OrderedDict from the PDFREPORTs tag"""
     assert crash_data_reader._read_pdf_data(  # pylint:disable=protected-access
-        pdfreport_dict=constants_test_data.pdf_input_data.get('PDFREPORTs'))
+        pdfreport_dict=constants_test_data.pdf_input_data)
 
     cursor.execute('SELECT * FROM acrs_test_pdf_report')
     records = cursor.fetchall()
@@ -138,9 +173,8 @@ def test_read_pdf_data(crash_data_reader, acrs_pdf_report_table, cursor):  # pyl
 
 
 def test_read_acrs_person_data(crash_data_reader, acrs_person_table, acrs_citation_codes_table, cursor):  # pylint:disable=unused-argument
-    """Tests the ordereddict from the PERSON/OWNER tag"""
-    for person in constants_test_data.person_input_data.get('ACRSPERSON'):
-        assert crash_data_reader._read_acrs_person_data(person_dict=person)  # pylint:disable=protected-access
+    """Tests the OrderedDict from the PERSON/OWNER tag"""
+    assert crash_data_reader._read_acrs_person_data(person_dict=constants_test_data.person_input_data)  # pylint:disable=protected-access
 
     cursor.execute('SELECT * FROM acrs_test_person')
     person_records = cursor.fetchall()
@@ -162,10 +196,8 @@ def test_read_acrs_person_data(crash_data_reader, acrs_person_table, acrs_citati
 
 def test_read_person_info_data_driver(crash_data_reader, cursor,
                                       acrs_person_info_table, acrs_person_table, acrs_citation_codes_table):  # pylint:disable=unused-argument
-    """Tests the ordereddict from the DRIVERs tag"""
-    assert crash_data_reader._read_person_info_data(  # pylint:disable=protected-access
-        person_dict=constants_test_data.person_info_driver_input_data.get('DRIVERs'),
-        tag='DRIVER')
+    """Tests the OrderedDict from the DRIVERs tag"""
+    assert crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_driver_input_data)  # pylint:disable=protected-access
 
     cursor.execute('SELECT * FROM acrs_test_person_info')
     records = cursor.fetchall()
@@ -193,9 +225,8 @@ def test_read_person_info_data_driver(crash_data_reader, cursor,
 
 
 def test_read_person_info_data_passenger(crash_data_reader, acrs_person_info_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
-    """Tests the ordereddict from the PASSENGERs tag"""
-    assert crash_data_reader._read_person_info_data(  # pylint:disable=protected-access
-        person_dict=constants_test_data.person_info_pass_input_data.get('PASSENGERs'), tag='PASSENGER')
+    """Tests the OrderedDict from the PASSENGERs tag"""
+    assert crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_input_data)  # pylint:disable=protected-access
 
     cursor.execute('SELECT * FROM acrs_test_person_info')
     records = cursor.fetchall()
@@ -218,8 +249,7 @@ def test_read_person_info_data_passenger(crash_data_reader, acrs_person_info_tab
 def test_read_person_info_data_passenger_multiple(crash_data_reader, acrs_person_info_table, acrs_person_table,  # pylint:disable=unused-argument
                                                   cursor):
     """Tests the OrderedDict that comes from the PASSENGERs tag. This tests the multiple """
-    assert crash_data_reader._read_person_info_data(  # pylint:disable=protected-access
-        person_dict=constants_test_data.person_info_pass_mult_input_data.get('PASSENGERs'), tag='PASSENGER')
+    assert crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_mult_input_data)  # pylint:disable=protected-access
 
     cursor.execute('SELECT * FROM acrs_test_person_info')
     records = cursor.fetchall()
@@ -240,9 +270,8 @@ def test_read_person_info_data_passenger_multiple(crash_data_reader, acrs_person
 
 
 def test_read_person_info_data_nonmotorist(crash_data_reader, acrs_person_info_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
-    """Tests the ordereddict that comes from the NONMOTORSTs tag"""
-    assert crash_data_reader._read_person_info_data(  # pylint:disable=protected-access
-        person_dict=constants_test_data.person_info_nonmotorist_input_data.get('NONMOTORISTs'), tag='NONMOTORIST')
+    """Tests the OrderedDict that comes from the NONMOTORSTs tag"""
+    assert crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_nonmotorist_input_data)  # pylint:disable=protected-access
 
     cursor.execute('SELECT * FROM acrs_test_person_info')
     records = cursor.fetchall()
@@ -263,7 +292,7 @@ def test_read_person_info_data_nonmotorist(crash_data_reader, acrs_person_info_t
 
 
 def test_read_roadway_data(crash_data_reader, acrs_roadway_table, cursor):  # pylint:disable=unused-argument
-    """Tests the ordereddict from ROADWAY tag"""
+    """Tests the OrderedDict from ROADWAY tag"""
     assert crash_data_reader._read_roadway_data(  # pylint:disable=protected-access
         roadway_dict=constants_test_data.roadway_input_data)
 
@@ -276,9 +305,9 @@ def test_read_roadway_data(crash_data_reader, acrs_roadway_table, cursor):  # py
 
 
 def test_read_towed_vehicle_data(crash_data_reader, acrs_towed_unit_table, cursor):  # pylint:disable=unused-argument
-    """Tests the ordereddict from TOWEDUNITs tag"""
+    """Tests the OrderedDict from TOWEDUNITs tag"""
     assert crash_data_reader._read_towed_vehicle_data(  # pylint:disable=protected-access
-        towed_dict=constants_test_data.towed_input_data.get('TOWEDUNITs'))
+        towed_dict=constants_test_data.towed_input_data)
 
     cursor.execute('SELECT * FROM acrs_test_towed_unit')
     records = cursor.fetchall()
@@ -289,9 +318,9 @@ def test_read_towed_vehicle_data(crash_data_reader, acrs_towed_unit_table, curso
 
 
 def test_read_acrs_vehicle_data(crash_data_reader, acrs_vehicles_table, cursor):  # pylint:disable=unused-argument
-    """Tests the ordereddict from ACRSVEHICLE"""
+    """Tests the OrderedDict from ACRSVEHICLE"""
     assert crash_data_reader._read_acrs_vehicle_data(  # pylint:disable=protected-access
-        vehicle_dict=constants_test_data.vehicle_input_data.get('VEHICLEs'))
+        vehicle_dict=constants_test_data.vehicle_input_data)
 
     cursor.execute('SELECT * FROM acrs_test_vehicles')
     records = cursor.fetchall()
@@ -304,10 +333,9 @@ def test_read_acrs_vehicle_data(crash_data_reader, acrs_vehicles_table, cursor):
 
 
 def test_read_acrs_vehicle_use_data(crash_data_reader, acrs_vehicle_use_table, cursor):  # pylint:disable=unused-argument
-    """Testing the ordereddict contained in VEHICLEUSEs"""
+    """Testing the OrderedDict contained in VEHICLEUSEs"""
     assert crash_data_reader._read_acrs_vehicle_use_data(  # pylint:disable=protected-access
-        vehicleuse_dict=constants_test_data.vehicle_use_input_data.get(
-            'VEHICLEUSEs'))
+        vehicleuse_dict=constants_test_data.vehicle_use_input_data)
 
     cursor.execute('SELECT * FROM acrs_test_vehicle_uses')
     records = cursor.fetchall()
@@ -318,9 +346,9 @@ def test_read_acrs_vehicle_use_data(crash_data_reader, acrs_vehicle_use_table, c
 
 
 def test_read_witness_data(crash_data_reader, acrs_witnesses_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
-    """Testing the ordereddict contained in WITNESSes"""
+    """Testing the OrderedDict contained in WITNESSes"""
     assert crash_data_reader._read_witness_data(  # pylint:disable=protected-access
-        witness_dict=constants_test_data.witness_input_data.get('WITNESSes'))
+        witness_dict=constants_test_data.witness_input_data)
 
     cursor.execute('SELECT * FROM acrs_test_witnesses')
     records = cursor.fetchall()
@@ -376,38 +404,3 @@ def test_get_single_attr(crash_data_reader):
 
     with pytest.raises(AssertionError):
         crash_data_reader.get_single_attr('MULTIPLENODE', constants_test_data.single_attr_input_data)
-
-
-def test_get_multiple_attr_single(crash_data_reader):
-    """Testing the results of get_multiple_attr with a single element in the source"""
-    actual = crash_data_reader.get_multiple_attr('TOPELEMENT',
-                                                 constants_test_data.multi_attr_single_input_data.get(
-                                                     'TOPELEMENTs'))
-    assert len(actual) == len(constants_test_data.multi_attr_single_exp_data)
-    assert len(actual[0]) == len(constants_test_data.multi_attr_single_exp_data[0])
-
-    assert actual[0].pop('ELEMENT1') == '01'
-    assert actual[0].pop('ELEMENT2') == '02'
-
-    # make sure its empty
-    assert not actual[0]
-
-
-def test_get_multiple_attr_mulitple(crash_data_reader):
-    """Testing the results of get_multiple_attr with multiple elements in the source"""
-
-    actual = crash_data_reader.get_multiple_attr('TOPELEMENT', constants_test_data.multi_attr_multi_input_data.get(
-        'TOPELEMENTs'))
-    assert len(actual) == len(constants_test_data.multi_attr_multi_exp_data)
-
-    assert len(actual[0]) == len(constants_test_data.multi_attr_multi_exp_data[0])
-    assert actual[0].pop('ELEMENT1') == '01'
-    assert actual[0].pop('ELEMENT2') == '02'
-
-    assert len(actual[1]) == len(constants_test_data.multi_attr_multi_exp_data[1])
-    assert actual[1].pop('ELEMENT1') == '03'
-    assert actual[1].pop('ELEMENT2') == '04'
-
-    # make sure they are empty
-    assert not actual[0]
-    assert not actual[1]

@@ -13,7 +13,7 @@ from src.crash_data_ingestor import CrashDataReader  # pylint:disable=wrong-impo
 @pytest.fixture(name='crash_data_reader')
 def crash_data_reader_fixture():
     """Fixture for the CrashDataReader class"""
-    cdr = CrashDataReader()
+    cdr = CrashDataReader(None)
     cdr.approval_table = 'acrs_test_approval'
     cdr.circumstance_table = 'acrs_test_circumstances'
     cdr.citation_codes_table = 'acrs_test_citation_codes'

@@ -8,18 +8,24 @@ CENSUS_TRACT (nvarchar(25)),
 ROAD_NAME_CLEAN (nvarchar(50)),
 REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
+import logging
 import re
 from typing import List, Optional, Tuple
 
 import pyodbc  # type: ignore
 from tqdm import tqdm  # type: ignore
 
-from bcgeocoder.geocoder import Geocoder
-from bcgeocoder.geocodio_types import GeocodeResult
+from balt_geocoder.geocoder import Geocoder
+from balt_geocoder.geocodio_types import GeocodeResult
 from .creds import GAPI
 
 conn = pyodbc.connect(r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
 cursor = conn.cursor()
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 def geocode_acrs() -> None:
@@ -43,10 +49,12 @@ def geocode_acrs() -> None:
             else:
                 geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
 
-            if geocode_result is None:
+            if geocode_result is not None and geocode_result.get('census_tract'):
+                assert geocode_result['census_tract']
+                data.append((geocode_result['census_tract'], str(row[0])))
                 continue
 
-            data.append((geocode_result.get('census_tract'), str(row[0])))
+            logging.warning('No census tract for roadway: %s', row)
 
     if data:
         cursor.executemany("""
@@ -75,10 +83,12 @@ def geocode_acrs_sanitized() -> None:
             geocode_result: Optional[GeocodeResult] = geocoder.reverse_geocode(  # pylint:disable=unsubscriptable-object ; see comment at top
                 row[1], row[2])
 
-            if geocode_result is None:
+            if geocode_result is not None and geocode_result.get('census_tract'):
+                assert geocode_result['census_tract']
+                data.append((geocode_result['census_tract'], row[0]))
                 continue
 
-            data.append((geocode_result.get('census_tract'), row[0]))
+            logging.warning('No census tract for sanitized roadway: %s', row)
 
     if data:
         cursor.executemany("""
@@ -102,8 +112,8 @@ def clean_road_names() -> None:
 
     data: List[Tuple[str, str, str]] = []
     for row in tqdm(cursor.fetchall()):
-        road_name_clean = None
-        ref_road_name_clean = None
+        road_name_clean = ''
+        ref_road_name_clean = ''
         if isinstance(row[1], str):
             road = re.search(r'(\d+\s+)?([NnEeSsWw](\.\s|\s|\.))?([^(]*)?', row[1])
             road_name_clean = _word_replacer(road.group(4)) if road is not None else ''

@@ -1,6 +1,6 @@
 pip
 wheel
-git+git://github.com/PyCQA/astroid@master#egg=astroid
+git+https://github.com/PyCQA/astroid@master#egg=astroid  # Bug in Astroid 2.4.0. Remove after new tag
 
 pyodbc~=4.0.30
 xmltodict~=0.12.0
@@ -18,4 +18,4 @@ flake8
 pandas
 bandit
 
-git+git://github.com/city-of-baltimore/Geocoder#egg=bcgeocoder
+git+https://github.com/city-of-baltimore/Geocoder#egg=bcgeocoder

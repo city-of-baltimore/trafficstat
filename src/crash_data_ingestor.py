@@ -1,17 +1,21 @@
 """Processes unprocessed data in the network share that holds crash data"""
 # pylint:disable=too-many-lines
+import inspect
 import logging
 import os
 import shutil
 import traceback
+from typing import List, Mapping, Optional, Sequence, Union
 from collections import OrderedDict
-from typing import Optional, List, Sequence, Union, Tuple, Any
 
 from pandas import to_datetime  # type: ignore
 import pyodbc  # type: ignore
 import xmltodict  # type: ignore
 
-from . import crash_data_types
+from .crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
+    CommercialVehicleType, CrashDiagramType, DamagedAreaType, DriverType, EmsType, EventType, NonMotoristType, \
+    PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, SqlExecuteType, \
+    TowedUnitType, VehicleType, VehicleUseType, WitnessType
 
 # The 'unsubscriptable-object' disable is because of issue https://github.com/PyCQA/pylint/issues/3882 with subscripting
 # Optional. When thats fixed, we can remove those disables.
@@ -22,12 +26,38 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S')
 
 
+def check_and_log(check_dict: str):
+    """Logs the function entry, and checks the check_dict argument for nullness"""
+    def _check_and_log(func):
+        def wrapper(*args, **kwargs):
+            logging.info("Entering %s", func.__name__)
+
+            # handle positional or keyword args
+            args_name = inspect.getfullargspec(func)[0]
+            args_dict = dict(zip(args_name, args))
+            args_dict.update(**kwargs)
+            self = args_dict['self']
+
+            if self.is_element_nil(args_dict[check_dict]):
+                self.log.warning('No data')
+                return False
+
+            return func(*args, **kwargs)
+        return wrapper
+    return _check_and_log
+
+
 class CrashDataReader:  # pylint:disable=too-many-instance-attributes
     """ Reads a directory of ACRS crash data files"""
 
-    def __init__(self):
+    def __init__(self, path: str = '//balt-fileld-srv.baltimore.city/GIS/DOT-BPD'):
+        """
+        Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
+        :param path: Path to search for XML files
+        :param path:
+        """
         self.log = logging.getLogger(__name__)
-        self.root: Optional[str] = None  # pylint:disable=unsubscriptable-object ; see comment at top
+        self.root: dict = {}  # pylint:disable=unsubscriptable-object ; see comment at top
         conn = pyodbc.connect(r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
         self.cursor = conn.cursor()
 
@@ -50,32 +80,31 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         self.vehicle_users_table = 'acrs_vehicle_uses'
         self.witnesses_table = 'acrs_witnesses'
 
-    def read_directory(self, path: str = '//balt-fileld-srv.baltimore.city/GIS/DOT-BPD') -> None:
-        """
-        Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
-        :param path: Path to search for XML files
-        :return:
-        """
-        processed_folder = os.path.join(path, 'processed')
-        if not os.path.exists(processed_folder):
-            os.mkdir(processed_folder)
+        if path:
+            processed_folder = os.path.join(path, 'processed')
+            if not os.path.exists(processed_folder):
+                os.mkdir(processed_folder)
 
-        for acrs_file in os.listdir(path):
-            if acrs_file.endswith('.xml'):
-                self.read_crash_data(os.path.join(path, acrs_file), processed_folder)
+            for acrs_file in os.listdir(path):
+                if acrs_file.endswith('.xml'):
+                    self.read_crash_data(os.path.join(path, acrs_file), processed_folder)
 
-    def _read_file(self, file_name: str) -> crash_data_types.CrashDataType:
+    def _read_file(self, file_name: str) -> CrashDataType:
         with open(file_name, encoding='utf-8') as acrs_file:
             crash_file = acrs_file.read()
 
         # Some of these files have non ascii at the beginning that causes parse errors
         offset = crash_file.find('<?xml')
-        self.root = xmltodict.parse(crash_file[offset:])
-        self.root.pop('@xmlns:i')
-        self.root.pop('@xmlns')
+        self.root = xmltodict.parse(crash_file[offset:],
+                                    force_list={'ACRSPERSON', 'ACRSVEHICLE', 'CIRCUMSTANCE', 'CITATIONCODE',
+                                                'DAMAGEDAREA', 'DRIVER', 'EMS', 'EVENT', 'NONMOTORIST', 'PASSENGER',
+                                                'PDFREPORT', 'REPORTDOCUMENT', 'REPORTPHOTO', 'TOWEDUNIT', 'VEHICLEUSE',
+                                                'WITNESS'})
+
         return self.root['REPORT']
 
-    def read_crash_data(self, file_name: str, processed_dir: str) -> bool:
+    def read_crash_data(self, file_name: str,  # pylint:disable=too-many-branches
+                        processed_dir: Optional[str]) -> None:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Reads the ACRS crash data files
         :param processed_dir: Directory to move the ACRS file after being processed
@@ -85,28 +114,46 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         self.log.info('Processing %s', file_name)
         crash_dict = self._read_file(file_name)
 
-        # use short circuit logic to cut this off early if any of these fail
-        self._read_approval_data(crash_dict.pop('APPROVALDATA'))
-        self._read_circumstance_data(crash_dict.pop('CIRCUMSTANCES'))
-        self._read_crash_diagrams_data(crash_dict.pop('DIAGRAM'))
-        self._read_ems_data(crash_dict.pop('EMSes'))
-        self._read_pdf_data(crash_dict.pop('PDFREPORTs'))
-        self._read_report_documents_data(crash_dict.pop('REPORTDOCUMENTs'))
-        self._read_report_photos_data(crash_dict.pop('REPORTPHOTOes'))
-        self._read_roadway_data(crash_dict.pop('ROADWAY'))
-        self._read_acrs_person_data(crash_dict.pop('People'))
-        self._read_acrs_vehicle_data(crash_dict.pop('VEHICLEs'))
-        self._read_person_info_data(crash_dict.pop('NONMOTORISTs'), 'NONMOTORIST')
-        self._read_witness_data(crash_dict.pop('WITNESSes'))
+        if crash_dict.get('APPROVALDATA'):
+            self._read_approval_data(crash_dict['APPROVALDATA'])
+
+        if crash_dict.get('CIRCUMSTANCES') and crash_dict.get('CIRCUMSTANCES', {}).get('CIRCUMSTANCE'):
+            self._read_circumstance_data(crash_dict['CIRCUMSTANCES']['CIRCUMSTANCE'])
+
+        if crash_dict.get('DIAGRAM'):
+            self._read_crash_diagrams_data(crash_dict['DIAGRAM'])
+
+        if crash_dict.get('EMSes') and crash_dict.get('EMSes', {}).get('EMS'):
+            self._read_ems_data(crash_dict['EMSes']['EMS'])
+
+        if crash_dict.get('PDFREPORTs') and crash_dict.get('PDFREPORTs', {}).get('PDFREPORT'):
+            self._read_pdf_data(crash_dict['PDFREPORTs']['PDFREPORT'])
+
+        if crash_dict.get('REPORTDOCUMENTs') and crash_dict.get('REPORTDOCUMENTs', {}).get('REPORTDOCUMENT'):
+            self._read_report_documents_data(crash_dict['REPORTDOCUMENTs']['REPORTDOCUMENT'])
+
+        if crash_dict.get('REPORTPHOTOes') and crash_dict.get('REPORTPHOTOes', {}).get('REPORTPHOTO'):
+            self._read_report_photos_data(crash_dict['REPORTPHOTOes']['REPORTPHOTO'])
+
+        if crash_dict.get('ROADWAY'):
+            self._read_roadway_data(crash_dict['ROADWAY'])
+
+        if crash_dict.get('People') and crash_dict.get('People', {}).get('ACRSPERSON'):
+            self._read_acrs_person_data(crash_dict['People']['ACRSPERSON'])
+
+        if crash_dict.get('VEHICLEs') and crash_dict.get('VEHICLEs', {}).get('ACRSVEHICLE'):
+            self._read_acrs_vehicle_data(crash_dict['VEHICLEs']['ACRSVEHICLE'])
+
+        if crash_dict.get('NONMOTORISTs') and crash_dict.get('NONMOTORISTs', {}).get('NONMOTORIST'):
+            self._read_person_info_data(crash_dict['NONMOTORISTs']['NONMOTORIST'])
+
+        if crash_dict.get('WITNESSes') and crash_dict.get('WITNESSes', {}).get('WITNESS'):
+            self._read_witness_data(crash_dict['WITNESSes']['WITNESS'])
+
         self._read_main_crash_data(crash_dict)
 
-        if len(crash_dict) == 0:
-            self.log.debug('Crash dict is fully processed')
-        else:
-            self.log.info('REMAINING ELEMENTS: %s', crash_dict)
-
-        self._file_move(file_name, processed_dir)
-        return True
+        if processed_dir:
+            self._file_move(file_name, processed_dir)
 
     def _file_move(self, file_name, processed_dir):
         """File copy with automatic renaming during retry"""
@@ -125,14 +172,9 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                 if i >= 5:
                     self.log.error('Error moving file. It will not be moved to the processed directory: %s', file_name)
 
-    def _read_main_crash_data(self, crash_dict: crash_data_types.CrashDataType) -> bool:
+    @check_and_log('crash_dict')
+    def _read_main_crash_data(self, crash_dict: CrashDataType) -> bool:
         """ Populates the acrs_crashes table """
-        self.log.debug('Processing main crash data')
-
-        if self.is_element_nil(crash_dict):
-            self.log.warning('No data in the main crash data')
-            return False
-
         data = [
             self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict),
             self.get_single_attr('AGENCYIDENTIFIER', crash_dict),
@@ -317,19 +359,12 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_approval_data(self,
-                            approval_dict: Optional[crash_data_types.ApprovalDataType]  # pylint:disable=unsubscriptable-object ; see comment at top
-                            ) -> bool:
+    @check_and_log('approval_dict')
+    def _read_approval_data(self, approval_dict: ApprovalDataType) -> bool:
         """
         Populates the acrs_approval table
         :param approval_dict: The ordereddict contained in the APPROVALDATA tag
         """
-        self.log.debug('Processing approval data')
-
-        if self.is_element_nil(approval_dict):
-            self.log.warning('No approval data')
-            return False
-
         data = [
             self.get_single_attr('AGENCY', approval_dict),
             self.get_single_attr('APPROVALDATE', approval_dict),
@@ -392,22 +427,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_circumstance_data(
-            self,
-            circumstance_dict: Optional[List[crash_data_types.CircumstancesType]]  # pylint:disable=unsubscriptable-object ; see comment at top
-            ) -> bool:
+    @check_and_log('circumstance_dict')
+    def _read_circumstance_data(self, circumstance_dict: List[CircumstanceType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_circumstances table
         :param circumstance_dict: List of CIRCUMSTANCE tags contained in the CIRCUMSTANCES tag
         """
-        self.log.debug('Processing circumstance data')
-
-        if self.is_element_nil(circumstance_dict):
-            self.log.warning('No circumstance data')
-            return False
-
         data = []
-        for circumstance in self.get_multiple_attr('CIRCUMSTANCE', circumstance_dict):
+        for circumstance in circumstance_dict:
             data.append((
                 self.get_single_attr('CIRCUMSTANCECODE', circumstance),
                 self.get_single_attr('CIRCUMSTANCEID', circumstance),
@@ -444,16 +471,11 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_citation_data(self, citation_dict: List[crash_data_types.CitationType]) -> bool:
+    @check_and_log('citation_dict')
+    def _read_citation_data(self, citation_dict: List[CitationCodeType]) -> bool:
         """ Populates the acrs_citation_codes table """
-        self.log.debug('Processing citation data')
-
-        if self.is_element_nil(citation_dict):
-            self.log.warning('No citation data')
-            return False
-
         data = []
-        for citation in self.get_multiple_attr('CITATIONCODE', citation_dict):
+        for citation in citation_dict:
             data.append((
                 self.get_single_attr('CITATIONNUMBER', citation),
                 self._validate_uniqueidentifier(self.get_single_attr('PERSONID', citation)),
@@ -480,19 +502,12 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_crash_diagrams_data(self,
-                                  crash_diagram_dict: Optional[crash_data_types.CrashDiagramType]  # pylint:disable=unsubscriptable-object ; see comment at top
-                                  ) -> bool:
+    @check_and_log('crash_diagram_dict')
+    def _read_crash_diagrams_data(self, crash_diagram_dict: CrashDiagramType) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_crash_diagrams table
         :param crash_diagram_dict: OrderedDict from the DIAGRAM tag
         """
-        self.log.debug('Processing crash diagrams data')
-
-        if self.is_element_nil(crash_diagram_dict):
-            self.log.warning('No crash diagrams data')
-            return False
-
         data = [
             self.get_single_attr('CRASHDIAGRAM', crash_diagram_dict),
             self.get_single_attr('CRASHDIAGRAMNATIVE', crash_diagram_dict),
@@ -520,21 +535,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_ems_data(self,
-                       ems_dict: Optional[List[crash_data_types.EmsType]]  # pylint:disable=unsubscriptable-object ; see comment at top
-                       ) -> bool:
+    @check_and_log('ems_dict')
+    def _read_ems_data(self, ems_dict: List[EmsType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_ems table from the EMSes tag
         :param ems_dict: List of OrderedDicts contained in the EMSes tag
         """
-        self.log.debug('Processing EMS data')
-
-        if self.is_element_nil(ems_dict):
-            self.log.warning('No EMS data')
-            return False
-
         data = []
-        for ems in self.get_multiple_attr('EMS', ems_dict):
+        for ems in ems_dict:
             data.append((
                 self.get_single_attr('EMSTRANSPORTATIONTYPE', ems),
                 self.get_single_attr('EMSUNITNUMBER', ems),
@@ -567,20 +575,13 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_commercial_vehicle_data(self,
-                                      commvehicle_dict: crash_data_types.CommercialVehiclesType  # pylint:disable=unsubscriptable-object ; see comment at top
-                                      ) -> bool:
+    @check_and_log('commvehicle_dict')
+    def _read_commercial_vehicle_data(self, commvehicle_dict: CommercialVehicleType) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_commercial_vehicle table
         :param commvehicle_dict: The dictionary of the ACRSVEHICLE
         :return:
         """
-        self.log.debug('Processing commercial vehicle data')
-
-        if self.is_element_nil(commvehicle_dict):
-            self.log.warning('No commercial vehicle data')
-            return False
-
         data = [
             self.get_single_attr('BODYTYPE', commvehicle_dict),
             self.get_single_attr('BUSUSE', commvehicle_dict),
@@ -653,21 +654,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_event_data(self,
-                         event_dict: Optional[List[crash_data_types.EventType]]  # pylint:disable=unsubscriptable-object ; see comment at top
-                         ) -> bool:
+    @check_and_log('event_dict')
+    def _read_event_data(self, event_dict: List[EventType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_events table from the EVENTS tag
         :param event_dict: The dictionary of the ACRSVEHICLE
         """
-        self.log.debug('Processing event data')
-
-        if self.is_element_nil(event_dict):
-            self.log.warning('No event data')
-            return False
-
         data = []
-        for event in self.get_multiple_attr('EVENT', event_dict):
+        for event in event_dict:
             data.append((
                 self.get_single_attr('EVENTID', event),
                 self.get_single_attr('EVENTSEQUENCE', event),
@@ -697,21 +691,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_pdf_data(self,
-                       pdfreport_dict: Optional[List[crash_data_types.PdfReportData]]  # pylint:disable=unsubscriptable-object ; see comment at top
-                       ) -> bool:
+    @check_and_log('pdfreport_dict')
+    def _read_pdf_data(self, pdfreport_dict: List[PdfReportDataType]) -> bool:
         """
         Populates the acrs_pdf_report table from the PDFREPORTs tag
         :param pdfreport_dict: List of OrderedDicts from the PDFREPORTs tag
         """
-        self.log.debug('Processing PDF data')
-
-        if self.is_element_nil(pdfreport_dict):
-            self.log.warning('No PDF data')
-            return False
-
         data = []
-        for report in self.get_multiple_attr('PDFREPORT', pdfreport_dict):
+        for report in pdfreport_dict:
             data.append((
                 self.get_single_attr('CHANGEDBY', report),
                 self.get_single_attr('DATESTATUSCHANGED', report),
@@ -746,49 +733,43 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_acrs_person_data(self,
-                               person_dict: Optional[crash_data_types.PersonType]  # pylint:disable=unsubscriptable-object ; see comment at top
-                               ) -> bool:
+    @check_and_log('person_dict')
+    def _read_acrs_person_data(self, person_dict: List[PersonType]) -> bool:
         """
         Processes the ACRSPERSON tag contents
         :param person_dict: OrderedDict from the PERSON, OWNER, PASSENGER, or NONMOTORIST tags
         """
-        self.log.debug('Processing person data')
+        data = []
+        for person in person_dict:
+            if person.get('CITATIONCODES') and person.get('CITATIONCODES', {}).get('CITATIONCODE'):
+                self._read_citation_data(person['CITATIONCODES']['CITATIONCODE'])
 
-        if self.is_element_nil(person_dict):
-            self.log.warning('No person data')
-            return False
-
-        citation_codes: List[crash_data_types.CitationType] = person_dict.pop('CITATIONCODES')
-        if citation_codes:
-            self._read_citation_data(citation_codes)
-
-        data = [
-            self.get_single_attr('ADDRESS', person_dict),
-            self.get_single_attr('CITY', person_dict),
-            self.get_single_attr('COMPANY', person_dict),
-            self.get_single_attr('COUNTRY', person_dict),
-            self.get_single_attr('COUNTY', person_dict),
-            self.get_single_attr('DLCLASS', person_dict),
-            self.get_single_attr('DLNUMBER', person_dict),
-            self.get_single_attr('DLSTATE', person_dict),
-            self.get_single_attr('DOB', person_dict),
-            self.get_single_attr('FIRSTNAME', person_dict),
-            self.get_single_attr('HOMEPHONE', person_dict),
-            self.get_single_attr('LASTNAME', person_dict),
-            self.get_single_attr('MIDDLENAME', person_dict),
-            self.get_single_attr('OTHERPHONE', person_dict),
-            self._validate_uniqueidentifier(self.get_single_attr('PERSONID', person_dict)),
-            self.get_single_attr('RACE', person_dict),
-            self.get_single_attr('REPORTNUMBER', person_dict),
-            self.get_single_attr('SEX', person_dict),
-            self.get_single_attr('STATE', person_dict),
-            self.get_single_attr('ZIP', person_dict)
-        ]
+            data.append((
+                self.get_single_attr('ADDRESS', person),
+                self.get_single_attr('CITY', person),
+                self.get_single_attr('COMPANY', person),
+                self.get_single_attr('COUNTRY', person),
+                self.get_single_attr('COUNTY', person),
+                self.get_single_attr('DLCLASS', person),
+                self.get_single_attr('DLNUMBER', person),
+                self.get_single_attr('DLSTATE', person),
+                self.get_single_attr('DOB', person),
+                self.get_single_attr('FIRSTNAME', person),
+                self.get_single_attr('HOMEPHONE', person),
+                self.get_single_attr('LASTNAME', person),
+                self.get_single_attr('MIDDLENAME', person),
+                self.get_single_attr('OTHERPHONE', person),
+                self._validate_uniqueidentifier(self.get_single_attr('PERSONID', person)),
+                self.get_single_attr('RACE', person),
+                self.get_single_attr('REPORTNUMBER', person),
+                self.get_single_attr('SEX', person),
+                self.get_single_attr('STATE', person),
+                self.get_single_attr('ZIP', person)
+            ))
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(
+            ret = self._safe_sql_executemany(
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -831,28 +812,21 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
+    @check_and_log('person_dict')
     def _read_person_info_data(
             self,
-            person_dict: Optional[List[crash_data_types.PersonInfoType]], tag: str  # pylint:disable=unsubscriptable-object ; see comment at top
+            person_dict: Union[List[DriverType], List[PassengerType], List[NonMotoristType]]  # pylint:disable=unsubscriptable-object ; see comment at top
             ) -> bool:
         """
         Populates the acrs_person_info table.
         :param person_dict: Contains the list of OrderedDicts contained in the drivers, passengers and nonmotorists tags
-        :param tag: The many tag to iterate over. Should be either DRIVER, PASSENGER or NONMOTORIST
         """
-        self.log.debug('Processing person info data')
-
-        assert tag in ['DRIVER', 'PASSENGER', 'NONMOTORIST']
-
-        if self.is_element_nil(person_dict):
-            logging.error('No person data to load')
-            return False
-
         data = []
-        for person in self.get_multiple_attr(tag, person_dict):
-            report_no = self.get_single_attr('REPORTNUMBER', person.get('PERSON'))
-            if not self._read_acrs_person_data(person.get('PERSON')):
-                return False
+        for person in person_dict:
+            report_no = ''
+            if person.get('PERSON'):
+                self._read_acrs_person_data([person['PERSON']])
+                report_no = self.get_single_attr('REPORTNUMBER', person['PERSON']) or ''
 
             data.append((
                 self.get_single_attr('AIRBAGDEPLOYED', person),
@@ -959,27 +933,20 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_report_documents_data(
-            self,
-            reportdoc_dict: Optional[List[crash_data_types.ReportDocument]]):  # pylint:disable=unsubscriptable-object ; see comment at top
+    @check_and_log('reportdoc_dict')
+    def _read_report_documents_data(self, reportdoc_dict: List[ReportDocumentType]):  # pylint:disable=unsubscriptable-object ; see comment at top
         """Populates the acrs_report_docs table. Currently a stub until we get the schema or example data for this"""
 
-    def _read_report_photos_data(self,
-                                 reportphotos_dict: Optional[List[crash_data_types.ReportPhoto]]):  # pylint:disable=unsubscriptable-object ; see comment at top
+    @check_and_log('reportphotos_dict')
+    def _read_report_photos_data(self, reportphotos_dict: List[ReportPhotoType]):  # pylint:disable=unsubscriptable-object ; see comment at top
         """Populates the acrs_report_photos table. Currently a stub until we get the schema or example data for this"""
 
-    def _read_roadway_data(self,
-                           roadway_dict: Optional[crash_data_types.RoadwayType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    @check_and_log('roadway_dict')
+    def _read_roadway_data(self, roadway_dict: RoadwayType) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_roadway table. Expects the ROADWAY tag contents
         :param roadway_dict: OrderedDict from the ROADWAY tag
         """
-        self.log.debug('Processing roadway data')
-
-        if self.is_element_nil(roadway_dict):
-            self.log.warning('No roadway data')
-            return False
-
         data = [
             self.get_single_attr('COUNTY', roadway_dict),
             self.get_single_attr('LOGMILE_DIR', roadway_dict),
@@ -1038,20 +1005,16 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_towed_vehicle_data(self, towed_dict: List[crash_data_types.TowedUnitType]) -> bool:
+    @check_and_log('towed_dict')
+    def _read_towed_vehicle_data(self, towed_dict: List[TowedUnitType]) -> bool:
         """
         Populates the acrs_towed_unit table
         :param towed_dict: The list of OrderedDicts that comes from the TOWEDUNITs tag
         """
-        self.log.debug('Processing the towed unit data')
-
-        if self.is_element_nil(towed_dict):
-            self.log.warning('No towed unit data')
-            return False
-
         data = []
-        for towed_unit in self.get_multiple_attr('TOWEDUNIT', towed_dict):
-            self._read_acrs_person_data(towed_unit.get('OWNER'))
+        for towed_unit in towed_dict:
+            if towed_unit.get('OWNER'):
+                self._read_acrs_person_data([towed_unit['OWNER']])
 
             data.append((
                 self.get_single_attr('INSURANCEPOLICYNUMBER', towed_unit),
@@ -1106,29 +1069,37 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_acrs_vehicle_data(self,
-                                vehicle_dict: Optional[List[crash_data_types.VehicleType]]  # pylint:disable=unsubscriptable-object ; see comment at top
-                                ) -> bool:
+    @check_and_log('vehicle_dict')
+    def _read_acrs_vehicle_data(self, vehicle_dict: List[VehicleType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_vehicles table
         :param vehicle_dict: List of OrderedDicts from the ACRSVEHICLE tag
         """
-        self.log.debug('Processing vehicle data')
-
-        if self.is_element_nil(vehicle_dict):
-            self.log.warning('No vehicle data')
-            return False
-
         data = []
-        for vehicle in self.get_multiple_attr('ACRSVEHICLE', vehicle_dict):
-            self._read_damaged_areas_data(vehicle.pop('DAMAGEDAREAs'))
-            self._read_person_info_data(vehicle.pop('DRIVERs'), 'DRIVER')
-            self._read_person_info_data(vehicle.pop('PASSENGERs'), 'PASSENGER')
-            self._read_acrs_person_data(vehicle.pop('OWNER'))
-            self._read_commercial_vehicle_data(vehicle.pop('COMMERCIALVEHICLE'))
-            self._read_event_data(vehicle.pop('EVENTS'))
-            self._read_acrs_vehicle_use_data(vehicle.pop('VEHICLEUSEs'))
-            self._read_towed_vehicle_data(vehicle.pop('TOWEDUNITs'))
+        for vehicle in vehicle_dict:
+            if vehicle.get('DAMAGEDAREAs') and vehicle.get('DAMAGEDAREAs', {}).get('DAMAGEDAREA'):
+                self._read_damaged_areas_data(vehicle['DAMAGEDAREAs']['DAMAGEDAREA'])
+
+            if vehicle.get('DRIVERs') and vehicle.get('DRIVERs', {}).get('DRIVER'):
+                self._read_person_info_data(vehicle['DRIVERs']['DRIVER'])
+
+            if vehicle.get('PASSENGERs') and vehicle.get('PASSENGERs', {}).get('PASSENGER'):
+                self._read_person_info_data(vehicle['PASSENGERs']['PASSENGER'])
+
+            if vehicle.get('OWNER'):
+                self._read_acrs_person_data([vehicle['OWNER']])
+
+            if vehicle.get('COMMERCIALVEHICLE'):
+                self._read_commercial_vehicle_data(vehicle['COMMERCIALVEHICLE'])
+
+            if vehicle.get('EVENTS') and vehicle.get('EVENTS', {}).get('EVENT'):
+                self._read_event_data(vehicle['EVENTS']['EVENT'])
+
+            if vehicle.get('VEHICLEUSEs') and vehicle.get('VEHICLEUSEs', {}).get('VEHICLEUSE'):
+                self._read_acrs_vehicle_use_data(vehicle.get('VEHICLEUSEs', {})['VEHICLEUSE'])
+
+            if vehicle.get('TOWEDUNITs') and vehicle.get('TOWEDUNITs', {}).get('TOWEDUNIT'):
+                self._read_towed_vehicle_data(vehicle['TOWEDUNITs']['TOWEDUNIT'])
 
             data.append((
                 self.get_single_attr('CONTINUEDIRECTION', vehicle),
@@ -1233,19 +1204,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_acrs_vehicle_use_data(self, vehicleuse_dict: List[crash_data_types.VehicleUseType]) -> bool:
+    @check_and_log('vehicleuse_dict')
+    def _read_acrs_vehicle_use_data(self, vehicleuse_dict: List[VehicleUseType]) -> bool:
         """
         Populates acrs_vehicle_use table
         :param vehicleuse_dict: The dictionary of the ACRSVEHICLE from the VEHICLEUSEs tag
         """
-        self.log.debug('Processing vehicle use data')
-
-        if self.is_element_nil(vehicleuse_dict):
-            self.log.warning('No vehicle use data')
-            return False
-
         data = []
-        for vehicleuse in self.get_multiple_attr('VEHICLEUSE', vehicleuse_dict):
+        for vehicleuse in vehicleuse_dict:
             data.append((
                 self.get_single_attr('ID', vehicleuse),
                 self._validate_uniqueidentifier(self.get_single_attr('VEHICLEID', vehicleuse)),
@@ -1273,19 +1239,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_damaged_areas_data(self, damaged_dict: List[crash_data_types.DamagedAreasType]) -> bool:
+    @check_and_log('damaged_dict')
+    def _read_damaged_areas_data(self, damaged_dict: List[DamagedAreaType]) -> bool:
         """
         Populates the acrs_damaged_areas table. Expects to be passed the OrderedDict of DAMAGEDAREAs
         :param damaged_dict: The dictionary of the ACRSVEHICLE
         """
-        self.log.debug("Processing damaged areas data")
-
-        if self.is_element_nil(damaged_dict):
-            self.log.warning("No damaged area data")
-            return False
-
         data = []
-        for damagedarea in self.get_multiple_attr('DAMAGEDAREA', damaged_dict):
+        for damagedarea in damaged_dict:
             data.append((
                 self.get_single_attr('DAMAGEID', damagedarea),
                 self.get_single_attr('IMPACTTYPE', damagedarea),
@@ -1312,23 +1273,16 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _read_witness_data(self,
-                           witness_dict: Optional[List[crash_data_types.WitnessType]]  # pylint:disable=unsubscriptable-object ; see comment at top
-                           ) -> bool:
+    @check_and_log('witness_dict')
+    def _read_witness_data(self, witness_dict: List[WitnessType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_witnesses table
         :param witness_dict: The list of OrderedDicts from the WITNESSes tag
         """
-        self.log.debug('Processing witness data')
-
-        if self.is_element_nil(witness_dict):
-            self.log.warning('No witness data')
-            return False
-
         data = []
-        for witness in self.get_multiple_attr('WITNESS', witness_dict):
-            if not self._read_acrs_person_data(witness.get('PERSON')):
-                return False
+        for witness in witness_dict:
+            if witness.get('PERSON'):
+                self._read_acrs_person_data([witness['PERSON']])
 
             data.append((
                 self._validate_uniqueidentifier(self.get_single_attr('PERSONID', witness)),
@@ -1354,7 +1308,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         return ret
 
     @staticmethod
-    def is_element_nil(element: OrderedDict) -> bool:
+    def is_element_nil(element: Optional[OrderedDict]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Checks if a tag is nil, because xmltodict returns an ordereddict with a nil element
         :param element: (ordereddict) The ordereddict to check for nil
@@ -1363,13 +1317,18 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         if not element:
             return True
 
+        if not isinstance(element, OrderedDict):
+            return False
+
         return (len(element) == 1) and \
             isinstance(element, OrderedDict) and \
             element.get('@i:nil') == 'true'  # pylist:disable=isinstance-second-argument-not-valid-type ; see comment
 
     @staticmethod
-    def _convert_to_date(val: str) -> str:
+    def _convert_to_date(val: Optional[str]) -> str:  # pylint:disable=unsubscriptable-object ; see comment at top
         """Converts XML datetime to sql date (YYYY-MM-DDThh:mm:ss.fffffff with optional microseconds to YYYYMMDD"""
+        if val is None:
+            return ''
         converted = to_datetime(val)
         return converted.strftime('%Y-%m-%d')
 
@@ -1396,15 +1355,15 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
             return None
         return uid
 
-    def _safe_sql_execute(self, query: str, data: crash_data_types.SqlExecuteType) -> bool:
+    def _safe_sql_execute(self, query: str, data: SqlExecuteType) -> bool:
         return self._safe_sql(query, data, False)
 
-    def _safe_sql_executemany(self, query: str, data: crash_data_types.SqlExecuteType) -> bool:
+    def _safe_sql_executemany(self, query: str, data: SqlExecuteType) -> bool:
         return self._safe_sql(query, data, True)
 
     def _safe_sql(self,
                   query: str,
-                  data: Sequence[Union[Tuple[Any], Any]],  # pylint:disable=unsubscriptable-object ; see comment at top
+                  data: Sequence,  # pylint:disable=unsubscriptable-object ; see comment at top
                   many: bool) -> bool:
         """
         Executes a sql query and checks for things that normally error out
@@ -1433,7 +1392,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
     def get_single_attr(self,
                         tag: str,
-                        crash_data: Union[None, OrderedDict, str]  # pylint:disable=unsubscriptable-object ; see comment at top
+                        crash_data: Mapping
                         ) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Gets a single element from the XML document we loaded. It errors if there are more that one of those type of tag
@@ -1449,21 +1408,3 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         assert isinstance(crash_data.get(tag), str), 'Expected {} to have only a single element'.format(tag)
         return crash_data.get(tag)
-
-    @staticmethod
-    def get_multiple_attr(tag: str, crash_data: crash_data_types.AttrElement) -> crash_data_types.MultipleAttrElement:
-        """
-        Generator that processes a one or many tag so that we can easily insert it into a database
-        :param tag: string or list of tag to parse. List should have hierarchy of tags relative to the crash_data
-        data structure, with the last element being the 'multiple' attribute that should be returned as a list
-        IE ['firstlevel', 'secondlevel', 'thirdlevel', ...]
-        :param crash_data: Output of xmltodict.parse with the crash data xml files
-        :return: List of ordereddicts with the referenced tag or an empty list if there is no valid return
-        """
-        if crash_data is None:
-            return []
-
-        if isinstance(crash_data.get(tag), list):
-            return crash_data.get(tag)
-
-        return [crash_data.get(tag)]
