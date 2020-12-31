@@ -22,8 +22,7 @@ if args.enrich:
     clean_road_names()
 
 if args.parsecrashdata:
-    cls = CrashDataReader()
-    cls.read_directory(args.parsecrashdata)
+    cls = CrashDataReader(args.parsecrashdata)
 
 if args.ms2:
     ws_maker = WorksheetMaker()

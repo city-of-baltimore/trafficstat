@@ -1,4 +1,5 @@
 """Types used in src/crash_data_ingestor.py"""
+# pylint:disable=line-too-long
 from collections import OrderedDict
 from typing import Any, List, Optional, Sequence, Tuple, TypedDict, Union
 from datetime import date, datetime
@@ -16,351 +17,482 @@ from uuid import UUID
 # definitions for typing
 SingleAttrElement = OrderedDict[str, Optional[str]]
 MultipleAttrElement = List[SingleAttrElement]
-AttrElement = OrderedDict[str, Union[SingleAttrElement, MultipleAttrElement]]
 SqlExecuteType = Sequence[Union[Tuple[Any], Any]]
 
 
 class ApprovalDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_approval"""
-    AGENCY: Optional[str]
-    APPROVALDATE: datetime
-    CADSENT: Optional[str]
-    CADSENT_DATE: Optional[datetime]
-    CC_NUMBER: str
-    DATE_INITIATED2: datetime
-    GROUP_NUMBER: int
-    HISTORICALAPPROVALDATAs: Optional[str]
-    INCIDENT_DATE: datetime
-    INVESTIGATOR: Optional[str]
-    REPORT_TYPE: Optional[str]
-    SEQ_GUID: Optional[str]
-    STATUS_CHANGE_DATE: datetime
-    STATUS_ID: str
-    STEP_NUMBER: Optional[int]
-    TR_USERNAME: Optional[str]
-    UNIT_CODE: str
+    AGENCY: str  # <xs:element type="xs:string" name="AGENCY"/>
+    APPROVALDATE: datetime  # <xs:element type="xs:dateTime" name="APPROVALDATE"/>
+    CADSENT: Optional[str]  # <xs:element type="xs:string" name="CADSENT" nillable="true"/>
+    CADSENT_DATE: Optional[datetime]  # <xs:element type="xs:string" name="CADSENT_DATE" nillable="true"/>
+    CC_NUMBER: str  # <xs:element type="xs:string" name="CC_NUMBER"/>
+    DATE_INITIATED2: datetime  # <xs:element type="xs:dateTime" name="DATE_INITIATED2"/>
+    GROUP_NUMBER: str  # <xs:element type="xs:string" name="GROUP_NUMBER"/>
+    HISTORICALAPPROVALDATAs: Optional[List[str]]  # <xs:element type="xs:string" name="HISTORICALAPPROVALDATAs" nillable="true"/>
+    INCIDENT_DATE: datetime  # <xs:element type="xs:dateTime" name="INCIDENT_DATE"/>
+    INVESTIGATOR: Optional[str]  # <xs:element type="xs:string" name="INVESTIGATOR" nillable="true"/>
+    REPORT_TYPE: str  # <xs:element type="xs:string" name="REPORT_TYPE"/>
+    SEQ_GUID: str  # <xs:element type="xs:string" name="SEQ_GUID"/>
+    STATUS_CHANGE_DATE: datetime  # <xs:element type="xs:dateTime" name="STATUS_CHANGE_DATE"/>
+    STATUS_ID: int  # <xs:element type="xs:byte" name="STATUS_ID"/>
+    STEP_NUMBER: int  # <xs:element name="STEP_NUMBER"> (restricted to values 1 and 2)
+    TR_USERNAME: str  # <xs:element type="xs:string" name="TR_USERNAME"/>
+    UNIT_CODE: str  # <xs:element name="UNIT_CODE"> (only values 999 and BCPD)
+
+
+# Inside the CIRCUMSTANCEs tag
+class CircumstanceType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Data for table acrs_circumstances"""
+    CIRCUMSTANCECODE: float  # <xs:element type="xs:float" name="CIRCUMSTANCECODE"/>
+    CIRCUMSTANCEID: int  # <xs:element type="xs:int" name="CIRCUMSTANCEID"/>
+    CIRCUMSTANCETYPE: str  # <xs:element name="CIRCUMSTANCETYPE"> (restricted to values 'weather', 'road', 'person', and 'vehicle')
+    PERSONID: Optional[UUID]  # <xs:element type="xs:string" name="PERSONID" nillable="true"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    VEHICLEID: Optional[UUID]  # <xs:element type="xs:string" name="VEHICLEID" nillable="true"/>
 
 
 class CircumstancesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
-    """Data for table acrs_circumstances"""
-    CIRCUMSTANCECODE: str
-    CIRCUMSTANCEID: int
-    CIRCUMSTANCETYPE: Optional[str]
-    PERSONID: Optional[UUID]
-    REPORTNUMBER: str
-    VEHICLEID: Optional[UUID]
+    """Multiple instance of CircumstanceType"""
+    CIRCUMSTANCE: List[CircumstanceType]
 
 
-class CitationType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+# Inside the CITATIONCODES tag
+class CitationCodeType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_citation_codes"""
-    CITATIONNUMBER: str
-    PERSONID: UUID
-    REPORTNUMBER: str
+    CITATIONNUMBER: str  # <xs:element type="xs:string" name="CITATIONNUMBER"/>
+    PERSONID: UUID  # <xs:element type="xs:string" name="PERSONID"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
 
+class CitationCodesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of CitationCodeType"""
+    CITATIONCODE: List[CitationCodeType]
+
+
+# Inside the DIAGRAM tag
 class CrashDiagramType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_crash_diagrams"""
-    CRASHDIAGRAM: Optional[str]
-    CRASHDIAGRAMNATIVE: Optional[str]
-    REPORTNUMBER: Optional[str]
+    CRASHDIAGRAM: str  # <xs:element type="xs:string" name="CRASHDIAGRAM"/>
+    CRASHDIAGRAMNATIVE: str  # <xs:element type="xs:string" name="CRASHDIAGRAMNATIVE"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
 
-class CommercialVehiclesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+class CommercialVehicleType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_commercial_vehicles"""
-    BODYTYPE: Optional[str]
-    BUSUSE: Optional[int]
-    CARRIERCLASSIFICATION: Optional[int]
-    CITY: Optional[str]
-    CONFIGURATION: Optional[int]
-    COUNTRY: Optional[str]
-    DOTNUMBER: Optional[str]
-    GVW: Optional[int]
-    HAZMATCLASS: Optional[str]
-    HAZMATNAME: Optional[str]
-    HAZMATNUMBER: Optional[str]
-    HAZMATSPILL: Optional[str]
-    MCNUMBER: Optional[str]
-    NAME: Optional[str]
-    NUMBEROFAXLES: Optional[int]
-    PLACARDVISIBLE: Optional[str]
-    POSTALCODE: Optional[str]
-    STATE: Optional[str]
-    STREET: Optional[str]
-    VEHICLEID: UUID
-    WEIGHT: Optional[str]
-    WEIGHTUNIT: Optional[str]
+    BODYTYPE: str  # <xs:element type="xs:float" name="BODYTYPE" minOccurs="0"/>
+    BUSUSE: str  # <xs:element name="BUSUSE" minOccurs="0"> (restricted to 00, 01, 02, 03, 04, 05, 07, 88, 99 and '')
+    CARRIERCLASSIFICATION: int  # <xs:element name="CARRIERCLASSIFICATION" minOccurs="0"> (restricted to 00, 01, 02, 03, 04, 88 and 99)
+    CITY: str  # <xs:element type="xs:string" name="CITY" minOccurs="0"/>
+    CONFIGURATION: int  # <xs:element type="xs:byte" name="CONFIGURATION" minOccurs="0"/>
+    COUNTRY: Optional[str]  # <xs:element type="xs:string" name="COUNTRY" minOccurs="0" nillable="true"/>
+    DOTNUMBER: str  # <xs:element type="xs:string" name="DOTNUMBER" minOccurs="0"/>
+    GVW: int  # <xs:element name="GVW" minOccurs="0"> (restricted to 00, 01, 02, 03, 88 and 99)
+    HAZMATCLASS: str  # <xs:element name="HAZMATCLASS" minOccurs="0"> (restricted to 01, 02, 03, 10, and "")
+    HAZMATNAME: Optional[str]  # <xs:element type="xs:string" name="HAZMATNAME" minOccurs="0" nillable="true"/>
+    HAZMATNUMBER: Optional[str]  # <xs:element type="xs:string" name="HAZMATNUMBER" minOccurs="0" nillable="true"/>
+    HAZMATSPILL: str  # <xs:element name="HAZMATSPILL" minOccurs="0"> (restricted to Y, N, U, and '')
+    MCNUMBER: str  # <xs:element type="xs:string" name="MCNUMBER" minOccurs="0"/>
+    NAME: str  # <xs:element type="xs:string" name="NAME" minOccurs="0"/>
+    NUMBEROFAXLES: str  # <xs:element type="xs:string" name="NUMBEROFAXLES" minOccurs="0"/>
+    PLACARDVISIBLE: str  # <xs:element name="PLACARDVISIBLE" minOccurs="0"> (restricted to Y, N, U, '')
+    POSTALCODE: str  # <xs:element type="xs:string" name="POSTALCODE" minOccurs="0"/>
+    STATE: str  # <xs:element type="xs:string" name="STATE" minOccurs="0"/>
+    STREET: str  # <xs:element type="xs:string" name="STREET" minOccurs="0"/>
+    VEHICLEID: UUID  # <xs:element type="xs:string" name="VEHICLEID" minOccurs="0"/>
+    WEIGHT: Optional[str]  # <xs:element type="xs:string" name="WEIGHT" minOccurs="0" nillable="true"/>
+    WEIGHTUNIT: Optional[str]  # <xs:element type="xs:string" name="WEIGHTUNIT" minOccurs="0" nillable="true"/>
+
+
+# Inside DAMAGEDAREAs tag
+class DamagedAreaType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Data for table acrs_damaged_areas_table"""
+    DAMAGEID: int  # <xs:element type="xs:int" name="DAMAGEID"/>
+    IMPACTTYPE: int  # <xs:element type="xs:byte" name="IMPACTTYPE"/>
+    VEHICLEID: UUID  # <xs:element type="xs:string" name="VEHICLEID"/>
 
 
 class DamagedAreasType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
-    """Data for table acrs_damaged_areas_table"""
-    DAMAGEID: int
-    IMPACTTYPE: int
-    VEHICLEID: UUID
+    """Multiple instance of DamagedAreaType"""
+    DAMAGEDAREA: List[DamagedAreaType]
 
 
+# Inside EMSes tag
 class EmsType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_ems"""
-    EMSTRANSPORTATIONTYPE: Optional[str]
-    EMSUNITNUMBER: Optional[str]
-    INJUREDTAKENBY: Optional[str]
-    INJUREDTAKENTO: Optional[str]
-    REPORTNUMBER: str
+    EMSTRANSPORTATIONTYPE: str  # <xs:element name="EMSTRANSPORTATIONTYPE"> (restricted to G, U and A)
+    EMSUNITNUMBER: str  # <xs:element name="EMSUNITNUMBER"> (restricted to A-F)
+    INJUREDTAKENBY: str  # <xs:element type="xs:string" name="INJUREDTAKENBY"/> (IE: Medic # 20)
+    INJUREDTAKENTO: str  # <xs:element type="xs:string" name="INJUREDTAKENTO"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
 
+class EmsesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of EmsType"""
+    EMS: List[EmsType]
+
+
+# Inside EVENTS tag
 class EventType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_events"""
-    EVENTID: int
-    EVENTSEQUENCE: Optional[int]
-    EVENTTYPE: Optional[int]
-    VEHICLEID: UUID
+    EVENTID: int  # <xs:element type="xs:int" name="EVENTID"/>
+    EVENTSEQUENCE: int  # <xs:element type="xs:byte" name="EVENTSEQUENCE"/>
+    EVENTTYPE: int  # <xs:element type="xs:byte" name="EVENTTYPE"/>
+    VEHICLEID: UUID  # <xs:element type="xs:string" name="VEHICLEID"/>
 
 
-class PdfReportData(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+class EventsType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of EventType"""
+    EVENT: List[EventType]
+
+
+# Inside the PDFREPORTs tag
+class PdfReportDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for acrs_pdf_report"""
-    CHANGEDBY: Optional[str]
-    DATESTATUSCHANGED: datetime
-    PDFREPORT1: Optional[str]
-    PDF_ID: int
-    REPORTNUMBER: str
-    STATUS: str
+    CHANGEDBY: str  # <xs:element type="xs:string" name="CHANGEDBY"/>
+    DATESTATUSCHANGED: datetime  # <xs:element type="xs:dateTime" name="DATESTATUSCHANGED"/>
+    PDFREPORT1: str  # <xs:element type="xs:string" name="PDFREPORT1"/>
+    PDF_ID: int  # <xs:element type="xs:int" name="PDF_ID"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    STATUS: str  # <xs:element type="xs:string" name="STATUS"/>
 
 
+class PdfReportsType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of PdfReportDataType"""
+    PDFREPORT: List[PdfReportDataType]
+
+
+# Acts as both the ACRSPERSON tag (inside People tag), PERSON tag, and the OWNER tag
 class PersonType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for acrs_person"""
-    ADDRESS: Optional[str]
-    CITATIONCODES: Optional[CitationType]
-    CITY: Optional[str]
-    COMPANY: Optional[str]
-    COUNTRY: Optional[str]
-    COUNTY: Optional[str]
-    DLCLASS: Optional[str]
-    DLNUMBER: Optional[str]
-    DLSTATE: Optional[str]
-    DOB: Optional[date]
-    FIRSTNAME: Optional[str]
-    HOMEPHONE: Optional[str]
-    LASTNAME: Optional[str]
-    MIDDLENAME: Optional[str]
-    OTHERPHONE: Optional[str]
-    PERSONID: UUID
-    RACE: Optional[str]
-    REPORTNUMBER: str
-    SEX: Optional[str]
-    STATE: Optional[str]
-    ZIP: Optional[str]
+    ADDRESS: str  # <xs:element type="xs:string" name="ADDRESS"/>
+    CITATIONCODES: CitationCodesType  # <xs:element type="cras:CITATIONCODEType" name="CITATIONCODE" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    CITY: str  # <xs:element type="xs:string" name="CITY"/>
+    COMPANY: Optional[str]  # <xs:element type="xs:string" name="COMPANY" nillable="true"/>
+    COUNTRY: Optional[str]  # <xs:element type="xs:string" name="COUNTRY" nillable="true"/>
+    COUNTY: Optional[str]  # <xs:element type="xs:string" name="COUNTY" nillable="true"/>
+    DLCLASS: Optional[str]  # <xs:element type="xs:string" name="DLCLASS" nillable="true"/>
+    DLNUMBER: str  # <xs:element type="xs:string" name="DLNUMBER"/>
+    DLSTATE: str  # <xs:element type="xs:string" name="DLSTATE"/>
+    DOB: date  # <xs:element type="xs:string" name="DOB"/>
+    FIRSTNAME: str  # <xs:element type="xs:string" name="FIRSTNAME"/>
+    HOMEPHONE: Optional[str]  # <xs:element type="xs:string" name="HOMEPHONE" nillable="true"/>
+    LASTNAME: str  # <xs:element type="xs:string" name="LASTNAME"/>
+    MIDDLENAME: Optional[str]  # <xs:element type="xs:string" name="MIDDLENAME" nillable="true"/>
+    OTHERPHONE: str  # <xs:element type="xs:string" name="OTHERPHONE"/>
+    PERSONID: UUID  # <xs:element type="xs:string" name="PERSONID"/>
+    RACE: Optional[str]  # <xs:element type="xs:string" name="RACE" nillable="true"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    SEX: Optional[str]  # <xs:element name="SEX"> (restricted to 'F', 'M', 'U', and '')
+    STATE: str  # <xs:element type="xs:string" name="STATE"/>
+    ZIP: str  # <xs:element type="xs:string" name="ZIP"/>
 
 
-class PersonInfoType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+class PeopleType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of PersonType"""
+    ACRSPERSON: List[PersonType]
+
+
+################
+# Person Types #
+################
+
+# Inside the DRIVERs tag
+class DriverType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for acrs_person_info"""
-    AIRBAGDEPLOYED: Optional[int]
-    ALCOHOLTESTINDICATOR: Optional[int]
-    ALCOHOLTESTTYPE: Optional[str]
-    ATFAULT: Optional[bool]
-    BAC: Optional[str]
-    CONDITION: Optional[str]
-    COMMERCIALVEHICLE: Optional[CommercialVehiclesType]
+    AIRBAGDEPLOYED: int  # <xs:element name="AIRBAGDEPLOYED"> (restricted to values 00, 01, 02, 03, 04, 88 and 99)
+    ALCOHOLTESTINDICATOR: int  # <xs:element name="ALCOHOLTESTINDICATOR"> (restricted to 00, 01, 02, 03, 88 and 99)
+    ALCOHOLTESTTYPE: Optional[str]  # <xs:element name="ALCOHOLTESTTYPE" nillable="true"> (restricted to 00, 01, 02, 88, 99 and '')
+    ATFAULT: str  # <xs:element name="ATFAULT"> (restricted to values Y, N, and U)
+    BAC: Optional[str]  # <xs:element type="xs:string" name="BAC" nillable="true"/>
+    CONDITION: str  # <xs:element type="xs:float" name="CONDITION"/> (Nonmotorist type is str)
+    DRIVERDISTRACTEDBY: int  # <xs:element type="xs:byte" name="DRIVERDISTRACTEDBY"/>
+    DRUGTESTINDICATOR: int  # <xs:element name="DRUGTESTINDICATOR"> (restricted to 00, 01, 02, 03, 88 and 99)
+    DRUGTESTRESULT: Optional[str]  # <xs:element name="DRUGTESTRESULT" nillable="true"> (restricted to P, N, U, A, and '')
+    EJECTION: int  # <xs:element name="EJECTION"> (restricted to 00, 01, 02, 03, 04, 88, and 99)
+    EMSRUNREPORTNUMBER: Optional[str]  # <xs:element type="xs:string" name="EMSRUNREPORTNUMBER" nillable="true"/>
+    EMSUNITNUMBER: Optional[str]  # <xs:element name="EMSUNITNUMBER" nillable="true"> (restricted to A, B, C, D, E, J, K, L and '')
+    EQUIPMENTPROBLEM: int  # <xs:element name="EQUIPMENTPROBLEM"> (restricted to 00, 01, 11, 13, 31, 44, 45, 47, 88 and 99)
+    HASCDL: bool  # <xs:element name="HASCDL">
+    INJURYSEVERITY: int  # <xs:element name="INJURYSEVERITY"> (restricted to 01, 02, 03, 04, and 05)
+    PERSON: PersonType  # <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    PERSONID: UUID  # <xs:element type="xs:string" name="PERSONID"/>
+    SAFETYEQUIPMENT: float  # <xs:element type="xs:float" name="SAFETYEQUIPMENT"/>
+    SUBSTANCEUSE: Optional[int]  # <xs:element type="xs:byte" name="SUBSTANCEUSE"/>
+    VEHICLEID: UUID  # <xs:element type="xs:string" name="VEHICLEID"/>
+
+
+class DriversType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of DriverType"""
+    DRIVER: List[DriverType]
+
+
+# Inside the PASSENGERs tag
+class PassengerType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Data for acrs_person_info"""
+    AIRBAGDEPLOYED: int  # <xs:element name="AIRBAGDEPLOYED"> (restricted to values 00, 01, 02, 03, 04, 88 and 99)
+    EJECTION: int  # <xs:element name="EJECTION"> (restricted to 00, 01, 02, 03, 04, 88, and 99)
+    EMSRUNREPORTNUMBER: Optional[str]  # <xs:element type="xs:string" name="EMSRUNREPORTNUMBER" nillable="true"/>
+    EMSUNITNUMBER: Optional[str]  # <xs:element name="EMSUNITNUMBER" nillable="true"> (restricted to A, B, C, D, E, J, K, L and '')
+    EQUIPMENTPROBLEM: int  # <xs:element name="EQUIPMENTPROBLEM"> (restricted to 00, 01, 11, 13, 31, 44, 45, 47, 88 and 99)
+    INJURYSEVERITY: int  # <xs:element name="INJURYSEVERITY"> (restricted to 01, 02, 03, 04, and 05)
+    PERSON: PersonType  # <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    SAFETYEQUIPMENT: float  # <xs:element type="xs:float" name="SAFETYEQUIPMENT"/>
+    SEAT: int  # <xs:element name="SEAT"> (restricted to 00, 01, 02, 03, 88, and 99)
+    SEATINGLOCATION: float  # <xs:element type="xs:float" name="SEATINGLOCATION"/>
+    SEATINGROW: int  # <xs:element type="xs:byte" name="SEATINGROW"/>
+    VEHICLEID: UUID  # <xs:element type="xs:string" name="VEHICLEID"/>
+
+
+class PassengersType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of PassengerType"""
+    PASSENGER: List[PassengerType]
+
+
+# Inside the NONMOTORISTs tag
+class NonMotoristType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Data for acrs_person_info"""
+    ALCOHOLTESTINDICATOR: int  # <xs:element name="ALCOHOLTESTINDICATOR"> (restricted to 00, 01, 02, 03, 88 and 99)
+    ALCOHOLTESTTYPE: Optional[str]  # <xs:element name="ALCOHOLTESTTYPE" nillable="true"> (restricted to 00, 01, 02, 88, 99 and '')
+    ATFAULT: str  # <xs:element name="ATFAULT"> (restricted to values Y, N, and U)
+    BAC: Optional[str]  # <xs:element type="xs:string" name="BAC" nillable="true"/>
+    CONDITION: str  # <xs:element type="xs:float" name="CONDITION"/>
     CONTINUEDIRECTION: Optional[str]
-    DAMAGEDAREAS: Optional[List[DamagedAreasType]]
-    DRIVERDISTRACTEDBY: Optional[int]
-    DRUGTESTINDICATOR: Optional[int]
-    DRUGTESTRESULT: Optional[str]
-    EJECTION: Optional[int]
-    EMSRUNREPORTNUMBER: Optional[str]
-    EMSUNITNUMBER: Optional[str]
-    EQUIPMENTPROBLEM: Optional[int]
-    GOINGDIRECTION: Optional[str]
-    HASCDL: Optional[bool]
-    INJURYSEVERITY: int
-    PEDESTRIANACTIONS: Optional[int]
-    PEDESTRIANLOCATION: Optional[float]
-    PEDESTRIANMOVEMENT: Optional[str]
-    PEDESTRIANOBEYTRAFFICSIGNAL: Optional[int]
-    PEDESTRIANTYPE: Optional[int]
-    PEDESTRIANVISIBILITY: Optional[int]
-    PERSONID: UUID
-    REPORTNUMBER: str
-    SAFETYEQUIPMENT: str
-    SEAT: Optional[int]
-    SEATINGLOCATION: Optional[int]
-    SEATINGROW: Optional[int]
-    SUBSTANCEUSE: Optional[int]
-    UNITNUMBERFIRSTSTRIKE: Optional[int]
-    VEHICLEID: Optional[UUID]
+    DRUGTESTINDICATOR: int  # <xs:element name="DRUGTESTINDICATOR"> (restricted to 00, 01, 02, 03, 88 and 99)
+    DRUGTESTRESULT: Optional[str]  # <xs:element name="DRUGTESTRESULT" nillable="true"> (restricted to P, N, U, A, and '')
+    EMSRUNREPORTNUMBER: Optional[str]  # <xs:element type="xs:string" name="EMSRUNREPORTNUMBER" nillable="true"/>
+    EMSUNITNUMBER: Optional[str]  # <xs:element name="EMSUNITNUMBER" nillable="true"> (restricted to A, B, C, D, E, J, K, L and '')
+    GOINGDIRECTION: Optional[str]  # <xs:element type="xs:string" name="GOINGDIRECTION" nillable="true"/>
+    INJURYSEVERITY: int  # <xs:element name="INJURYSEVERITY"> (restricted to 01, 02, 03, 04, and 05)
+    PEDESTRIANACTIONS: int  # <xs:element type="xs:byte" name="PEDESTRIANACTIONS"/>
+    PEDESTRIANLOCATION: float  # <xs:element type="xs:float" name="PEDESTRIANLOCATION"/>
+    PEDESTRIANMOVEMENT: float  # <xs:element type="xs:float" name="PEDESTRIANMOVEMENT"/>
+    PEDESTRIANOBEYTRAFFICSIGNAL: int  # <xs:element name="PEDESTRIANOBEYTRAFFICSIGNAL"> (restricted to 00, 01, 02, 03, 04, 88, and 99)
+    PEDESTRIANTYPE: int  # <xs:element name="PEDESTRIANTYPE"> (restricted to 01, 02, 03, 05, 06, 07, 88, and 99)
+    PEDESTRIANVISIBILITY: int  # <xs:element name="PEDESTRIANVISIBILITY"> (restricted to 00, 01, 02, 03, 04, 06, 07, 88 and 99)
+    PERSON: PersonType  # <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    PERSONID: UUID  # <xs:element type="xs:string" name="PERSONID"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    SAFETYEQUIPMENT: float  # <xs:element type="xs:float" name="SAFETYEQUIPMENT"/>
+    SUBSTANCEUSE: int  # <xs:element name="SUBSTANCEUSE"> (restricted to 00, 01, 11, 12, 13, 14, 21, 22, 88, and 99)
+    UNITNUMBERFIRSTSTRIKE: str  # <xs:element name="UNITNUMBERFIRSTSTRIKE"> (restricted to 1, 2 and '')
 
 
-class ReportDocument(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+class NonMotoristsType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of NonMotoristType"""
+    NONMOTORIST: List[NonMotoristType]
+
+
+class ReportDocumentType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """There is not an example of this data, so this is just a stub for now. For the REPORTDOCUMENTS tag."""
 
 
-class ReportPhoto(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+class ReportDocumentsType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of ReportDocumentType"""
+    REPORTDOCUMENT: List[ReportDocumentType]
+
+
+class ReportPhotoType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """There is not an example of this data, so this is just a stub for now"""
+
+
+class ReportPhotoesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of ReportPhotoType"""
+    REPORTPHOTO: List[ReportPhotoType]
 
 
 class RoadwayType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_roadway"""
-    COUNTY: Optional[int]
-    LOGMILE_DIR: Optional[str]
-    MILEPOINT: Optional[float]
-    MUNICIPAL: Optional[int]
-    MUNICIPAL_AREA_CODE: Optional[int]
-    REFERENCE_MUNI: Optional[int]
-    REFERENCE_ROADNAME: Optional[str]
-    REFERENCE_ROUTE_NUMBER: Optional[str]
-    REFERENCE_ROUTE_SUFFIX: Optional[str]
-    REFERENCE_ROUTE_TYPE: Optional[str]
-    ROADID: UUID
-    ROAD_NAME: Optional[str]
-    ROUTE_NUMBER: Optional[str]
-    ROUTE_SUFFIX: Optional[str]
-    ROUTE_TYPE: Optional[str]
+    COUNTY: int  # <xs:element name="COUNTY" minOccurs="0"> (restricted to 3, 23, and 24)
+    LOGMILE_DIR: str  # <xs:element name="LOGMILE_DIR" minOccurs="0"> (restricted to N, S, E, W, U, and '')
+    MILEPOINT: Optional[float]  # <xs:element type="xs:float" name="MILEPOINT" minOccurs="0"/>
+    MUNICIPAL: Optional[int]  # <xs:element name="MUNICIPAL" minOccurs="0"> (restricted to 999 and 000)
+    MUNICIPAL_AREA_CODE: Optional[int]  # <xs:element name="MUNICIPAL_AREA_CODE" minOccurs="0"> (restricted to 999 and 000)
+    REFERENCE_MUNI: Optional[int]  # <xs:element name="REFERENCE_MUNI" minOccurs="0"> (restricted to 999 and 000)
+    REFERENCE_ROADNAME: Optional[str]  # <xs:element type="xs:string" name="REFERENCE_ROADNAME" minOccurs="0"/>
+    REFERENCE_ROUTE_NUMBER: Optional[str]  # <xs:element type="xs:string" name="REFERENCE_ROUTE_NUMBER" minOccurs="0"/>
+    REFERENCE_ROUTE_SUFFIX: Optional[str]  # <xs:element name="REFERENCE_ROUTE_SUFFIX" minOccurs="0" nillable="true"> (restricted to E, B, AL, AV, 6, IR, and '')
+    REFERENCE_ROUTE_TYPE: Optional[str]  # <xs:element type="xs:string" name="REFERENCE_ROUTE_TYPE" minOccurs="0"/>
+    ROADID: UUID  # <xs:element type="xs:string" name="ROADID" minOccurs="0"/>
+    ROAD_NAME: Optional[str]  # <xs:element type="xs:string" name="ROAD_NAME" minOccurs="0"/>
+    ROUTE_NUMBER: Optional[str]  # <xs:element type="xs:string" name="ROUTE_NUMBER" minOccurs="0"/>
+    ROUTE_SUFFIX: Optional[str]  # <xs:element name="ROUTE_SUFFIX" minOccurs="0" nillable="true"> (restricted to E, AL, B, A and '')
+    ROUTE_TYPE: Optional[str]  # <xs:element name="ROUTE_TYPE" minOccurs="0">
 
 
+# Inside the TOWEDUNITs tag
 class TowedUnitType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_towed_unit"""
-    INSURANCEPOLICYNUMBER: Optional[str]
-    INSURER: Optional[str]
-    LICENSEPLATENUMBER: Optional[str]
-    LICENSEPLATESTATE: Optional[str]
-    OWNERID: UUID
-    TOWEDID: UUID
-    UNITNUMBER: Optional[str]
-    VEHICLEID: UUID
-    VEHICLEMAKE: Optional[str]
-    VEHICLEMODEL: Optional[str]
-    VEHICLEYEAR: Optional[int]
-    VIN: Optional[str]
+    INSURANCEPOLICYNUMBER: str  # <xs:element type="xs:string" name="INSURANCEPOLICYNUMBER"/>
+    INSURER: str  # <xs:element type="xs:string" name="INSURER"/>
+    LICENSEPLATENUMBER: str  # <xs:element type="xs:string" name="LICENSEPLATENUMBER"/>
+    LICENSEPLATESTATE: str  # <xs:element type="xs:string" name="LICENSEPLATESTATE"/>
+    OWNER: PersonType  # <xs:element type="cras:OWNERType" name="OWNER" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    OWNERID: UUID  # <xs:element type="xs:string" name="OWNERID"/>
+    TOWEDID: UUID  # <xs:element type="xs:string" name="TOWEDID"/>
+    UNITNUMBER: str  # <xs:element type="xs:string" name="UNITNUMBER" nillable="true"/>
+    VEHICLEID: UUID  # <xs:element type="xs:string" name="VEHICLEID"/>
+    VEHICLEMAKE: str  # <xs:element type="xs:string" name="VEHICLEMAKE"/>
+    VEHICLEMODEL: str  # <xs:element type="xs:string" name="VEHICLEMODEL"/>
+    VEHICLEYEAR: int  # <xs:element type="xs:short" name="VEHICLEYEAR"/>
+    VIN: str  # <xs:element type="xs:string" name="VIN"/>
 
 
+class TowedUnitsType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of TowedUnitType"""
+    TOWEDUNIT: List[TowedUnitType]
+
+
+# Inside VEHICLEUSEs tag
 class VehicleUseType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_vehicle_uses"""
-    ID: int
-    VEHICLEID: UUID
-    VEHICLEUSECODE: int
+    ID: int  # <xs:element type="xs:int" name="ID"/>
+    VEHICLEID: UUID  # <xs:element type="xs:string" name="VEHICLEID"/>
+    VEHICLEUSECODE: int  # <xs:element name="VEHICLEUSECODE"> (restricted to 00, 01, 02, and 03)
+
+
+class VehicleUsesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of VehicleUseType"""
+    VEHICLEUSE: List[VehicleUseType]
 
 
 class WitnessType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_witnesses"""
-    PERSONID: UUID
-    REPORTNUMBER: str
+    PERSON: PersonType  # <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    PERSONID: UUID  # <xs:element type="xs:string" name="PERSONID"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
 
+class WitnessesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of WitnessType"""
+    WITNESS: List[WitnessType]
+
+
+# Inside the VEHICLEs.ACRSVEHICLE tag
 class VehicleType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_vehicles"""
-    COMMERCIALVEHICLE: Optional[str]
-    CONTINUEDIRECTION: str
-    DAMAGEEXTENT: Optional[int]
-    DRIVERLESSVEHICLE: Optional[bool]
-    DRIVERs: Optional[List[PersonInfoType]]
-    EMERGENCYMOTORVEHICLEUSE: Optional[bool]
-    EVENTS: Optional[List[EventType]]
-    FIRE: Optional[bool]
-    FIRSTIMPACT: Optional[int]
-    GOINGDIRECTION: Optional[str]
-    HITANDRUN: Optional[bool]
-    INSURANCEPOLICYNUMBER: Optional[str]
-    INSURER: Optional[str]
-    LICENSEPLATENUMBER: Optional[str]
-    LICENSEPLATESTATE: Optional[str]
-    MAINIMPACT: Optional[int]
-    MOSTHARMFULEVENT: Optional[str]
-    OWNERID: Optional[UUID]
-    PARKEDVEHICLE: Optional[bool]
-    PASSENGERs: Optional[List[PersonInfoType]]
-    REGISTRATIONEXPIRATIONYEAR: Optional[int]
-    REPORTNUMBER: str
-    SFVEHICLEINTRANSPORT: Optional[int]
-    SPEEDLIMIT: Optional[int]
-    TOWEDUNITTYPE: Optional[int]
-    TOWEDUNITs: Optional[List[TowedUnitType]]
-    UNITNUMBER: Optional[str]
-    VEHICLEBODYTYPE: Optional[str]
-    VEHICLEID: UUID
-    VEHICLEMAKE: Optional[int]
-    VEHICLEMODEL: Optional[int]
-    VEHICLEMOVEMENT: Optional[float]
-    VEHICLEREMOVEDBY: Optional[int]
-    VEHICLEREMOVEDTO: Optional[int]
-    VEHICLETOWEDAWAY: Optional[int]
-    VEHICLEUSEs: Optional[List[VehicleUseType]]
-    VEHICLEYEAR: Optional[int]
-    VIN: Optional[int]
+    COMMERCIALVEHICLE: Optional[CommercialVehicleType]  # <xs:element name="COMMERCIALVEHICLE" nillable="true">
+    CONTINUEDIRECTION: str  # <xs:element name="CONTINUEDIRECTION">
+    DAMAGEDAREAs: DamagedAreasType  # <xs:element type="cras:DAMAGEDAREAsType" name="DAMAGEDAREAs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    DAMAGEEXTENT: int  # <xs:element name="DAMAGEEXTENT"> (restricted to 00, 01, 02, 03, 04, 05, 88 and 99)
+    DRIVERLESSVEHICLE: str  # <xs:element name="DRIVERLESSVEHICLE"> (restricted to 'Y', 'N', and 'U')
+    DRIVERs: DriversType  # <xs:element type="cras:DRIVERsType" name="DRIVERs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    EMERGENCYMOTORVEHICLEUSE: str  # <xs:element name="EMERGENCYMOTORVEHICLEUSE"> (restricted to 'Y', 'N', and 'U')
+    EVENTS: EventsType  # <xs:element type="cras:EVENTType" name="EVENT" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    FIRE: str  # <xs:element name="FIRE"> (restricted to 'Y', 'N', and 'U')
+    FIRSTIMPACT: str  # <xs:element type="xs:string" name="FIRSTIMPACT"/>
+    GOINGDIRECTION: str  # <xs:element name="GOINGDIRECTION"> (restricted to N, S, E, W, U, and '')
+    HITANDRUN: str  # <xs:element name="HITANDRUN"> (restricted to 'Y', 'N', and 'U')
+    INSURANCEPOLICYNUMBER: str  # <xs:element type="xs:string" name="INSURANCEPOLICYNUMBER"/>
+    INSURER: str  # <xs:element type="xs:string" name="INSURER"/>
+    LICENSEPLATENUMBER: str  # <xs:element type="xs:string" name="LICENSEPLATENUMBER"/>
+    LICENSEPLATESTATE: str  # <xs:element type="xs:string" name="LICENSEPLATESTATE"/>
+    MAINIMPACT: Optional[int]  # <xs:element type="xs:string" name="MAINIMPACT"/>
+    MOSTHARMFULEVENT: float  # <xs:element type="xs:float" name="MOSTHARMFULEVENT"/>
+    OWNER: PersonType  # <xs:element type="cras:OWNERType" name="OWNER" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    OWNERID: UUID  # <xs:element type="xs:string" name="OWNERID"/>
+    PARKEDVEHICLE: bool  # <xs:element name="PARKEDVEHICLE">
+    PASSENGERs: PassengersType  # <xs:element name="PASSENGERs">
+    REGISTRATIONEXPIRATIONYEAR: str  # <xs:element type="xs:string" name="REGISTRATIONEXPIRATIONYEAR" nillable="true"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    SFVEHICLEINTRANSPORT: int  # <xs:element type="xs:byte" name="SFVEHICLEINTRANSPORT"/>
+    SPEEDLIMIT: int  # <xs:element type="xs:byte" name="SPEEDLIMIT"/>
+    TOWEDUNITTYPE: int  # <xs:element name="TOWEDUNITTYPE"> (restricted to 00, 01, 03, 06, 07, 88 and 99)
+    TOWEDUNITs: TowedUnitsType  # <xs:element name="TOWEDUNITs">
+    UNITNUMBER: int  # <xs:element name="UNITNUMBER"> (restricted to values 1-10)
+    VEHICLEBODYTYPE: str  # <xs:element type="xs:string" name="VEHICLEBODYTYPE"/>
+    VEHICLEID: UUID  # <xs:element type="xs:string" name="VEHICLEID"/>
+    VEHICLEMAKE: str  # <xs:element type="xs:string" name="VEHICLEMAKE"/>
+    VEHICLEMODEL: str  # <xs:element type="xs:string" name="VEHICLEMODEL"/>
+    VEHICLEMOVEMENT: Optional[float]  # <xs:element type="xs:float" name="VEHICLEMOVEMENT"/>
+    VEHICLEREMOVEDBY: Optional[str]  # <xs:element type="xs:string" name="VEHICLEREMOVEDBY" nillable="true"/>
+    VEHICLEREMOVEDTO: Optional[str]  # <xs:element type="xs:string" name="VEHICLEREMOVEDTO" nillable="true"/>
+    VEHICLETOWEDAWAY: Optional[int]  # <xs:element name="VEHICLETOWEDAWAY"> (restricted to Y, N, U and '')
+    VEHICLEUSEs: VehicleUsesType  # <xs:element type="cras:VEHICLEUSEsType" name="VEHICLEUSEs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    VEHICLEYEAR: str  # <xs:element type="xs:string" name="VEHICLEYEAR"/>
+    VIN: str  # <xs:element type="xs:string" name="VIN"/>
+
+
+class VehiclesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
+    """Multiple instance of VehicleType"""
+    ACRSVEHICLE: List[VehicleType]
 
 
 class CrashDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
     """Data for table acrs_crashes"""
-    ACRSREPORTTIMESTAMP: datetime
-    AGENCYIDENTIFIER: Optional[str]
-    AGENCYNAME: Optional[str]
-    APPROVALDATA: Optional[ApprovalDataType]
-    AREA: Optional[str]
-    CIRCUMSTANCES: Optional[CircumstancesType]
-    COLLISIONTYPE: int
-    CONMAINCLOSURE: Optional[int]
-    CONMAINLOCATION: Optional[int]
-    CONMAINWORKERSPRESENT: Optional[bool]
-    CONMAINZONE: Optional[str]
-    CRASHDATE: date
-    CRASHTIME: datetime
-    CURRENTASSIGNMENT: Optional[str]
-    CURRENTGROUP: int
-    DEFAULTASSIGNMENT: str
-    DEFAULTGROUP: int
-    DIAGRAM: Optional[CrashDiagramType]
-    DOCTYPE: Optional[str]
-    EMSes: Optional[List[EmsType]]
-    FIXEDOBJECTSTRUCK: str
-    HARMFULEVENTONE: str
-    HARMFULEVENTTWO: str
-    HITANDRUN: bool
-    INSERTDATE: datetime
-    INTERCHANGEAREA: int
-    INTERCHANGEIDENTIFICATION: Optional[str]
-    INTERSECTIONTYPE: int
-    INVESTIGATINGOFFICERUSERNAME: Optional[str]
-    INVESTIGATOR: Optional[str]
-    JUNCTION: str
-    LANEDIRECTION: Optional[str]
-    LANENUMBER: int
-    LANETYPE: Optional[int]
-    LATITUDE: Optional[float]
-    LIGHT: str
-    LOCALCASENUMBER: str
-    LOCALCODES: Optional[str]
-    LONGITUDE: Optional[float]
-    MILEPOINTDIRECTION: Optional[str]
-    MILEPOINTDISTANCE: float
-    MILEPOINTDISTANCEUNITS: Optional[str]
-    NARRATIVE: Optional[str]
-    NONMOTORISTs: Optional[List[PersonInfoType]]
-    NONTRAFFIC: bool
-    NUMBEROFLANES: int
-    OFFROADDESCRIPTION: Optional[str]
-    PDFREPORTs: Optional[List[PdfReportData]]
-    PHOTOSTAKEN: Optional[bool]
-    People: Optional[List[PersonType]]
-    RAMP: Optional[str]
-    REPORTCOUNTYLOCATION: int
-    REPORTDOCUMENTs: Optional[List[ReportDocument]]
-    REPORTNUMBER: str
-    REPORTPHOTOes: Optional[List[ReportPhoto]]
-    REPORTTYPE: str
-    ROADALIGNMENT: int
-    ROADCONDITION: int
-    ROADDIVISION: str
-    ROADGRADE: int
-    ROADID: Optional[str]
-    ROADWAY: Optional[RoadwayType]
-    SCHOOLBUSINVOLVEMENT: int
-    STATEGOVERNMENTPROPERTYNAME: Optional[str]
-    SUPERVISOR: Optional[str]
-    SUPERVISORUSERNAME: Optional[str]
-    SUPERVISORYDATE: datetime
-    SURFACECONDITION: str
-    TRAFFICCONTROL: Optional[int]
-    TRAFFICCONTROLFUNCTIONING: Optional[bool]
-    UPDATEDATE: datetime
-    UPLOADVERSION: Optional[str]
-    VEHICLEs: Optional[List[VehicleType]]
-    VERSIONNUMBER: int
-    WEATHER: Optional[str]
-    WITNESSes: Optional[List[WitnessType]]
+    ACRSREPORTTIMESTAMP: datetime  # <xs:element type="xs:dateTime" name="ACRSREPORTTIMESTAMP"/>
+    AGENCYIDENTIFIER: str  # <xs:element type="xs:string" name="AGENCYIDENTIFIER"/>
+    AGENCYNAME: str  # <xs:element type="xs:string" name="AGENCYNAME"/>
+    APPROVALDATA: ApprovalDataType  # <xs:element type="cras:APPROVALDATAType" name="APPROVALDATA" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    AREA: str  # <xs:element type="xs:string" name="AREA"/>
+    CIRCUMSTANCES: CircumstancesType  # <xs:element type="cras:CIRCUMSTANCESType" name="CIRCUMSTANCES" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    COLLISIONTYPE: int  # <xs:element type="xs:byte" name="COLLISIONTYPE"/>
+    CONMAINCLOSURE: Optional[str]  # <xs:element name="CONMAINCLOSURE" nillable="true"> (restricted to values 00, 01, 02, 03, 04, 88, 99, and ''
+    CONMAINLOCATION: Optional[str]  # <xs:element name="CONMAINLOCATION" nillable="true"> (restricted to values 00, 01, 02, 03, 04, 05, 88, 99, and '')
+    CONMAINWORKERSPRESENT: Optional[str]  # <xs:element name="CONMAINWORKERSPRESENT" nillable="true"> (restricted to Y, N, U, '')
+    CONMAINZONE: bool  # <xs:element name="CONMAINWORKERSPRESENT" nillable="true">
+    CRASHDATE: date  # <xs:element type="xs:dateTime" name="CRASHDATE"/>
+    CRASHTIME: datetime  # <xs:element type="xs:dateTime" name="CRASHTIME"/>
+    CURRENTASSIGNMENT: str  # <xs:element name="CURRENTASSIGNMENT"> (restricted to values 999, BCPD, and '')
+    CURRENTGROUP: str  # <xs:element type="xs:string" name="CURRENTGROUP"/>
+    DEFAULTASSIGNMENT: str  # <xs:element name="DEFAULTASSIGNMENT"> (restricted to values 999, BCPD, and '')
+    DEFAULTGROUP: str  # <xs:element type="xs:string" name="DEFAULTGROUP"/>
+    DIAGRAM: CrashDiagramType  # <xs:element type="cras:DIAGRAMType" name="DIAGRAM" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    DOCTYPE: str  # <xs:element type="xs:string" name="DOCTYPE"/>
+    EMSes: EmsesType  # <xs:element type="cras:EMSType" name="EMS" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    FIXEDOBJECTSTRUCK: float  # <xs:element type="xs:float" name="FIXEDOBJECTSTRUCK"/>
+    HARMFULEVENTONE: float  # <xs:element type="xs:float" name="HARMFULEVENTONE"/>
+    HARMFULEVENTTWO: float  # <xs:element type="xs:float" name="HARMFULEVENTTWO"/>
+    HITANDRUN: bool  # <xs:element name="HITANDRUN">
+    INSERTDATE: datetime  # <xs:element type="xs:dateTime" name="INSERTDATE"/>
+    INTERCHANGEAREA: str  # <xs:element name="INTERCHANGEAREA"> (restricted to 00, 01, 02, 03, 04, 05, 06, 88, 99, and '')
+    INTERCHANGEIDENTIFICATION: Optional[str]  # <xs:element type="xs:string" name="INTERCHANGEIDENTIFICATION" nillable="true"/>
+    INTERSECTIONTYPE: str  # <xs:element name="INTERSECTIONTYPE">
+    INVESTIGATINGOFFICERUSERNAME: str  # <xs:element type="xs:string" name="INVESTIGATINGOFFICERUSERNAME"/>
+    INVESTIGATOR: Optional[str]  # <xs:element type="xs:string" name="INVESTIGATOR" nillable="true"/>
+    JUNCTION: str  # <xs:element type="xs:string" name="JUNCTION"/>
+    LANEDIRECTION: Optional[str]  # <xs:element name="LANEDIRECTION"> (restricted to N, S, E, W, U and '')
+    LANENUMBER: str  # <xs:element name="LANENUMBER"> (restricted to 1, 2, 3, 4, 5, 6 or '')
+    LANETYPE: str  # <xs:element type="xs:string" name="LANETYPE" nillable="true"/>
+    LATITUDE: float  # <xs:element type="xs:float" name="LATITUDE"/>
+    LIGHT: float  # <xs:element name="LIGHT">
+    LOCALCASENUMBER: str  # <xs:element type="xs:string" name="LOCALCASENUMBER"/>
+    LOCALCODES: Optional[str]  # <xs:element type="xs:string" name="LOCALCODES" nillable="true"/>
+    LONGITUDE: float  # <xs:element type="xs:float" name="LONGITUDE"/>
+    MILEPOINTDIRECTION: str  # <xs:element name="MILEPOINTDIRECTION"> (restrcted to N, S, E, W, U, and '')
+    MILEPOINTDISTANCE: str  # <xs:element type="xs:string" name="MILEPOINTDISTANCE"/>
+    MILEPOINTDISTANCEUNITS: str  # <xs:element name="MILEPOINTDISTANCEUNITS"> (restricted to M, F, U, and '')
+    NARRATIVE: str  # <xs:element type="xs:string" name="NARRATIVE"/>
+    NONMOTORISTs: NonMotoristsType  # <xs:element type="cras:NONMOTORISTType" name="NONMOTORIST" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    NONTRAFFIC: bool  # <xs:element name="NONTRAFFIC">
+    NUMBEROFLANES: str  # <xs:element type="xs:string" name="NUMBEROFLANES"/>
+    OFFROADDESCRIPTION: str  # <xs:element type="xs:string" name="OFFROADDESCRIPTION" nillable="true"/>
+    PDFREPORTs: PdfReportsType  # <xs:element type="cras:PDFREPORTsType" name="PDFREPORTs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    PHOTOSTAKEN: bool  # <xs:element name="PHOTOSTAKEN">
+    People: PeopleType  # <xs:element type="cras:PeopleType" name="People" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    RAMP: Optional[str]  # <xs:element type="xs:string" name="RAMP" nillable="true"/>
+    REPORTCOUNTYLOCATION: int  # <xs:element name="REPORTCOUNTYLOCATION"> (restricted to 03, 23, 24, and 88)
+    REPORTDOCUMENTs: ReportDocumentsType  # <xs:element type="xs:string" name="REPORTDOCUMENTs" nillable="true"/>
+    REPORTNUMBER: str  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    REPORTPHOTOes: ReportPhotoesType  # <xs:element type="xs:string" name="REPORTPHOTOes" nillable="true"/>
+    REPORTTYPE: str  # <xs:element name="REPORTTYPE"> (restricted to 'Property Damage Crash', 'Injury Crash', and 'Fatal Crash')
+    ROADALIGNMENT: str  # <xs:element name="ROADALIGNMENT"> (restricted to 00, 01, 02, 03, 88, 99 and '')
+    ROADCONDITION: str  # <xs:element type="xs:string" name="ROADCONDITION"/>
+    ROADDIVISION: str  # <xs:element name="ROADDIVISION"> (restricted to 00, 01, 02, 03, 04, 05.01, 88, 99 and '')
+    ROADGRADE: str  # <xs:element name="ROADGRADE"> (restricted to 00, 01, 02, 03, 04, 05, 06, 88, 99 and '')
+    ROADID: str  # <xs:element type="xs:string" name="ROADID"/> (this is a six digit number, not a UUID)
+    ROADWAY: RoadwayType  # <xs:element type="cras:ROADWAYType" name="ROADWAY" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    SCHOOLBUSINVOLVEMENT: int  # <xs:element name="SCHOOLBUSINVOLVEMENT"> (restricted to 00, 01, 02, 03, and 99)
+    STATEGOVERNMENTPROPERTYNAME: Optional[str]  # <xs:element type="xs:string" name="STATEGOVERNMENTPROPERTYNAME" nillable="true"/>
+    SUPERVISOR: Optional[str]  # <xs:element type="xs:string" name="SUPERVISOR" nillable="true"/>
+    SUPERVISORUSERNAME: str  # <xs:element type="xs:string" name="SUPERVISORUSERNAME"/>
+    SUPERVISORYDATE: datetime  # <xs:element type="xs:dateTime" name="SUPERVISORYDATE"/>
+    SURFACECONDITION: str  # <xs:element type="xs:string" name="SURFACECONDITION"/>
+    TRAFFICCONTROL: int  # <xs:element type="xs:byte" name="TRAFFICCONTROL"/>
+    TRAFFICCONTROLFUNCTIONING: str  # <xs:element name="TRAFFICCONTROLFUNCTIONING"> (restricted to Y, N, U, and '')
+    UPDATEDATE: datetime  # <xs:element type="xs:string" name="UPDATEDATE"/>
+    UPLOADVERSION: str  # <xs:element type="xs:string" name="UPLOADVERSION"/>
+    VEHICLEs: VehiclesType  # <xs:element type="cras:VEHICLEsType" name="VEHICLEs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    VERSIONNUMBER: int  # <xs:element name="VERSIONNUMBER">
+    WEATHER: float  # <xs:element type="xs:float" name="WEATHER"/>
+    WITNESSes: WitnessesType
