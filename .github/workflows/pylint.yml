@@ -8,25 +8,18 @@ jobs:
         uses: actions/checkout@v2
       - name: Setup Python
         uses: actions/setup-python@v2
-      - name: Checkout bcgeocoder repo
-        uses: actions/checkout@v2
-        with:
-          repository: city-of-baltimore/Geocoder
-          path: geocoder-repo
       - name: Install dependencies
         run: |
-          pip install --upgrade pip wheel pylint flake8 bandit mypy wheel
-          pip install --upgrade ./geocoder-repo
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
       - name: Lint with pylint
         run: |
-          pylint trafficstat
+          pylint src main.py
       - name: Lint with flake8
         run : |
-          flake8 --config=.flake8 trafficstat
+          flake8 --config=.flake8 src main.py
       - name: Look for security issues with Bandit
         run: |
-          bandit trafficstat
+          bandit src main.py
       - name: Type checking
         run: |
-          mypy trafficstat
+          mypy src main.py
