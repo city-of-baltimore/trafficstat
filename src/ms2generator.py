@@ -1,9 +1,13 @@
 """Creates data files that MS2 can use to import data"""
 import datetime
+from typing import Dict, Optional
 import uuid
-import xlsxwriter  # type: ignore
 
 import pyodbc  # type: ignore
+import xlsxwriter  # type: ignore
+
+# The 'unsubscriptable-object' disable is because of issue https://github.com/PyCQA/pylint/issues/3882 with subscripting
+# Optional. When thats fixed, we can remove those disables.
 
 SEX = {
     '01': 'Male',
@@ -49,10 +53,10 @@ ACRS_VEHICLE = {
     '57': 'Trailer Uncoupling',
     '58': 'Cargo',
     '59': 'Engine Trouble',
-    '80.88': 'Suspension',              # ACRS only (TANG: 48.88)
-    '81.88': 'Mirrors',                 # ACRS only (TANG: 50.88)
-    '82.88': 'Wipers',                      # ACRS only (TANG: 49.88)
-    '83.88': 'Exhaust System',          # ACRS only (TANG: 76.88)
+    '80.88': 'Suspension',  # ACRS only (TANG: 48.88)
+    '81.88': 'Mirrors',  # ACRS only (TANG: 50.88)
+    '82.88': 'Wipers',  # ACRS only (TANG: 49.88)
+    '83.88': 'Exhaust System',  # ACRS only (TANG: 76.88)
 }
 
 TANG_VEHICLE = {
@@ -65,12 +69,12 @@ TANG_VEHICLE = {
     # '57': 'TRAILER COUPLING',
     # '58': 'CARGO',
     # '59': 'ENGINE TROUBLE',
-    '48.88': 'SUSPENSION',              # TANG only (ACRS 80.88)
-    '49.88': 'WIPERS',                  # TANG only (ACRS 82.88)
-    '50.88': 'MIRRORS',                 # TANG only (ACRS 81.88)
-    '84.88': 'OTHER VEHICLE DEFECT',    # Maps to ACRS code 88
-    '76.88': 'EXHAUST SYSTEM',          # TANG only (ACRS 83.88)
-    '85.88': 'EXHAUST SYSTEM',          # TANG only (ACRS 83.88)
+    '48.88': 'SUSPENSION',  # TANG only (ACRS 80.88)
+    '49.88': 'WIPERS',  # TANG only (ACRS 82.88)
+    '50.88': 'MIRRORS',  # TANG only (ACRS 81.88)
+    '84.88': 'OTHER VEHICLE DEFECT',  # Maps to ACRS code 88
+    '76.88': 'EXHAUST SYSTEM',  # TANG only (ACRS 83.88)
+    '85.88': 'EXHAUST SYSTEM',  # TANG only (ACRS 83.88)
 }
 
 # PERSON VALUES
@@ -124,7 +128,7 @@ TANG_PERSON = {
     # '06': 'FELL ASLEEP, FAINTED, ETC.',
     # '07': 'FAILED TO GIVE FULL TIME AND ATTENTION',
     # '08': 'DID NOT COMPLY WITH LICENSE RESTRICTIONS',
-    '09': 'FAILURE TO DRIVE WITHIN A SINGLE LANE',                  # TANG only
+    '09': 'FAILURE TO DRIVE WITHIN A SINGLE LANE',  # TANG only
     # '10': 'IMPROPER RIGHT TURN ON RED',
     # '11': 'FAILED TO YIELD RIGHT OF WAY',
     # '12': 'FAILED TO OBEY STOP SIGN',
@@ -145,16 +149,16 @@ TANG_PERSON = {
     # '27': 'IMPROPER SIGNAL',
     # '28': 'IMPROPER PARKING',
     # '29': 'INTERFERENCE/OBSTRUCTION BY PASSENGER',
-    '39.88': 'RAN OFF THE ROAD',                                    # TANG only (ACRS 70.88)
-    '68.88': 'DISREGUARDED OTHER ROAD MARKINGS',                    # TANG only (ACRS 71.88)
-    '75.88': 'OPERATED MOTOR VEHICLE IN ERRATIC RECKLESS MANNER',   # TANG only (ACRS 72.88)
-    '74.88': 'SWERVED OR AVOIDED VEHICLE OR OBJECT IN ROAD',        # TANG only (ACRS 73.88)
-    '73.88': 'OVER CORRECTING OVER STEERING',                       # TANG only (ACRS 74.88)
-    '70.88': 'OTHER IMPROPER ACTION',                               # TANG only (ACRS 75.88)
-    '60.88': 'INATTENTIVE',                                         # TANG only (ACRS 76.88)
-    '40.88': 'FAILURE TO OBEY TRAFFIC SIGNS SIGNALS OR OFFICER',    # TANG only (ACRS 77.88)
-    '38.88': 'WRONG SIDE OF ROAD',                                  # TANG only (ACRS 78.88)
-    '80.88': 'OTHER MOTORIST NON MOTORIST',                         # Maps to ACRS code 88
+    '39.88': 'RAN OFF THE ROAD',  # TANG only (ACRS 70.88)
+    '68.88': 'DISREGUARDED OTHER ROAD MARKINGS',  # TANG only (ACRS 71.88)
+    '75.88': 'OPERATED MOTOR VEHICLE IN ERRATIC RECKLESS MANNER',  # TANG only (ACRS 72.88)
+    '74.88': 'SWERVED OR AVOIDED VEHICLE OR OBJECT IN ROAD',  # TANG only (ACRS 73.88)
+    '73.88': 'OVER CORRECTING OVER STEERING',  # TANG only (ACRS 74.88)
+    '70.88': 'OTHER IMPROPER ACTION',  # TANG only (ACRS 75.88)
+    '60.88': 'INATTENTIVE',  # TANG only (ACRS 76.88)
+    '40.88': 'FAILURE TO OBEY TRAFFIC SIGNS SIGNALS OR OFFICER',  # TANG only (ACRS 77.88)
+    '38.88': 'WRONG SIDE OF ROAD',  # TANG only (ACRS 78.88)
+    '80.88': 'OTHER MOTORIST NON MOTORIST',  # Maps to ACRS code 88
 }
 
 # WEATHER
@@ -177,7 +181,7 @@ TANG_WEATHER = {
     # '45': 'RAIN, SNOW',
     # '46': 'ANIMAL',
     # '47': 'VISION OBSTRUCTION (INCL. BLINDED BY SUN)',
-    '82.88': 'OTHER ENVIROMENTAL',                                  # Maps to ACRS code 88
+    '82.88': 'OTHER ENVIROMENTAL',  # Maps to ACRS code 88
 }
 
 # ROAD
@@ -190,10 +194,10 @@ ACRS_ROAD = {
     '65': 'Road Under Construction/Maintenance',
     '66': 'Traffic Control Device Inoperative',
     '67': 'Shoulder Low, Soft, High',
-    '76': 'Backup Due to Prior Crash',                              # ACRS only (added April 2017)
-    '77': 'Backup Due to Prior Non-Recurring Incident',             # ACRS only (added April 2017)
-    '78': 'Backup Due to Regular Congestion',                       # ACRS only (added April 2017)
-    '79': 'Toll Booth/Plaza Related',                               # ACRS only (added April 2017)
+    '76': 'Backup Due to Prior Crash',  # ACRS only (added April 2017)
+    '77': 'Backup Due to Prior Non-Recurring Incident',  # ACRS only (added April 2017)
+    '78': 'Backup Due to Regular Congestion',  # ACRS only (added April 2017)
+    '79': 'Toll Booth/Plaza Related',  # ACRS only (added April 2017)
     '60.88': 'Non-highway Work',
     '68.88': 'Physical Obstruction(s)',
     '69.88': 'Worn, Travel-polished Surface',
@@ -207,10 +211,10 @@ TANG_ROAD = {
     # '65': 'ROAD UNDER CONSTRUCTION/MAINTENANCE',
     # '66': 'TRAFFIC CONTROL DEVICE INOPERATIVE',
     # '67': 'SHOULDERS LOW, SOFT, HIGH',
-    '69.88': 'PHYSICAL OBSTRUCTION(S)',                             # TANG only (ACRS 68.88)
-    '71.88': 'WORN, TRAVEL-POLISHED SURFACE',                       # TANG only (ACRS 69.88)
-    '72.88': 'NON-HIGHWAY WORK',                                    # TANG only (ACRS 60.88)
-    '83.88': 'OTHER ROAD CONDITION',                                # Maps to ACRS code 88
+    '69.88': 'PHYSICAL OBSTRUCTION(S)',  # TANG only (ACRS 68.88)
+    '71.88': 'WORN, TRAVEL-POLISHED SURFACE',  # TANG only (ACRS 69.88)
+    '72.88': 'NON-HIGHWAY WORK',  # TANG only (ACRS 60.88)
+    '83.88': 'OTHER ROAD CONDITION',  # Maps to ACRS code 88
 }
 
 
@@ -253,7 +257,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.workbook.close()
 
-    def add_crash_worksheet(self):
+    def add_crash_worksheet(self) -> None:
         """Generates the worksheet for the acrs_crash_sanitized table"""
         sql_cmd = """
             SELECT [acrs_crashes_sanitized].[LIGHT_CODE],
@@ -298,7 +302,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
             on acrs_crashes_sanitized.REPORT_NO = acrs_roadway_sanitized.REPORT_NO
         """
 
-        def standardize_time(val):
+        def standardize_time(val: str) -> str:
             """ Convert int that is the 24 hour time into a standardized timestamp """
 
             val = str(val)
@@ -344,7 +348,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     worksheet.write(row_no, element_no, row[element_no])
             row_no += 1
 
-    def add_person_worksheet(self):
+    def add_person_worksheet(self) -> None:
         """Generates the worksheet for the acrs_person_sanitized table"""
         sql_cmd = """
             SELECT SEX as SEX_CODE,
@@ -411,7 +415,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
             row_no += 1
 
-    def add_ems_worksheet(self):
+    def add_ems_worksheet(self) -> None:
         """Generates the worksheet for the acrs_ems_sanitized table"""
         self._create_worksheet("""
             SELECT REPORT_NO,
@@ -422,7 +426,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
             FROM acrs_ems_sanitized
         """, "EMS")
 
-    def add_vehicle_worksheet(self):
+    def add_vehicle_worksheet(self) -> None:
         """Generates the worksheet for the acrs_vehicle_sanitized table"""
         sql_cmd = """
             SELECT HARM_EVENT_CODE,
@@ -477,7 +481,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         row_no = 1
         for row in self.cursor.fetchall():
             self.add_vehicle_circum(row[report_no_index],
-                                    int(row[vehicle_id_index]),
+                                    row[vehicle_id_index],
                                     self.vehicle_id_dict[row[vehicle_id_index]])
 
             for element_no, _ in enumerate(row):
@@ -498,7 +502,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
             row_no += 1
 
-    def add_vehicle_circum(self, report_no, vehicle_id, vehicle_uuid):
+    def add_vehicle_circum(self, report_no: str, vehicle_id: str, vehicle_uuid: str) -> None:
         """ Creates the vehicle_circum sheet"""
         self.cursor.execute("""
             SELECT *
@@ -520,7 +524,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                                       vehicle_uuid))
                     self.vehicle_circum_ws_row += 1
 
-    def add_road_circum(self):
+    def add_road_circum(self) -> None:
         """ Creates blank road_circum sheet"""
         self.cursor.execute("""
             SELECT *
@@ -539,7 +543,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                                    None))
                     self.road_circum_ws_row += 1
 
-    def _validate_vehicle_value(self, val):
+    def _validate_vehicle_value(self, val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         """ Validates circumstance values for vehicles """
         master_dict = {}
         master_dict.update(TANG_VEHICLE)
@@ -554,7 +558,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_person_value(self, val):
+    def _validate_person_value(self, val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         """ Validates circumstance values for persons """
         master_dict = {}
         master_dict.update(TANG_PERSON)
@@ -569,7 +573,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_weather_value(self, val):
+    def _validate_weather_value(self, val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         """ Validates circumstance values for weather """
         master_dict = {}
         master_dict.update(TANG_WEATHER)
@@ -584,7 +588,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_road_value(self, val):
+    def _validate_road_value(self, val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         """ Validates circumstance values for road """
         master_dict = {}
         master_dict.update(TANG_ROAD)
@@ -600,7 +604,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         return ret
 
     @staticmethod
-    def _validate_value(val, master_dict):
+    def _validate_value(val: str, master_dict: Dict) -> str:  # pylint:disable=unsubscriptable-object ; see comment at top
         if val is None:
             return None
 
@@ -609,7 +613,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         return val
 
     @staticmethod
-    def _lookup_sex(val):
+    def _lookup_sex(val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         master_dict = {}
         master_dict.update(TANG_MASTER)
         master_dict.update(SEX)
@@ -617,14 +621,14 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         return master_dict.get(val)
 
     @staticmethod
-    def _lookup_direction(val):
+    def _lookup_direction(val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         master_dict = {}
         master_dict.update(TANG_MASTER)
         master_dict.update(DIRECTION)
 
         return master_dict.get(val)
 
-    def _create_worksheet(self, sql_cmd, worksheet_name):
+    def _create_worksheet(self, sql_cmd: str, worksheet_name: str) -> None:
         """
         Writes the first line of headers as strings
         :param sql_cmd: SQL statement to execute
@@ -651,13 +655,13 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     worksheet.write(row_no, element_no, row[element_no])
             row_no += 1
 
-    def _get_person_uuid(self, person_id):
+    def _get_person_uuid(self, person_id: str) -> str:
         """ Safe lookup of the person uuid """
         if self.vehicle_id_dict.get(person_id) is None:
             self.vehicle_id_dict[person_id] = str(uuid.uuid4())
         return self.vehicle_id_dict[person_id]
 
-    def _get_vehicle_uuid(self, vehicle_id):
+    def _get_vehicle_uuid(self, vehicle_id: str) -> str:
         """ Safe lookup of the vehicle uuid """
         if self.vehicle_id_dict.get(vehicle_id) is None:
             self.vehicle_id_dict[vehicle_id] = str(uuid.uuid4())

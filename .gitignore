@@ -184,3 +184,6 @@ dmypy.json
 .idea/
 
 venv*/
+
+# Project specific location cache
+geo.pickle

@@ -1,0 +1,1586 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="REPORT" type="cras:REPORTType" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+  <xs:complexType name="APPROVALDATAType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="AGENCY"/>
+      <xs:element type="xs:dateTime" name="APPROVALDATE"/>
+      <xs:element type="xs:string" name="CADSENT" nillable="true"/>
+      <xs:element type="xs:string" name="CADSENT_DATE" nillable="true"/>
+      <xs:element type="xs:string" name="CC_NUMBER"/>
+      <xs:element type="xs:dateTime" name="DATE_INITIATED2"/>
+      <xs:element type="xs:string" name="GROUP_NUMBER"/>
+      <xs:element type="xs:string" name="HISTORICALAPPROVALDATAs" nillable="true"/>
+      <xs:element type="xs:dateTime" name="INCIDENT_DATE"/>
+      <xs:element type="xs:string" name="INVESTIGATOR" nillable="true"/>
+      <xs:element type="xs:string" name="REPORT_TYPE"/>
+      <xs:element type="xs:string" name="SEQ_GUID"/>
+      <xs:element type="xs:dateTime" name="STATUS_CHANGE_DATE"/>
+      <xs:element type="xs:byte" name="STATUS_ID"/>
+      <xs:element name="STEP_NUMBER">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="2"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="TR_USERNAME"/>
+      <xs:element name="UNIT_CODE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="999"/>
+            <xs:enumeration value="BCPD"/>
+            <xs:enumeration value=""/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CIRCUMSTANCEType">
+    <xs:sequence>
+      <xs:element type="xs:float" name="CIRCUMSTANCECODE"/>
+      <xs:element type="xs:int" name="CIRCUMSTANCEID"/>
+      <xs:element name="CIRCUMSTANCETYPE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Weather"/>
+            <xs:enumeration value="Road"/>
+            <xs:enumeration value="Person"/>
+            <xs:enumeration value="Vehicle"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="PERSONID" nillable="true"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+      <xs:element type="xs:string" name="VEHICLEID" nillable="true"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CIRCUMSTANCESType">
+    <xs:sequence>
+      <xs:element type="cras:CIRCUMSTANCEType" name="CIRCUMSTANCE" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DIAGRAMType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="CRASHDIAGRAM"/>
+      <xs:element type="xs:string" name="CRASHDIAGRAMNATIVE"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PDFREPORTType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="CHANGEDBY"/>
+      <xs:element type="xs:dateTime" name="DATESTATUSCHANGED"/>
+      <xs:element type="xs:string" name="PDFREPORT1"/>
+      <xs:element type="xs:int" name="PDF_ID"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+      <xs:element type="xs:string" name="STATUS"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PDFREPORTsType">
+    <xs:sequence>
+      <xs:element type="cras:PDFREPORTType" name="PDFREPORT" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ACRSPERSONType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="ADDRESS"/>
+      <xs:element name="CITATIONCODES">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:CITATIONCODEType" name="CITATIONCODE" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element type="xs:string" name="CITY"/>
+      <xs:element type="xs:string" name="COMPANY" nillable="true"/>
+      <xs:element type="xs:string" name="COUNTRY" nillable="true"/>
+      <xs:element type="xs:string" name="COUNTY" nillable="true"/>
+      <xs:element type="xs:string" name="DLCLASS" nillable="true"/>
+      <xs:element type="xs:string" name="DLNUMBER"/>
+      <xs:element type="xs:string" name="DLSTATE"/>
+      <xs:element type="xs:string" name="DOB"/>
+      <xs:element type="xs:string" name="FIRSTNAME"/>
+      <xs:element type="xs:string" name="HOMEPHONE" nillable="true"/>
+      <xs:element type="xs:string" name="LASTNAME"/>
+      <xs:element type="xs:string" name="MIDDLENAME" nillable="true"/>
+      <xs:element type="xs:string" name="OTHERPHONE"/>
+      <xs:element type="xs:string" name="PERSONID"/>
+      <xs:element type="xs:string" name="RACE" nillable="true"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+      <xs:element name="SEX">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="F"/>
+            <xs:enumeration value="M"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="STATE"/>
+      <xs:element type="xs:string" name="ZIP"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PeopleType">
+    <xs:sequence>
+      <xs:element type="cras:ACRSPERSONType" name="ACRSPERSON" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ROADWAYType" mixed="true">
+    <xs:sequence>
+      <xs:element name="COUNTY" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="24"/>
+            <xs:enumeration value="23"/>
+            <xs:enumeration value="3"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="LOGMILE_DIR" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="E"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="W"/>
+            <xs:enumeration value="S"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:float" name="MILEPOINT" minOccurs="0"/>
+      <xs:element name="MUNICIPAL" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:short">
+            <xs:enumeration value="999"/>
+            <xs:enumeration value="000"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="MUNICIPAL_AREA_CODE" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="999"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="000"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="REFERENCE_MUNI" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="000"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="REFERENCE_ROADNAME" minOccurs="0"/>
+      <xs:element type="xs:string" name="REFERENCE_ROUTE_NUMBER" minOccurs="0"/>
+      <xs:element name="REFERENCE_ROUTE_SUFFIX" minOccurs="0" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="B"/>
+            <xs:enumeration value="AL"/>
+            <xs:enumeration value="AV"/>
+            <xs:enumeration value="6"/>
+            <xs:enumeration value="IR"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="REFERENCE_ROUTE_TYPE" minOccurs="0"/>
+      <xs:element type="xs:string" name="ROADID" minOccurs="0"/>
+      <xs:element type="xs:string" name="ROAD_NAME" minOccurs="0"/>
+      <xs:element type="xs:string" name="ROUTE_NUMBER" minOccurs="0"/>
+      <xs:element name="ROUTE_SUFFIX" minOccurs="0" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="AL"/>
+            <xs:enumeration value="B"/>
+            <xs:enumeration value="A"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ROUTE_TYPE" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="MU"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="MD"/>
+            <xs:enumeration value="IS"/>
+            <xs:enumeration value="US"/>
+            <xs:enumeration value="RP"/>
+            <xs:enumeration value="CO"/>
+            <xs:enumeration value="GV"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DAMAGEDAREAType">
+    <xs:sequence>
+      <xs:element type="xs:int" name="DAMAGEID"/>
+      <xs:element type="xs:byte" name="IMPACTTYPE"/>
+      <xs:element type="xs:string" name="VEHICLEID"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DAMAGEDAREAsType" mixed="true">
+    <xs:sequence>
+      <xs:element type="cras:DAMAGEDAREAType" name="DAMAGEDAREA" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PERSONType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="ADDRESS"/>
+      <xs:element name="CITATIONCODES">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:CITATIONCODEType" name="CITATIONCODE" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element type="xs:string" name="CITY"/>
+      <xs:element type="xs:string" name="COMPANY" nillable="true"/>
+      <xs:element type="xs:string" name="COUNTRY" nillable="true"/>
+      <xs:element type="xs:string" name="COUNTY" nillable="true"/>
+      <xs:element type="xs:string" name="DLCLASS" nillable="true"/>
+      <xs:element type="xs:string" name="DLNUMBER"/>
+      <xs:element type="xs:string" name="DLSTATE"/>
+      <xs:element type="xs:string" name="DOB"/>
+      <xs:element type="xs:string" name="FIRSTNAME"/>
+      <xs:element type="xs:string" name="HOMEPHONE" nillable="true"/>
+      <xs:element type="xs:string" name="LASTNAME"/>
+      <xs:element type="xs:string" name="MIDDLENAME" nillable="true"/>
+      <xs:element type="xs:string" name="OTHERPHONE" nillable="true"/>
+      <xs:element type="xs:string" name="PERSONID"/>
+      <xs:element type="xs:string" name="RACE" nillable="true"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+      <xs:element name="SEX">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="M"/>
+            <xs:enumeration value="F"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="STATE"/>
+      <xs:element type="xs:string" name="ZIP"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DRIVERType">
+    <xs:sequence>
+      <xs:element name="AIRBAGDEPLOYED">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="05"/>
+            <xs:enumeration value="88"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ALCOHOLTESTINDICATOR">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ALCOHOLTESTTYPE" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="88"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ATFAULT">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Y"/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="BAC" nillable="true"/>
+      <xs:element type="xs:float" name="CONDITION"/>
+      <xs:element type="xs:byte" name="DRIVERDISTRACTEDBY"/>
+      <xs:element name="DRUGTESTINDICATOR">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="02"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="DRUGTESTRESULT" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="U"/>
+            <xs:enumeration value="A"/>
+            <xs:enumeration value="P"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="EJECTION">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="03"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="EMSRUNREPORTNUMBER" nillable="true"/>
+      <xs:element name="EMSUNITNUMBER" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="A"/>
+            <xs:enumeration value="B"/>
+            <xs:enumeration value="L"/>
+            <xs:enumeration value="C"/>
+            <xs:enumeration value="D"/>
+            <xs:enumeration value="M"/>
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="J"/>
+            <xs:enumeration value="K"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="EQUIPMENTPROBLEM">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="13"/>
+            <xs:enumeration value="44"/>
+            <xs:enumeration value="31"/>
+            <xs:enumeration value="45"/>
+            <xs:enumeration value="47"/>
+            <xs:enumeration value="11"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="HASCDL">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="INJURYSEVERITY">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="05"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="PERSONID"/>
+      <xs:element type="xs:float" name="SAFETYEQUIPMENT"/>
+      <xs:element type="xs:byte" name="SUBSTANCEUSE"/>
+      <xs:element type="xs:string" name="VEHICLEID"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="DRIVERsType" mixed="true">
+    <xs:sequence>
+      <xs:element type="cras:DRIVERType" name="DRIVER" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="OWNERType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="ADDRESS"/>
+      <xs:element name="CITATIONCODES">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:CITATIONCODEType" name="CITATIONCODE" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element type="xs:string" name="CITY"/>
+      <xs:element type="xs:string" name="COMPANY" nillable="true"/>
+      <xs:element type="xs:string" name="COUNTRY" nillable="true"/>
+      <xs:element type="xs:string" name="COUNTY" nillable="true"/>
+      <xs:element type="xs:string" name="DLCLASS" nillable="true"/>
+      <xs:element type="xs:string" name="DLNUMBER"/>
+      <xs:element type="xs:string" name="DLSTATE"/>
+      <xs:element type="xs:string" name="DOB"/>
+      <xs:element type="xs:string" name="FIRSTNAME"/>
+      <xs:element type="xs:string" name="HOMEPHONE" nillable="true"/>
+      <xs:element type="xs:string" name="LASTNAME"/>
+      <xs:element type="xs:string" name="MIDDLENAME" nillable="true"/>
+      <xs:element type="xs:string" name="OTHERPHONE" nillable="true"/>
+      <xs:element type="xs:string" name="PERSONID"/>
+      <xs:element type="xs:string" name="RACE" nillable="true"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+      <xs:element name="SEX">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="M"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="F"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="STATE"/>
+      <xs:element type="xs:string" name="ZIP"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="VEHICLEUSEType">
+    <xs:sequence>
+      <xs:element type="xs:int" name="ID"/>
+      <xs:element type="xs:string" name="VEHICLEID"/>
+      <xs:element name="VEHICLEUSECODE">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="03"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="VEHICLEUSEsType" mixed="true">
+    <xs:sequence>
+      <xs:element type="cras:VEHICLEUSEType" name="VEHICLEUSE" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ACRSVEHICLEType">
+    <xs:sequence>
+      <xs:element name="COMMERCIALVEHICLE" nillable="true">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="xs:float" name="BODYTYPE" minOccurs="0"/>
+            <xs:element name="BUSUSE" minOccurs="0">
+              <xs:simpleType>
+                <xs:restriction base="xs:string">
+                  <xs:enumeration value="00"/>
+                  <xs:enumeration value="01"/>
+                  <xs:enumeration value=""/>
+                  <xs:enumeration value="88"/>
+                  <xs:enumeration value="07"/>
+                  <xs:enumeration value="02"/>
+                  <xs:enumeration value="99"/>
+                  <xs:enumeration value="03"/>
+                  <xs:enumeration value="05"/>
+                  <xs:enumeration value="04"/>
+                </xs:restriction>
+              </xs:simpleType>
+            </xs:element>
+            <xs:element name="CARRIERCLASSIFICATION" minOccurs="0">
+              <xs:simpleType>
+                <xs:restriction base="xs:byte">
+                  <xs:enumeration value="01"/>
+                  <xs:enumeration value="00"/>
+                  <xs:enumeration value="88"/>
+                  <xs:enumeration value="02"/>
+                  <xs:enumeration value="03"/>
+                  <xs:enumeration value="99"/>
+                  <xs:enumeration value="04"/>
+                </xs:restriction>
+              </xs:simpleType>
+            </xs:element>
+            <xs:element type="xs:string" name="CITY" minOccurs="0"/>
+            <xs:element type="xs:byte" name="CONFIGURATION" minOccurs="0"/>
+            <xs:element type="xs:string" name="COUNTRY" minOccurs="0" nillable="true"/>
+            <xs:element type="xs:string" name="DOTNUMBER" minOccurs="0"/>
+            <xs:element name="GVW" minOccurs="0">
+              <xs:simpleType>
+                <xs:restriction base="xs:byte">
+                  <xs:enumeration value="03"/>
+                  <xs:enumeration value="02"/>
+                  <xs:enumeration value="88"/>
+                  <xs:enumeration value="99"/>
+                  <xs:enumeration value="01"/>
+                  <xs:enumeration value="00"/>
+                </xs:restriction>
+              </xs:simpleType>
+            </xs:element>
+            <xs:element name="HAZMATCLASS" minOccurs="0">
+              <xs:simpleType>
+                <xs:restriction base="xs:string">
+                  <xs:enumeration value="10"/>
+                  <xs:enumeration value=""/>
+                  <xs:enumeration value="02"/>
+                  <xs:enumeration value="03"/>
+                  <xs:enumeration value="01"/>
+                </xs:restriction>
+              </xs:simpleType>
+            </xs:element>
+            <xs:element type="xs:string" name="HAZMATNAME" minOccurs="0" nillable="true"/>
+            <xs:element type="xs:string" name="HAZMATNUMBER" minOccurs="0" nillable="true"/>
+            <xs:element name="HAZMATSPILL" minOccurs="0">
+              <xs:simpleType>
+                <xs:restriction base="xs:string">
+                  <xs:enumeration value="N"/>
+                  <xs:enumeration value=""/>
+                  <xs:enumeration value="U"/>
+                  <xs:enumeration value="Y"/>
+                </xs:restriction>
+              </xs:simpleType>
+            </xs:element>
+            <xs:element type="xs:string" name="MCNUMBER" minOccurs="0"/>
+            <xs:element type="xs:string" name="NAME" minOccurs="0"/>
+            <xs:element type="xs:string" name="NUMBEROFAXLES" minOccurs="0"/>
+            <xs:element name="PLACARDVISIBLE" minOccurs="0">
+              <xs:simpleType>
+                <xs:restriction base="xs:string">
+                  <xs:enumeration value="U"/>
+                  <xs:enumeration value="N"/>
+                  <xs:enumeration value=""/>
+                  <xs:enumeration value="Y"/>
+                </xs:restriction>
+              </xs:simpleType>
+            </xs:element>
+            <xs:element type="xs:string" name="POSTALCODE" minOccurs="0"/>
+            <xs:element type="xs:string" name="STATE" minOccurs="0"/>
+            <xs:element type="xs:string" name="STREET" minOccurs="0"/>
+            <xs:element type="xs:string" name="VEHICLEID" minOccurs="0"/>
+            <xs:element type="xs:string" name="WEIGHT" minOccurs="0" nillable="true"/>
+            <xs:element type="xs:string" name="WEIGHTUNIT" minOccurs="0" nillable="true"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="CONTINUEDIRECTION">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="S"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="W"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="cras:DAMAGEDAREAsType" name="DAMAGEDAREAs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element name="DAMAGEEXTENT">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="05"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="88"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="DRIVERLESSVEHICLE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="cras:DRIVERsType" name="DRIVERs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element name="EMERGENCYMOTORVEHICLEUSE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="EVENTS">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:EVENTType" name="EVENT" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="FIRE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="U"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="FIRSTIMPACT"/>
+      <xs:element name="GOINGDIRECTION">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="S"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="W"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="HITANDRUN">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="INSURANCEPOLICYNUMBER"/>
+      <xs:element type="xs:string" name="INSURER"/>
+      <xs:element type="xs:string" name="LICENSEPLATENUMBER"/>
+      <xs:element type="xs:string" name="LICENSEPLATESTATE"/>
+      <xs:element type="xs:string" name="MAINIMPACT"/>
+      <xs:element type="xs:float" name="MOSTHARMFULEVENT"/>
+      <xs:element type="cras:OWNERType" name="OWNER" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="OWNERID"/>
+      <xs:element name="PARKEDVEHICLE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="PASSENGERs">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:PASSENGERType" name="PASSENGER" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element type="xs:string" name="REGISTRATIONEXPIRATIONYEAR" nillable="true"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+      <xs:element type="xs:byte" name="SFVEHICLEINTRANSPORT"/>
+      <xs:element type="xs:byte" name="SPEEDLIMIT"/>
+      <xs:element name="TOWEDUNITTYPE">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="06"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="07"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="03"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="TOWEDUNITs">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:TOWEDUNITType" name="TOWEDUNIT" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="UNITNUMBER">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value="4"/>
+            <xs:enumeration value="5"/>
+            <xs:enumeration value="6"/>
+            <xs:enumeration value="7"/>
+            <xs:enumeration value="8"/>
+            <xs:enumeration value="9"/>
+            <xs:enumeration value="10"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="VEHICLEBODYTYPE"/>
+      <xs:element type="xs:string" name="VEHICLEID"/>
+      <xs:element type="xs:string" name="VEHICLEMAKE"/>
+      <xs:element type="xs:string" name="VEHICLEMODEL"/>
+      <xs:element type="xs:float" name="VEHICLEMOVEMENT"/>
+      <xs:element type="xs:string" name="VEHICLEREMOVEDBY" nillable="true"/>
+      <xs:element type="xs:string" name="VEHICLEREMOVEDTO" nillable="true"/>
+      <xs:element name="VEHICLETOWEDAWAY">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Y"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="cras:VEHICLEUSEsType" name="VEHICLEUSEs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="VEHICLEYEAR"/>
+      <xs:element type="xs:string" name="VIN"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="VEHICLEsType" mixed="true">
+    <xs:sequence>
+      <xs:element type="cras:ACRSVEHICLEType" name="ACRSVEHICLE" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="REPORTType">
+    <xs:sequence>
+      <xs:element type="xs:dateTime" name="ACRSREPORTTIMESTAMP"/>
+      <xs:element type="xs:string" name="AGENCYIDENTIFIER"/>
+      <xs:element type="xs:string" name="AGENCYNAME"/>
+      <xs:element type="cras:APPROVALDATAType" name="APPROVALDATA" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="AREA"/>
+      <xs:element type="cras:CIRCUMSTANCESType" name="CIRCUMSTANCES" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:byte" name="COLLISIONTYPE"/>
+      <xs:element name="CONMAINCLOSURE" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="CONMAINLOCATION" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="05"/>
+            <xs:enumeration value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="CONMAINWORKERSPRESENT" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="CONMAINZONE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:dateTime" name="CRASHDATE"/>
+      <xs:element type="xs:dateTime" name="CRASHTIME"/>
+      <xs:element name="CURRENTASSIGNMENT">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="999"/>
+            <xs:enumeration value="BCPD"/>
+            <xs:enumeration value=""/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="CURRENTGROUP"/>
+      <xs:element name="DEFAULTASSIGNMENT">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="999"/>
+            <xs:enumeration value="BCPD"/>
+            <xs:enumeration value=""/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="DEFAULTGROUP"/>
+      <xs:element type="cras:DIAGRAMType" name="DIAGRAM" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="DOCTYPE"/>
+      <xs:element name="EMSes">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:EMSType" name="EMS" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element type="xs:float" name="FIXEDOBJECTSTRUCK"/>
+      <xs:element type="xs:float" name="HARMFULEVENTONE"/>
+      <xs:element type="xs:float" name="HARMFULEVENTTWO"/>
+      <xs:element name="HITANDRUN">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:dateTime" name="INSERTDATE"/>
+      <xs:element name="INTERCHANGEAREA">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="05"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="06"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="INTERCHANGEIDENTIFICATION" nillable="true"/>
+      <xs:element name="INTERSECTIONTYPE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="06"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="05"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="INVESTIGATINGOFFICERUSERNAME"/>
+      <xs:element type="xs:string" name="INVESTIGATOR" nillable="true"/>
+      <xs:element type="xs:string" name="JUNCTION"/>
+      <xs:element name="LANEDIRECTION">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="S"/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="W"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="LANENUMBER">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="4"/>
+            <xs:enumeration value="5"/>
+            <xs:enumeration value="6"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="LANETYPE" nillable="true"/>
+      <xs:element type="xs:float" name="LATITUDE"/>
+      <xs:element name="LIGHT">
+        <xs:simpleType>
+          <xs:restriction base="xs:float">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="05.02"/>
+            <xs:enumeration value="06.02"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="07.88"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="LOCALCASENUMBER"/>
+      <xs:element type="xs:string" name="LOCALCODES" nillable="true"/>
+      <xs:element type="xs:float" name="LONGITUDE"/>
+      <xs:element name="MILEPOINTDIRECTION">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="S"/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="W"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="MILEPOINTDISTANCE"/>
+      <xs:element name="MILEPOINTDISTANCEUNITS">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="F"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="U"/>
+            <xs:enumeration value="M"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="NARRATIVE"/>
+      <xs:element name="NONMOTORISTs">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:NONMOTORISTType" name="NONMOTORIST" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="NONTRAFFIC">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="NUMBEROFLANES"/>
+      <xs:element type="xs:string" name="OFFROADDESCRIPTION" nillable="true"/>
+      <xs:element type="cras:PDFREPORTsType" name="PDFREPORTs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element name="PHOTOSTAKEN">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="cras:PeopleType" name="People" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="RAMP" nillable="true"/>
+      <xs:element name="REPORTCOUNTYLOCATION">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="24"/>
+            <xs:enumeration value="23"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="08"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="REPORTDOCUMENTs" nillable="true"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+      <xs:element type="xs:string" name="REPORTPHOTOes" nillable="true"/>
+      <xs:element name="REPORTTYPE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Property Damage Crash"/>
+            <xs:enumeration value="Injury Crash"/>
+            <xs:enumeration value="Fatal Crash"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ROADALIGNMENT">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="ROADCONDITION"/>
+      <xs:element name="ROADDIVISION">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="05.01"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ROADGRADE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="06"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="05"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="ROADID"/>
+      <xs:element type="cras:ROADWAYType" name="ROADWAY" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element name="SCHOOLBUSINVOLVEMENT">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="03"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="STATEGOVERNMENTPROPERTYNAME" nillable="true"/>
+      <xs:element type="xs:string" name="SUPERVISOR" nillable="true"/>
+      <xs:element type="xs:string" name="SUPERVISORUSERNAME"/>
+      <xs:element type="xs:dateTime" name="SUPERVISORYDATE"/>
+      <xs:element type="xs:string" name="SURFACECONDITION"/>
+      <xs:element type="xs:byte" name="TRAFFICCONTROL"/>
+      <xs:element name="TRAFFICCONTROLFUNCTIONING">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="Y"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="UPDATEDATE"/>
+      <xs:element type="xs:string" name="UPLOADVERSION"/>
+      <xs:element type="cras:VEHICLEsType" name="VEHICLEs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element name="VERSIONNUMBER">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value="2"/>
+            <xs:enumeration value="4"/>
+            <xs:enumeration value="3"/>
+            <xs:enumeration value="6"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:float" name="WEATHER"/>
+      <xs:element name="WITNESSes">
+        <xs:complexType mixed="true">
+          <xs:sequence>
+            <xs:element type="cras:WITNESSType" name="WITNESS" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PASSENGERType">
+    <xs:sequence>
+      <xs:element name="AIRBAGDEPLOYED">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="05"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="88"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="EJECTION">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="04"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="EMSRUNREPORTNUMBER" nillable="true"/>
+      <xs:element name="EMSUNITNUMBER" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="B"/>
+            <xs:enumeration value="A"/>
+            <xs:enumeration value="C"/>
+            <xs:enumeration value="D"/>
+            <xs:enumeration value="F"/>
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="M"/>
+            <xs:enumeration value="K"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="EQUIPMENTPROBLEM">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="13"/>
+            <xs:enumeration value="31"/>
+            <xs:enumeration value="43"/>
+            <xs:enumeration value="45"/>
+            <xs:enumeration value="11"/>
+            <xs:enumeration value="47"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="INJURYSEVERITY">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="05"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="PERSONID"/>
+      <xs:element type="xs:float" name="SAFETYEQUIPMENT"/>
+      <xs:element name="SEAT">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="88"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:float" name="SEATINGLOCATION"/>
+      <xs:element type="xs:byte" name="SEATINGROW"/>
+      <xs:element type="xs:string" name="VEHICLEID"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="PASSENGERsType">
+    <xs:sequence>
+      <xs:element type="cras:PASSENGERType" name="PASSENGER" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="WITNESSType">
+    <xs:sequence>
+      <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="PERSONID"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="WITNESSesType">
+    <xs:sequence>
+      <xs:element type="cras:WITNESSType" name="WITNESS" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="EVENTType">
+    <xs:sequence>
+      <xs:element type="xs:int" name="EVENTID"/>
+      <xs:element type="xs:byte" name="EVENTSEQUENCE"/>
+      <xs:element type="xs:byte" name="EVENTTYPE"/>
+      <xs:element type="xs:string" name="VEHICLEID"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="EVENTSType">
+    <xs:sequence>
+      <xs:element type="cras:EVENTType" name="EVENT" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TOWEDUNITType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="INSURANCEPOLICYNUMBER"/>
+      <xs:element type="xs:string" name="INSURER"/>
+      <xs:element type="xs:string" name="LICENSEPLATENUMBER"/>
+      <xs:element type="xs:string" name="LICENSEPLATESTATE"/>
+      <xs:element type="cras:OWNERType" name="OWNER" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="OWNERID"/>
+      <xs:element type="xs:string" name="TOWEDID"/>
+      <xs:element type="xs:string" name="UNITNUMBER" nillable="true"/>
+      <xs:element type="xs:string" name="VEHICLEID"/>
+      <xs:element type="xs:string" name="VEHICLEMAKE"/>
+      <xs:element type="xs:string" name="VEHICLEMODEL"/>
+      <xs:element type="xs:short" name="VEHICLEYEAR"/>
+      <xs:element type="xs:string" name="VIN"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="TOWEDUNITsType">
+    <xs:sequence>
+      <xs:element type="cras:TOWEDUNITType" name="TOWEDUNIT" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="EMSType">
+    <xs:sequence>
+      <xs:element name="EMSTRANSPORTATIONTYPE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="G"/>
+            <xs:enumeration value="U"/>
+            <xs:enumeration value="A"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="EMSUNITNUMBER">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="A"/>
+            <xs:enumeration value="B"/>
+            <xs:enumeration value="C"/>
+            <xs:enumeration value="D"/>
+            <xs:enumeration value="E"/>
+            <xs:enumeration value="F"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="INJUREDTAKENBY"/>
+      <xs:element type="xs:string" name="INJUREDTAKENTO"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="EMSesType">
+    <xs:sequence>
+      <xs:element type="cras:EMSType" name="EMS" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="NONMOTORISTType">
+    <xs:sequence>
+      <xs:element name="ALCOHOLTESTINDICATOR">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="01"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ALCOHOLTESTTYPE" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="ATFAULT">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="U"/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="BAC" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="0.17"/>
+            <xs:enumeration value="0.08"/>
+            <xs:enumeration value="0.05"/>
+            <xs:enumeration value="0"/>
+            <xs:enumeration value="0.46"/>
+            <xs:enumeration value="0.16"/>
+            <xs:enumeration value="0.288890"/>
+            <xs:enumeration value="0.22"/>
+            <xs:enumeration value="0.23"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="CONDITION"/>
+      <xs:element type="xs:string" name="CONTINUEDIRECTION" nillable="true"/>
+      <xs:element name="DRUGTESTINDICATOR">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="01"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="DRUGTESTRESULT" nillable="true">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value=""/>
+            <xs:enumeration value="P"/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value="A"/>
+            <xs:enumeration value="U"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="EMSRUNREPORTNUMBER"/>
+      <xs:element name="EMSUNITNUMBER">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="C"/>
+            <xs:enumeration value="A"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="B"/>
+            <xs:enumeration value="D"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="GOINGDIRECTION" nillable="true"/>
+      <xs:element name="INJURYSEVERITY">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="05"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="01"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:byte" name="PEDESTRIANACTIONS"/>
+      <xs:element type="xs:float" name="PEDESTRIANLOCATION"/>
+      <xs:element type="xs:float" name="PEDESTRIANMOVEMENT"/>
+      <xs:element name="PEDESTRIANOBEYTRAFFICSIGNAL">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="04"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="PEDESTRIANTYPE">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="06"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="07"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="05"/>
+            <xs:enumeration value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="PEDESTRIANVISIBILITY">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="04"/>
+            <xs:enumeration value="07"/>
+            <xs:enumeration value="06"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+      <xs:element type="xs:string" name="PERSONID"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+      <xs:element name="SAFETYEQUIPMENT">
+        <xs:simpleType>
+          <xs:restriction base="xs:float">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="21"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="25.88"/>
+            <xs:enumeration value="26.88"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="SUBSTANCEUSE">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="11"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="14"/>
+            <xs:enumeration value="12"/>
+            <xs:enumeration value="13"/>
+            <xs:enumeration value="22"/>
+            <xs:enumeration value="21"/>
+            <xs:enumeration value="88"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="UNITNUMBERFIRSTSTRIKE">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="1"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="2"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="NONMOTORISTsType">
+    <xs:sequence>
+      <xs:element type="cras:NONMOTORISTType" name="NONMOTORIST" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CITATIONCODEType">
+    <xs:sequence>
+      <xs:element type="xs:string" name="CITATIONNUMBER"/>
+      <xs:element type="xs:string" name="PERSONID"/>
+      <xs:element type="xs:string" name="REPORTNUMBER"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CITATIONCODESType">
+    <xs:sequence>
+      <xs:element type="cras:CITATIONCODEType" name="CITATIONCODE" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="COMMERCIALVEHICLEType">
+    <xs:sequence>
+      <xs:element type="xs:float" name="BODYTYPE" minOccurs="0"/>
+      <xs:element name="BUSUSE" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="07"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="05"/>
+            <xs:enumeration value="04"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="CARRIERCLASSIFICATION" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="00"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="04"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="CITY" minOccurs="0"/>
+      <xs:element type="xs:byte" name="CONFIGURATION" minOccurs="0"/>
+      <xs:element type="xs:string" name="COUNTRY" minOccurs="0" nillable="true"/>
+      <xs:element type="xs:string" name="DOTNUMBER" minOccurs="0"/>
+      <xs:element name="GVW" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:byte">
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="88"/>
+            <xs:enumeration value="99"/>
+            <xs:enumeration value="01"/>
+            <xs:enumeration value="00"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="HAZMATCLASS" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="10"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="02"/>
+            <xs:enumeration value="03"/>
+            <xs:enumeration value="01"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="HAZMATNAME" minOccurs="0" nillable="true"/>
+      <xs:element type="xs:string" name="HAZMATNUMBER" minOccurs="0" nillable="true"/>
+      <xs:element name="HAZMATSPILL" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="N"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="U"/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="MCNUMBER" minOccurs="0"/>
+      <xs:element type="xs:string" name="NAME" minOccurs="0"/>
+      <xs:element type="xs:string" name="NUMBEROFAXLES" minOccurs="0"/>
+      <xs:element name="PLACARDVISIBLE" minOccurs="0">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="U"/>
+            <xs:enumeration value="N"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value="Y"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element type="xs:string" name="POSTALCODE" minOccurs="0"/>
+      <xs:element type="xs:string" name="STATE" minOccurs="0"/>
+      <xs:element type="xs:string" name="STREET" minOccurs="0"/>
+      <xs:element type="xs:string" name="VEHICLEID" minOccurs="0"/>
+      <xs:element type="xs:string" name="WEIGHT" minOccurs="0" nillable="true"/>
+      <xs:element type="xs:string" name="WEIGHTUNIT" minOccurs="0" nillable="true"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
