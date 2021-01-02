@@ -326,8 +326,8 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         accident_time_index = header_list.index('ACC_TIME')
         report_id_index = header_list.index('REPORT_TYPE')
 
-        assert accident_date_index != -1 and accident_time_index != -1, \
-            "Unable to find all crash indexes"
+        if accident_date_index == -1 or accident_time_index == -1:
+            raise AssertionError("Unable to find all crash indexes")
 
         row_no = 1
         for row in self.cursor.fetchall():
@@ -393,7 +393,8 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         vehicle_id_index = header_list.index('VEHICLE_ID')
         sex_index = header_list.index('SEX_CODE')
 
-        assert person_id_index != -1 and vehicle_id_index != -1 and sex_index != -1, "Unable to find person indexes"
+        if person_id_index == -1 or vehicle_id_index == -1 or sex_index == -1:
+            raise AssertionError("Unable to find person indexes")
 
         worksheet.write_row(0, 0, header_list)
         row_no = 1
@@ -475,8 +476,8 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         cont_dir_index = header_list.index('CONTI_DIRECTION_CODE')
         going_dir_index = header_list.index('GOING_DIRECTION_CODE')
 
-        assert report_no_index != -1 and vehicle_id_index != -1 and cont_dir_index != -1 and going_dir_index != -1, \
-            "Unable to find vehicle index"
+        if report_no_index == -1 or vehicle_id_index == -1 or cont_dir_index == -1 or going_dir_index == -1:
+            raise AssertionError("Unable to find vehicle index")
 
         row_no = 1
         for row in self.cursor.fetchall():
@@ -609,7 +610,8 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
             return None
 
         val = str(val)
-        assert val in master_dict.keys()
+        if val not in master_dict.keys():
+            raise AssertionError("Unable to validate {}. Expected values {}".format(val, master_dict.keys()))
         return val
 
     @staticmethod

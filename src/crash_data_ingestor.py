@@ -245,7 +245,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_execute(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
@@ -388,7 +388,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_execute(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -447,7 +447,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?)
@@ -485,7 +485,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?)
@@ -517,7 +517,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_execute(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?)
@@ -554,7 +554,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?)
@@ -610,7 +610,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_execute(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -672,7 +672,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?)
@@ -711,7 +711,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?)
@@ -770,7 +770,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -866,7 +866,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -968,7 +968,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_execute(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1034,7 +1034,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1140,7 +1140,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1221,7 +1221,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?)
@@ -1256,7 +1256,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?, ?)
@@ -1292,7 +1292,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         ret: bool = True
         if data:
             ret = self._safe_sql_executemany(
-                """
+                """  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 MERGE {table_name} USING (
                 VALUES
                     (?, ?)
