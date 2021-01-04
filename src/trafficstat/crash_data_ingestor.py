@@ -1,5 +1,6 @@
 """Processes unprocessed data in the network share that holds crash data"""
 # pylint:disable=too-many-lines
+#
 import inspect
 import logging
 import os
@@ -12,7 +13,7 @@ from pandas import to_datetime  # type: ignore
 import pyodbc  # type: ignore
 import xmltodict  # type: ignore
 
-from .crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
+from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
     CommercialVehicleType, CrashDiagramType, DamagedAreaType, DriverType, EmsType, EventType, NonMotoristType, \
     PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, SqlExecuteType, \
     TowedUnitType, VehicleType, VehicleUseType, WitnessType
@@ -244,7 +245,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(
+            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -387,7 +388,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(
+            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -446,7 +447,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -484,7 +485,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -516,7 +517,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(
+            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -553,7 +554,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -609,7 +610,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(
+            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -671,7 +672,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -710,7 +711,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -769,7 +770,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -865,7 +866,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -967,7 +968,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(
+            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -1033,7 +1034,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -1139,7 +1140,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -1220,7 +1221,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -1255,7 +1256,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            self._safe_sql_executemany(
+            self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -1291,7 +1292,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(
+            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
                 """
                 MERGE {table_name} USING (
                 VALUES
@@ -1343,7 +1344,8 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
             return None
 
         val = val.lower()
-        assert val in ['y', 'n', 'u'], 'Expected y or n and got {}'.format(val)
+        if val not in ['y', 'n', 'u']:
+            raise AssertionError('Expected y or n and got {}'.format(val))
         if val == 'u':
             return None
         return int(bool(val == 'y'))
@@ -1383,7 +1385,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
             else:
                 self.cursor.execute(query, data)
         except (pyodbc.ProgrammingError, pyodbc.DataError, pyodbc.IntegrityError) as err:
-            self.log.error('SQL data error: %s\nError: %s', data, err)
+            self.log.error('SQL data error: %s\nError: %s\nQuery: %s', data, err, query)
             traceback.print_stack()
             return False
 
@@ -1406,5 +1408,6 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         if crash_data.get(tag) is None or self.is_element_nil(crash_data.get(tag)):
             return None
 
-        assert isinstance(crash_data.get(tag), str), 'Expected {} to have only a single element'.format(tag)
+        if not isinstance(crash_data.get(tag), str):
+            raise AssertionError('Expected {} to have only a single element'.format(tag))
         return crash_data.get(tag)
