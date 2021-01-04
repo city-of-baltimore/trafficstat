@@ -50,7 +50,6 @@ def geocode_acrs() -> None:
                 geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
 
             if geocode_result is not None and geocode_result.get('census_tract'):
-                assert geocode_result['census_tract']
                 data.append((geocode_result['census_tract'], str(row[0])))
                 continue
 
@@ -84,7 +83,6 @@ def geocode_acrs_sanitized() -> None:
                 row[1], row[2])
 
             if geocode_result is not None and geocode_result.get('census_tract'):
-                assert geocode_result['census_tract']
                 data.append((geocode_result['census_tract'], row[0]))
                 continue
 
