@@ -11,4 +11,4 @@ jobs:
       - name: Tox
         run: |
           pip install tox
-          tox
+          tox -e lint,mypy,bandit
