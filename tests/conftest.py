@@ -5,9 +5,7 @@ from pathlib import PurePath, Path
 import pyodbc
 import pytest
 
-sys.path.append(str(PurePath(Path.cwd().parent, 'src')))
-
-from src.crash_data_ingestor import CrashDataReader  # pylint:disable=wrong-import-position  # noqa: E402
+from trafficstat.crash_data_ingestor import CrashDataReader
 
 
 @pytest.fixture(name='crash_data_reader')
