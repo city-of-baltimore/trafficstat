@@ -6,29 +6,28 @@ import logging
 import os
 import shutil
 import traceback
-from typing import List, Mapping, Optional, Sequence, Union
 from collections import OrderedDict
+from typing import List, Mapping, Optional, Sequence, Union
 
-from pandas import to_datetime  # type: ignore
-import pyodbc  # type: ignore
 import xmltodict  # type: ignore
-
+from pandas import to_datetime  # type: ignore
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
     CommercialVehicleType, CrashDiagramType, DamagedAreaType, DriverType, EmsType, EventType, NonMotoristType, \
     PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, SqlExecuteType, \
     TowedUnitType, VehicleType, VehicleUseType, WitnessType
+from trafficstat.crash_data_types import Crashes, Base
 
 # The 'unsubscriptable-object' disable is because of issue https://github.com/PyCQA/pylint/issues/3882 with subscripting
 # Optional. When thats fixed, we can remove those disables.
 
-logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.INFO,
-    datefmt='%Y-%m-%d %H:%M:%S')
+LOGGER = logging.getLogger(__name__)
 
 
 def check_and_log(check_dict: str):
     """Logs the function entry, and checks the check_dict argument for nullness"""
+
     def _check_and_log(func):
         def wrapper(*args, **kwargs):
             logging.info("Entering %s", func.__name__)
@@ -40,46 +39,30 @@ def check_and_log(check_dict: str):
             self = args_dict['self']
 
             if self.is_element_nil(args_dict[check_dict]):
-                self.log.warning('No data')
+                LOGGER.warning('No data')
                 return False
 
             return func(*args, **kwargs)
+
         return wrapper
+
     return _check_and_log
 
 
-class CrashDataReader:  # pylint:disable=too-many-instance-attributes
+class CrashDataReader:
     """ Reads a directory of ACRS crash data files"""
 
-    def __init__(self, path: str = '//balt-fileld-srv.baltimore.city/GIS/DOT-BPD'):
+    def __init__(self, path: str = '//balt-fileld-srv.baltimore.city/GIS/DOT-BPD', conn_str='sqlite:///crash.db'):
         """
         Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
         :param path: Path to search for XML files
         :param path:
         """
-        self.log = logging.getLogger(__name__)
-        self.root: dict = {}  # pylint:disable=unsubscriptable-object ; see comment at top
-        conn = pyodbc.connect(r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
-        self.cursor = conn.cursor()
+        self.root: dict = {}
+        self.engine = create_engine(conn_str, echo=True, future=True)
 
-        # Table names
-        self.approval_table = 'acrs_approval'
-        self.circumstance_table = 'acrs_circumstances'
-        self.citation_codes_table = 'acrs_citation_codes'
-        self.crash_diagrams_table = 'acrs_crash_diagrams'
-        self.crashes_table = 'acrs_crashes'
-        self.commercial_vehicles_table = 'acrs_commercial_vehicles'
-        self.damaged_areas_table = 'acrs_damaged_areas'
-        self.ems_table = 'acrs_ems'
-        self.events_table = 'acrs_events'
-        self.pdf_table = 'acrs_pdf_report'
-        self.person_table = 'acrs_person'
-        self.person_info_table = 'acrs_person_info'
-        self.roadway_table = 'acrs_roadway'
-        self.towed_unit_table = 'acrs_towed_unit'
-        self.vehicle_table = 'acrs_vehicles'
-        self.vehicle_users_table = 'acrs_vehicle_uses'
-        self.witnesses_table = 'acrs_witnesses'
+        with self.engine.begin() as connection:
+            Base.metadata.create_all(connection)
 
         if path:
             processed_folder = os.path.join(path, 'processed')
@@ -105,14 +88,15 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         return self.root['REPORT']
 
     def read_crash_data(self, file_name: str,  # pylint:disable=too-many-branches
-                        processed_dir: Optional[str]) -> None:  # pylint:disable=unsubscriptable-object ; see comment at top
+                        processed_dir: Optional[
+                            str]) -> None:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Reads the ACRS crash data files
         :param processed_dir: Directory to move the ACRS file after being processed
         :param file_name: Full path to the file to process
         :return: True if the file was inserted into the database, false if there was an error
         """
-        self.log.info('Processing %s', file_name)
+        LOGGER.info('Processing %s', file_name)
         crash_dict = self._read_file(file_name)
 
         if crash_dict.get('APPROVALDATA'):
@@ -156,7 +140,8 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         if processed_dir:
             self._file_move(file_name, processed_dir)
 
-    def _file_move(self, file_name, processed_dir):
+    @staticmethod
+    def _file_move(file_name, processed_dir):
         """File copy with automatic renaming during retry"""
         i = 0
         while i < 5:
@@ -171,83 +156,84 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
             except shutil.Error:
                 i += 1
                 if i >= 5:
-                    self.log.error('Error moving file. It will not be moved to the processed directory: %s', file_name)
+                    LOGGER.error('Error moving file. It will not be moved to the processed directory: %s', file_name)
 
     @check_and_log('crash_dict')
     def _read_main_crash_data(self, crash_dict: CrashDataType) -> bool:
         """ Populates the acrs_crashes table """
-        data = [
-            self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict),
-            self.get_single_attr('AGENCYIDENTIFIER', crash_dict),
-            self.get_single_attr('AGENCYNAME', crash_dict),
-            self.get_single_attr('AREA', crash_dict),
-            self.get_single_attr('COLLISIONTYPE', crash_dict),
-            self.get_single_attr('CONMAINCLOSURE', crash_dict),
-            self.get_single_attr('CONMAINLOCATION', crash_dict),
-            self._convert_to_bool(self.get_single_attr('CONMAINWORKERSPRESENT', crash_dict)),
-            self.get_single_attr('CONMAINZONE', crash_dict),
-            self._convert_to_date(self.get_single_attr('CRASHDATE', crash_dict)),
-            self.get_single_attr('CRASHTIME', crash_dict),
-            self.get_single_attr('CURRENTASSIGNMENT', crash_dict),
-            self.get_single_attr('CURRENTGROUP', crash_dict),
-            self.get_single_attr('DEFAULTASSIGNMENT', crash_dict),
-            self.get_single_attr('DEFAULTGROUP', crash_dict),
-            self.get_single_attr('DOCTYPE', crash_dict),
-            self.get_single_attr('FIXEDOBJECTSTRUCK', crash_dict),
-            self.get_single_attr('HARMFULEVENTONE', crash_dict),
-            self.get_single_attr('HARMFULEVENTTWO', crash_dict),
-            self._convert_to_bool(self.get_single_attr('HITANDRUN', crash_dict)),
-            self.get_single_attr('INSERTDATE', crash_dict),
-            self.get_single_attr('INTERCHANGEAREA', crash_dict),
-            self.get_single_attr('INTERCHANGEIDENTIFICATION', crash_dict),
-            self.get_single_attr('INTERSECTIONTYPE', crash_dict),
-            self.get_single_attr('INVESTIGATINGOFFICERUSERNAME', crash_dict),
-            self.get_single_attr('INVESTIGATOR', crash_dict),
-            self.get_single_attr('JUNCTION', crash_dict),
-            self.get_single_attr('LANEDIRECTION', crash_dict),
-            self.get_single_attr('LANENUMBER', crash_dict),
-            self.get_single_attr('LANETYPE', crash_dict),
-            self.get_single_attr('LATITUDE', crash_dict),
-            self.get_single_attr('LIGHT', crash_dict),
-            self.get_single_attr('LOCALCASENUMBER', crash_dict),
-            self.get_single_attr('LOCALCODES', crash_dict),
-            self.get_single_attr('LONGITUDE', crash_dict),
-            self.get_single_attr('MILEPOINTDIRECTION', crash_dict),
-            self.get_single_attr('MILEPOINTDISTANCE', crash_dict),
-            self.get_single_attr('MILEPOINTDISTANCEUNITS', crash_dict),
-            self.get_single_attr('NARRATIVE', crash_dict),
-            self._convert_to_bool(self.get_single_attr('NONTRAFFIC', crash_dict)),
-            self.get_single_attr('NUMBEROFLANES', crash_dict),
-            self.get_single_attr('OFFROADDESCRIPTION', crash_dict),
-            self._convert_to_bool(self.get_single_attr('PHOTOSTAKEN', crash_dict)),
-            self.get_single_attr('RAMP', crash_dict),
-            self.get_single_attr('REPORTCOUNTYLOCATION', crash_dict),
-            self.get_single_attr('REPORTNUMBER', crash_dict),
-            self.get_single_attr('REPORTTYPE', crash_dict),
-            self.get_single_attr('ROADALIGNMENT', crash_dict),
-            self.get_single_attr('ROADCONDITION', crash_dict),
-            self.get_single_attr('ROADDIVISION', crash_dict),
-            self.get_single_attr('ROADGRADE', crash_dict),
-            self.get_single_attr('ROADID', crash_dict),
-            self.get_single_attr('SCHOOLBUSINVOLVEMENT', crash_dict),
-            self.get_single_attr('STATEGOVERNMENTPROPERTYNAME', crash_dict),
-            self.get_single_attr('SUPERVISOR', crash_dict),
-            self.get_single_attr('SUPERVISORUSERNAME', crash_dict),
-            self.get_single_attr('SUPERVISORYDATE', crash_dict),
-            self.get_single_attr('SURFACECONDITION', crash_dict),
-            self.get_single_attr('TRAFFICCONTROL', crash_dict),
-            self._convert_to_bool(self.get_single_attr('TRAFFICCONTROLFUNCTIONING', crash_dict)),
-            self.get_single_attr('UPDATEDATE', crash_dict),
-            self.get_single_attr('UPLOADVERSION', crash_dict),
-            self.get_single_attr('VERSIONNUMBER', crash_dict),
-            self.get_single_attr('WEATHER', crash_dict)
-        ]
+        add = Crashes(
+            ACRSREPORTTIMESTAMP=self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict),
+            AGENCYIDENTIFIER=self.get_single_attr('AGENCYIDENTIFIER', crash_dict),
+            AGENCYNAME=self.get_single_attr('AGENCYNAME', crash_dict),
+            AREA=self.get_single_attr('AREA', crash_dict),
+            COLLISIONTYPE=self.get_single_attr('COLLISIONTYPE', crash_dict),
+            CONMAINCLOSURE=self.get_single_attr('CONMAINCLOSURE', crash_dict),
+            CONMAINLOCATION=self.get_single_attr('CONMAINLOCATION', crash_dict),
+            CONMAINWORKERSPRESENT=self._convert_to_bool(self.get_single_attr('CONMAINWORKERSPRESENT', crash_dict)),
+            CONMAINZONE=self.get_single_attr('CONMAINZONE', crash_dict),
+            CRASHDATE=self._convert_to_date(self.get_single_attr('CRASHDATE', crash_dict)),
+            CRASHTIME=self.get_single_attr('CRASHTIME', crash_dict),
+            CURRENTASSIGNMENT=self.get_single_attr('CURRENTASSIGNMENT', crash_dict),
+            CURRENTGROUP=self.get_single_attr('CURRENTGROUP', crash_dict),
+            DEFAULTASSIGNMENT=self.get_single_attr('DEFAULTASSIGNMENT', crash_dict),
+            DEFAULTGROUP=self.get_single_attr('DEFAULTGROUP', crash_dict),
+            DOCTYPE=self.get_single_attr('DOCTYPE', crash_dict),
+            FIXEDOBJECTSTRUCK=self.get_single_attr('FIXEDOBJECTSTRUCK', crash_dict),
+            HARMFULEVENTONE=self.get_single_attr('HARMFULEVENTONE', crash_dict),
+            HARMFULEVENTTWO=self.get_single_attr('HARMFULEVENTTWO', crash_dict),
+            HITANDRUN=self._convert_to_bool(self.get_single_attr('HITANDRUN', crash_dict)),
+            INSERTDATE=self.get_single_attr('INSERTDATE', crash_dict),
+            INTERCHANGEAREA=self.get_single_attr('INTERCHANGEAREA', crash_dict),
+            INTERCHANGEIDENTIFICATION=self.get_single_attr('INTERCHANGEIDENTIFICATION', crash_dict),
+            INTERSECTIONTYPE=self.get_single_attr('INTERSECTIONTYPE', crash_dict),
+            INVESTIGATINGOFFICERUSERNAME=self.get_single_attr('INVESTIGATINGOFFICERUSERNAME', crash_dict),
+            INVESTIGATOR=self.get_single_attr('INVESTIGATOR', crash_dict),
+            JUNCTION=self.get_single_attr('JUNCTION', crash_dict),
+            LANEDIRECTION=self.get_single_attr('LANEDIRECTION', crash_dict),
+            LANENUMBER=self.get_single_attr('LANENUMBER', crash_dict),
+            LANETYPE=self.get_single_attr('LANETYPE', crash_dict),
+            LATITUDE=self.get_single_attr('LATITUDE', crash_dict),
+            LIGHT=self.get_single_attr('LIGHT', crash_dict),
+            LOCALCASENUMBER=self.get_single_attr('LOCALCASENUMBER', crash_dict),
+            LOCALCODES=self.get_single_attr('LOCALCODES', crash_dict),
+            LONGITUDE=self.get_single_attr('LONGITUDE', crash_dict),
+            MILEPOINTDIRECTION=self.get_single_attr('MILEPOINTDIRECTION', crash_dict),
+            MILEPOINTDISTANCE=self.get_single_attr('MILEPOINTDISTANCE', crash_dict),
+            MILEPOINTDISTANCEUNITS=self.get_single_attr('MILEPOINTDISTANCEUNITS', crash_dict),
+            NARRATIVE=self.get_single_attr('NARRATIVE', crash_dict),
+            NONTRAFFIC=self._convert_to_bool(self.get_single_attr('NONTRAFFIC', crash_dict)),
+            NUMBEROFLANES=self.get_single_attr('NUMBEROFLANES', crash_dict),
+            OFFROADDESCRIPTION=self.get_single_attr('OFFROADDESCRIPTION', crash_dict),
+            PHOTOSTAKEN=self._convert_to_bool(self.get_single_attr('PHOTOSTAKEN', crash_dict)),
+            RAMP=self.get_single_attr('RAMP', crash_dict),
+            REPORTCOUNTYLOCATION=self.get_single_attr('REPORTCOUNTYLOCATION', crash_dict),
+            REPORTNUMBER=self.get_single_attr('REPORTNUMBER', crash_dict),
+            REPORTTYPE=self.get_single_attr('REPORTTYPE', crash_dict),
+            ROADALIGNMENT=self.get_single_attr('ROADALIGNMENT', crash_dict),
+            ROADCONDITION=self.get_single_attr('ROADCONDITION', crash_dict),
+            ROADDIVISION=self.get_single_attr('ROADDIVISION', crash_dict),
+            ROADGRADE=self.get_single_attr('ROADGRADE', crash_dict),
+            ROADID=self.get_single_attr('ROADID', crash_dict),
+            SCHOOLBUSINVOLVEMENT=self.get_single_attr('SCHOOLBUSINVOLVEMENT', crash_dict),
+            STATEGOVERNMENTPROPERTYNAME=self.get_single_attr('STATEGOVERNMENTPROPERTYNAME', crash_dict),
+            SUPERVISOR=self.get_single_attr('SUPERVISOR', crash_dict),
+            SUPERVISORUSERNAME=self.get_single_attr('SUPERVISORUSERNAME', crash_dict),
+            SUPERVISORYDATE=self.get_single_attr('SUPERVISORYDATE', crash_dict),
+            SURFACECONDITION=self.get_single_attr('SURFACECONDITION', crash_dict),
+            TRAFFICCONTROL=self.get_single_attr('TRAFFICCONTROL', crash_dict),
+            TRAFFICCONTROLFUNCTIONING=self._convert_to_bool(
+                self.get_single_attr('TRAFFICCONTROLFUNCTIONING', crash_dict)),
+            UPDATEDATE=self.get_single_attr('UPDATEDATE', crash_dict),
+            UPLOADVERSION=self.get_single_attr('UPLOADVERSION', crash_dict),
+            VERSIONNUMBER=self.get_single_attr('VERSIONNUMBER', crash_dict),
+            WEATHER=self.get_single_attr('WEATHER', crash_dict)
+        )
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
+            ret = self._safe_sql_execute(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_crashes USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -262,7 +248,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                 ROADID, SCHOOLBUSINVOLVEMENT, STATEGOVERNMENTPROPERTYNAME, SUPERVISOR, SUPERVISORUSERNAME,
                 SUPERVISORYDATE, SURFACECONDITION, TRAFFICCONTROL, TRAFFICCONTROLFUNCTIONING, UPDATEDATE, UPLOADVERSION,
                 VERSIONNUMBER, WEATHER)
-                ON ({table_name}.REPORTNUMBER = vals.REPORTNUMBER)
+                ON (acrs_crashes.REPORTNUMBER = vals.REPORTNUMBER)
                 WHEN MATCHED THEN
                     UPDATE SET
                     ACRSREPORTTIMESTAMP = vals.ACRSREPORTTIMESTAMP,
@@ -356,7 +342,8 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                         vals.SUPERVISOR, vals.SUPERVISORUSERNAME, vals.SUPERVISORYDATE, vals.SURFACECONDITION,
                         vals.TRAFFICCONTROL, vals.TRAFFICCONTROLFUNCTIONING, vals.UPDATEDATE, vals.UPLOADVERSION,
                         vals.VERSIONNUMBER, vals.WEATHER);
-                """.format(table_name=self.crashes_table), data)
+                """, data
+            )
 
         return ret
 
@@ -388,16 +375,16 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
+            ret = self._safe_sql_execute(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_approval USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ) AS vals (AGENCY, DATE, CADSENT, CADSENT_DATE, CC_NUMBER, DATE_INITIATED2, GROUP_NUMBER,
                 HISTORICALAPPROVALDATA, INCIDENT_DATE, INVESTIGATOR, REPORT_TYPE, SEQ_GUID, STATUS_CHANGE_DATE,
                 STATUS_ID, STEP_NUMBER, TR_USERNAME, UNIT_CODE)
-                ON ({table_name}.SEQ_GUID = vals.SEQ_GUID AND
-                    {table_name}.CC_NUMBER = vals.CC_NUMBER)
+                ON (acrs_approval.SEQ_GUID = vals.SEQ_GUID AND
+                    acrs_approval.CC_NUMBER = vals.CC_NUMBER)
                 WHEN MATCHED THEN
                     UPDATE SET
                     AGENCY = vals.AGENCY,
@@ -423,13 +410,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                     vals.DATE_INITIATED2, vals.GROUP_NUMBER, vals.HISTORICALAPPROVALDATA, vals.INCIDENT_DATE,
                     vals.INVESTIGATOR, vals.REPORT_TYPE, vals.SEQ_GUID, vals.STATUS_CHANGE_DATE, vals.STATUS_ID,
                     vals.STEP_NUMBER, vals.TR_USERNAME, vals.UNIT_CODE);
-                """.format(table_name=self.approval_table), data
+                """, data
             )
 
         return ret
 
     @check_and_log('circumstance_dict')
-    def _read_circumstance_data(self, circumstance_dict: List[CircumstanceType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_circumstance_data(self, circumstance_dict: List[
+        CircumstanceType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_circumstances table
         :param circumstance_dict: List of CIRCUMSTANCE tags contained in the CIRCUMSTANCES tag
@@ -447,14 +435,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_circumstances USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?)
                 ) as vals (CIRCUMSTANCECODE, CIRCUMSTANCEID, CIRCUMSTANCETYPE, PERSONID, REPORTNUMBER, VEHICLEID)
-                ON ({table_name}.CIRCUMSTANCEID = vals.CIRCUMSTANCEID AND
-                    {table_name}.REPORTNUMBER = vals.REPORTNUMBER)
+                ON (acrs_circumstances.CIRCUMSTANCEID = vals.CIRCUMSTANCEID AND
+                    acrs_circumstances.REPORTNUMBER = vals.REPORTNUMBER)
                 WHEN MATCHED THEN
                     UPDATE SET
                     CIRCUMSTANCECODE = vals.CIRCUMSTANCECODE,
@@ -467,7 +455,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                     INSERT (CIRCUMSTANCECODE, CIRCUMSTANCEID, CIRCUMSTANCETYPE, PERSONID, REPORTNUMBER, VEHICLEID)
                     VALUES (vals.CIRCUMSTANCECODE, vals.CIRCUMSTANCEID, vals.CIRCUMSTANCETYPE, vals.PERSONID,
                     vals.REPORTNUMBER, vals.VEHICLEID );
-                """.format(table_name=self.circumstance_table), data
+                """, data
             )
 
         return ret
@@ -485,26 +473,26 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_citation_codes USING (
                 VALUES
                     (?, ?, ?)
                 ) as vals (CITATIONNUMBER, PERSONID, REPORTNUMBER)
-                ON ({table_name}.CITATIONNUMBER = vals.CITATIONNUMBER AND
-                    {table_name}.REPORTNUMBER = vals.REPORTNUMBER AND
-                    {table_name}.PERSONID = vals.PERSONID
+                ON (acrs_citation_codes.CITATIONNUMBER = vals.CITATIONNUMBER AND
+                    acrs_citation_codes.REPORTNUMBER = vals.REPORTNUMBER AND
+                    acrs_citation_codes.PERSONID = vals.PERSONID
                 )
                 WHEN NOT MATCHED THEN
                     INSERT (CITATIONNUMBER, PERSONID, REPORTNUMBER)
                     VALUES (vals.CITATIONNUMBER, vals.PERSONID, vals.REPORTNUMBER);
-                """.format(table_name=self.citation_codes_table), data
+                """, data
             )
 
         return ret
 
     @check_and_log('crash_diagram_dict')
-    def _read_crash_diagrams_data(self, crash_diagram_dict: CrashDiagramType) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_crash_diagrams_data(self, crash_diagram_dict: CrashDiagramType) -> bool:
         """
         Populates the acrs_crash_diagrams table
         :param crash_diagram_dict: OrderedDict from the DIAGRAM tag
@@ -517,13 +505,13 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
+            ret = self._safe_sql_execute(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_crash_diagrams USING (
                 VALUES
                     (?, ?, ?)
                 ) as vals (CRASHDIAGRAM, CRASHDIAGRAMNATIVE, REPORTNUMBER)
-                ON ({table_name}.REPORTNUMBER = vals.REPORTNUMBER)
+                ON (acrs_crash_diagrams.REPORTNUMBER = vals.REPORTNUMBER)
                 WHEN MATCHED THEN
                     UPDATE SET
                     CRASHDIAGRAM = vals.CRASHDIAGRAM,
@@ -531,13 +519,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                 WHEN NOT MATCHED THEN
                     INSERT (CRASHDIAGRAM, CRASHDIAGRAMNATIVE, REPORTNUMBER)
                     VALUES (vals.CRASHDIAGRAM, vals.CRASHDIAGRAMNATIVE, vals.REPORTNUMBER);
-                """.format(table_name=self.crash_diagrams_table), data
+                """, data
             )
 
         return ret
 
     @check_and_log('ems_dict')
-    def _read_ems_data(self, ems_dict: List[EmsType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_ems_data(self,
+                       ems_dict: List[EmsType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_ems table from the EMSes tag
         :param ems_dict: List of OrderedDicts contained in the EMSes tag
@@ -554,30 +543,30 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_ems USING (
                 VALUES
                     (?, ?, ?, ?, ?)
                 ) as vals (EMSTRANSPORTATIONTYPE, EMSUNITNUMBER, INJUREDTAKENBY, INJUREDTAKENTO, REPORTNUMBER)
-                ON ({table_name}.EMSUNITNUMBER = vals.EMSUNITNUMBER AND
-                    {table_name}.REPORTNUMBER = vals.REPORTNUMBER)
+                ON (acrs_ems.EMSUNITNUMBER = vals.EMSUNITNUMBER AND
+                    acrs_ems.REPORTNUMBER = vals.REPORTNUMBER)
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.EMSTRANSPORTATIONTYPE = vals.EMSTRANSPORTATIONTYPE,
-                    {table_name}.INJUREDTAKENBY = vals.INJUREDTAKENBY,
-                    {table_name}.INJUREDTAKENTO = vals.INJUREDTAKENTO
+                    acrs_ems.EMSTRANSPORTATIONTYPE = vals.EMSTRANSPORTATIONTYPE,
+                    acrs_ems.INJUREDTAKENBY = vals.INJUREDTAKENBY,
+                    acrs_ems.INJUREDTAKENTO = vals.INJUREDTAKENTO
                 WHEN NOT MATCHED THEN
                 INSERT (EMSTRANSPORTATIONTYPE, EMSUNITNUMBER, INJUREDTAKENBY, INJUREDTAKENTO, REPORTNUMBER)
                 VALUES (vals.EMSTRANSPORTATIONTYPE, vals.EMSUNITNUMBER, vals.INJUREDTAKENBY, vals.INJUREDTAKENTO,
                 vals.REPORTNUMBER);
-                """.format(table_name=self.ems_table), data
+                """, data
             )
 
         return ret
 
     @check_and_log('commvehicle_dict')
-    def _read_commercial_vehicle_data(self, commvehicle_dict: CommercialVehicleType) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_commercial_vehicle_data(self, commvehicle_dict: CommercialVehicleType) -> bool:
         """
         Populates the acrs_commercial_vehicle table
         :param commvehicle_dict: The dictionary of the ACRSVEHICLE
@@ -610,38 +599,38 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
+            ret = self._safe_sql_execute(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_commercial_vehicles USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ) as vals (BODYTYPE, BUSUSE, CARRIERCLASSIFICATION, CITY, CONFIGURATION, COUNTRY, DOTNUMBER, GVW,
                 HAZMATCLASS, HAZMATNAME, HAZMATNUMBER, HAZMATSPILL, MCNUMBER, NAME, NUMBEROFAXLES, PLACARDVISIBLE,
                 POSTALCODE, STATE, STREET, VEHICLEID, WEIGHT, WEIGHTUNIT)
-                ON ({table_name}.VEHICLEID = vals.VEHICLEID)
+                ON (acrs_commercial_vehicles.VEHICLEID = vals.VEHICLEID)
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.BODYTYPE = vals.BODYTYPE,
-                    {table_name}.BUSUSE = vals.BUSUSE,
-                    {table_name}.CARRIERCLASSIFICATION = vals.CARRIERCLASSIFICATION,
-                    {table_name}.CITY = vals.CITY,
-                    {table_name}.CONFIGURATION = vals.CONFIGURATION,
-                    {table_name}.COUNTRY = vals.COUNTRY,
-                    {table_name}.DOTNUMBER = vals.DOTNUMBER,
-                    {table_name}.GVW = vals.GVW,
-                    {table_name}.HAZMATCLASS = vals.HAZMATCLASS,
-                    {table_name}.HAZMATNAME = vals.HAZMATNAME,
-                    {table_name}.HAZMATNUMBER = vals.HAZMATNUMBER,
-                    {table_name}.HAZMATSPILL = vals.HAZMATSPILL,
-                    {table_name}.MCNUMBER = vals.MCNUMBER,
-                    {table_name}.NAME = vals.NAME,
-                    {table_name}.NUMBEROFAXLES = vals.NUMBEROFAXLES,
-                    {table_name}.PLACARDVISIBLE = vals.PLACARDVISIBLE,
-                    {table_name}.POSTALCODE = vals.POSTALCODE,
-                    {table_name}.STATE = vals.STATE,
-                    {table_name}.STREET = vals.STREET,
-                    {table_name}.WEIGHT = vals.WEIGHT,
-                    {table_name}.WEIGHTUNIT = vals.WEIGHTUNIT
+                    acrs_commercial_vehicles.BODYTYPE = vals.BODYTYPE,
+                    acrs_commercial_vehicles.BUSUSE = vals.BUSUSE,
+                    acrs_commercial_vehicles.CARRIERCLASSIFICATION = vals.CARRIERCLASSIFICATION,
+                    acrs_commercial_vehicles.CITY = vals.CITY,
+                    acrs_commercial_vehicles.CONFIGURATION = vals.CONFIGURATION,
+                    acrs_commercial_vehicles.COUNTRY = vals.COUNTRY,
+                    acrs_commercial_vehicles.DOTNUMBER = vals.DOTNUMBER,
+                    acrs_commercial_vehicles.GVW = vals.GVW,
+                    acrs_commercial_vehicles.HAZMATCLASS = vals.HAZMATCLASS,
+                    acrs_commercial_vehicles.HAZMATNAME = vals.HAZMATNAME,
+                    acrs_commercial_vehicles.HAZMATNUMBER = vals.HAZMATNUMBER,
+                    acrs_commercial_vehicles.HAZMATSPILL = vals.HAZMATSPILL,
+                    acrs_commercial_vehicles.MCNUMBER = vals.MCNUMBER,
+                    acrs_commercial_vehicles.NAME = vals.NAME,
+                    acrs_commercial_vehicles.NUMBEROFAXLES = vals.NUMBEROFAXLES,
+                    acrs_commercial_vehicles.PLACARDVISIBLE = vals.PLACARDVISIBLE,
+                    acrs_commercial_vehicles.POSTALCODE = vals.POSTALCODE,
+                    acrs_commercial_vehicles.STATE = vals.STATE,
+                    acrs_commercial_vehicles.STREET = vals.STREET,
+                    acrs_commercial_vehicles.WEIGHT = vals.WEIGHT,
+                    acrs_commercial_vehicles.WEIGHTUNIT = vals.WEIGHTUNIT
                 WHEN NOT MATCHED THEN
                     INSERT (BODYTYPE, BUSUSE, CARRIERCLASSIFICATION, CITY, CONFIGURATION, COUNTRY, DOTNUMBER, GVW,
                         HAZMATCLASS, HAZMATNAME, HAZMATNUMBER, HAZMATSPILL, MCNUMBER, NAME, NUMBEROFAXLES,
@@ -650,13 +639,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                         vals.COUNTRY, vals.DOTNUMBER, vals.GVW, vals.HAZMATCLASS, vals.HAZMATNAME, vals.HAZMATNUMBER,
                         vals.HAZMATSPILL, vals.MCNUMBER, vals.NAME, vals.NUMBEROFAXLES, vals.PLACARDVISIBLE,
                         vals.POSTALCODE, vals.STATE, vals.STREET, vals.VEHICLEID, vals.WEIGHT, vals.WEIGHTUNIT);
-                """.format(table_name=self.commercial_vehicles_table), data
+                """, data
             )
 
         return ret
 
     @check_and_log('event_dict')
-    def _read_event_data(self, event_dict: List[EventType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_event_data(self, event_dict: List[
+        EventType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_events table from the EVENTS tag
         :param event_dict: The dictionary of the ACRSVEHICLE
@@ -672,22 +662,22 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_events USING (
                 VALUES
                     (?, ?, ?, ?)
                 ) as vals (EVENTID, EVENTSEQUENCE, EVENTTYPE, VEHICLEID)
-                ON ({table_name}.EVENTID = vals.EVENTID AND
-                    {table_name}.VEHICLEID = vals.VEHICLEID)
+                ON (acrs_events.EVENTID = vals.EVENTID AND
+                    acrs_events.VEHICLEID = vals.VEHICLEID)
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.EVENTSEQUENCE = vals.EVENTSEQUENCE,
-                    {table_name}.EVENTTYPE = vals.EVENTTYPE
+                    acrs_events.EVENTSEQUENCE = vals.EVENTSEQUENCE,
+                    acrs_events.EVENTTYPE = vals.EVENTTYPE
                 WHEN NOT MATCHED THEN
                     INSERT (EVENTID, EVENTSEQUENCE, EVENTTYPE, VEHICLEID)
                     VALUES (vals.EVENTID, vals.EVENTSEQUENCE, vals.EVENTTYPE, vals.VEHICLEID);
-                """.format(table_name=self.events_table), data
+                """, data
             )
 
         return ret
@@ -711,14 +701,14 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_pdf_report USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?)
                 ) as vals (CHANGEDBY, DATESTATUSCHANGED, PDFREPORT1, PDF_ID, REPORTNUMBER, STATUS)
-                ON ({table_name}.PDF_ID = vals.PDF_ID AND
-                    {table_name}.REPORTNUMBER = vals.REPORTNUMBER)
+                ON (acrs_pdf_report.PDF_ID = vals.PDF_ID AND
+                    acrs_pdf_report.REPORTNUMBER = vals.REPORTNUMBER)
                 WHEN MATCHED THEN
                     UPDATE SET
                     CHANGEDBY = vals.CHANGEDBY,
@@ -729,7 +719,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                     INSERT (CHANGEDBY, DATESTATUSCHANGED, PDFREPORT1, PDF_ID, REPORTNUMBER, STATUS)
                     VALUES (vals.CHANGEDBY, vals.DATESTATUSCHANGED, vals.PDFREPORT1, vals.PDF_ID, vals.REPORTNUMBER,
                     vals.STATUS);
-                """.format(table_name=self.pdf_table), data
+                """, data
             )
 
         return ret
@@ -770,37 +760,37 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_person USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ) as vals (ADDRESS, CITY, COMPANY, COUNTRY, COUNTY, DLCLASS, DLNUMBER, DLSTATE, DOB, FIRSTNAME,
                 HOMEPHONE, LASTNAME, MIDDLENAME, OTHERPHONE, PERSONID, RACE, REPORTNUMBER, SEX, STATE, ZIP)
-                ON ({table_name}.REPORTNUMBER = vals.REPORTNUMBER AND
-                    {table_name}.PERSONID = vals.PERSONID)
+                ON (acrs_person.REPORTNUMBER = vals.REPORTNUMBER AND
+                    acrs_person.PERSONID = vals.PERSONID)
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.ADDRESS = vals.ADDRESS,
-                    {table_name}.CITY = vals.CITY,
-                    {table_name}.COMPANY = vals.COMPANY,
-                    {table_name}.COUNTRY = vals.COUNTRY,
-                    {table_name}.COUNTY = vals.COUNTY,
-                    {table_name}.DLCLASS = vals.DLCLASS,
-                    {table_name}.DLNUMBER = vals.DLNUMBER,
-                    {table_name}.DLSTATE = vals.DLSTATE,
-                    {table_name}.DOB = vals.DOB,
-                    {table_name}.FIRSTNAME = vals.FIRSTNAME,
-                    {table_name}.HOMEPHONE = vals.HOMEPHONE,
-                    {table_name}.LASTNAME = vals.LASTNAME,
-                    {table_name}.MIDDLENAME = vals.MIDDLENAME,
-                    {table_name}.OTHERPHONE = vals.OTHERPHONE,
-                    {table_name}.PERSONID = vals.PERSONID,
-                    {table_name}.RACE = vals.RACE,
-                    {table_name}.REPORTNUMBER = vals.REPORTNUMBER,
-                    {table_name}.SEX = vals.SEX,
-                    {table_name}.STATE = vals.STATE,
-                    {table_name}.ZIP = vals.ZIP
+                    acrs_person.ADDRESS = vals.ADDRESS,
+                    acrs_person.CITY = vals.CITY,
+                    acrs_person.COMPANY = vals.COMPANY,
+                    acrs_person.COUNTRY = vals.COUNTRY,
+                    acrs_person.COUNTY = vals.COUNTY,
+                    acrs_person.DLCLASS = vals.DLCLASS,
+                    acrs_person.DLNUMBER = vals.DLNUMBER,
+                    acrs_person.DLSTATE = vals.DLSTATE,
+                    acrs_person.DOB = vals.DOB,
+                    acrs_person.FIRSTNAME = vals.FIRSTNAME,
+                    acrs_person.HOMEPHONE = vals.HOMEPHONE,
+                    acrs_person.LASTNAME = vals.LASTNAME,
+                    acrs_person.MIDDLENAME = vals.MIDDLENAME,
+                    acrs_person.OTHERPHONE = vals.OTHERPHONE,
+                    acrs_person.PERSONID = vals.PERSONID,
+                    acrs_person.RACE = vals.RACE,
+                    acrs_person.REPORTNUMBER = vals.REPORTNUMBER,
+                    acrs_person.SEX = vals.SEX,
+                    acrs_person.STATE = vals.STATE,
+                    acrs_person.ZIP = vals.ZIP
                 WHEN NOT MATCHED THEN
                     INSERT (ADDRESS, CITY, COMPANY, COUNTRY, COUNTY, DLCLASS, DLNUMBER, DLSTATE, DOB, FIRSTNAME,
                     HOMEPHONE, LASTNAME, MIDDLENAME, OTHERPHONE, PERSONID, RACE, REPORTNUMBER, SEX, STATE, ZIP)
@@ -808,7 +798,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                     vals.DLNUMBER, vals.DLSTATE, vals.DOB, vals.FIRSTNAME, vals.HOMEPHONE, vals.LASTNAME,
                     vals.MIDDLENAME, vals.OTHERPHONE, vals.PERSONID, vals.RACE, vals.REPORTNUMBER, vals.SEX, vals.STATE,
                     vals.ZIP);
-                """.format(table_name=self.person_table), data
+                """, data
             )
 
         return ret
@@ -816,8 +806,9 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
     @check_and_log('person_dict')
     def _read_person_info_data(
             self,
-            person_dict: Union[List[DriverType], List[PassengerType], List[NonMotoristType]]  # pylint:disable=unsubscriptable-object ; see comment at top
-            ) -> bool:
+            person_dict: Union[List[DriverType], List[PassengerType], List[NonMotoristType]]
+            # pylint:disable=unsubscriptable-object ; see comment at top
+    ) -> bool:
         """
         Populates the acrs_person_info table.
         :param person_dict: Contains the list of OrderedDicts contained in the drivers, passengers and nonmotorists tags
@@ -866,9 +857,9 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_person_info USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ) AS vals (AIRBAGDEPLOYED, ALCOHOLTESTINDICATOR, ALCOHOLTESTTYPE, ATFAULT, BAC, CONDITION,
@@ -877,43 +868,43 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                 PEDESTRIANLOCATION, PEDESTRIANMOVEMENT, PEDESTRIANOBEYTRAFFICSIGNAL, PEDESTRIANTYPE,
                 PEDESTRIANVISIBILITY, PERSONID, REPORTNUMBER, SAFETYEQUIPMENT, SEAT, SEATINGLOCATION, SEATINGROW,
                 SUBSTANCEUSE, UNITNUMBERFIRSTSTRIKE, VEHICLEID)
-                ON ({table_name}.EMSRUNREPORTNUMBER = vals.EMSRUNREPORTNUMBER AND
-                {table_name}.PERSONID = vals.PERSONID AND
-                {table_name}.VEHICLEID = vals.VEHICLEID)
+                ON (acrs_person_info.EMSRUNREPORTNUMBER = vals.EMSRUNREPORTNUMBER AND
+                acrs_person_info.PERSONID = vals.PERSONID AND
+                acrs_person_info.VEHICLEID = vals.VEHICLEID)
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.AIRBAGDEPLOYED = vals.AIRBAGDEPLOYED,
-                    {table_name}.ALCOHOLTESTINDICATOR = vals.ALCOHOLTESTINDICATOR,
-                    {table_name}.ALCOHOLTESTTYPE = vals.ALCOHOLTESTTYPE,
-                    {table_name}.ATFAULT = vals.ATFAULT,
-                    {table_name}.BAC = vals.BAC,
-                    {table_name}.CONDITION = vals.CONDITION,
-                    {table_name}.CONTINUEDIRECTION = vals.CONTINUEDIRECTION,
-                    {table_name}.DRIVERDISTRACTEDBY = vals.DRIVERDISTRACTEDBY,
-                    {table_name}.DRUGTESTINDICATOR = vals.DRUGTESTINDICATOR,
-                    {table_name}.DRUGTESTRESULT = vals.DRUGTESTRESULT,
-                    {table_name}.EJECTION = vals.EJECTION,
-                    {table_name}.EMSRUNREPORTNUMBER = vals.EMSRUNREPORTNUMBER,
-                    {table_name}.EMSUNITNUMBER = vals.EMSUNITNUMBER,
-                    {table_name}.EQUIPMENTPROBLEM = vals.EQUIPMENTPROBLEM,
-                    {table_name}.GOINGDIRECTION = vals.GOINGDIRECTION,
-                    {table_name}.HASCDL = vals.HASCDL,
-                    {table_name}.INJURYSEVERITY = vals.INJURYSEVERITY,
-                    {table_name}.PEDESTRIANACTIONS = vals.PEDESTRIANACTIONS,
-                    {table_name}.PEDESTRIANLOCATION = vals.PEDESTRIANLOCATION,
-                    {table_name}.PEDESTRIANMOVEMENT = vals.PEDESTRIANMOVEMENT,
-                    {table_name}.PEDESTRIANOBEYTRAFFICSIGNAL = vals.PEDESTRIANOBEYTRAFFICSIGNAL,
-                    {table_name}.PEDESTRIANTYPE = vals.PEDESTRIANTYPE,
-                    {table_name}.PEDESTRIANVISIBILITY = vals.PEDESTRIANVISIBILITY,
-                    {table_name}.PERSONID = vals.PERSONID,
-                    {table_name}.REPORTNUMBER = vals.REPORTNUMBER,
-                    {table_name}.SAFETYEQUIPMENT = vals.SAFETYEQUIPMENT,
-                    {table_name}.SEAT = vals.SEAT,
-                    {table_name}.SEATINGLOCATION = vals.SEATINGLOCATION,
-                    {table_name}.SEATINGROW = vals.SEATINGROW,
-                    {table_name}.SUBSTANCEUSE = vals.SUBSTANCEUSE,
-                    {table_name}.UNITNUMBERFIRSTSTRIKE = vals.UNITNUMBERFIRSTSTRIKE,
-                    {table_name}.VEHICLEID = vals.VEHICLEID
+                    acrs_person_info.AIRBAGDEPLOYED = vals.AIRBAGDEPLOYED,
+                    acrs_person_info.ALCOHOLTESTINDICATOR = vals.ALCOHOLTESTINDICATOR,
+                    acrs_person_info.ALCOHOLTESTTYPE = vals.ALCOHOLTESTTYPE,
+                    acrs_person_info.ATFAULT = vals.ATFAULT,
+                    acrs_person_info.BAC = vals.BAC,
+                    acrs_person_info.CONDITION = vals.CONDITION,
+                    acrs_person_info.CONTINUEDIRECTION = vals.CONTINUEDIRECTION,
+                    acrs_person_info.DRIVERDISTRACTEDBY = vals.DRIVERDISTRACTEDBY,
+                    acrs_person_info.DRUGTESTINDICATOR = vals.DRUGTESTINDICATOR,
+                    acrs_person_info.DRUGTESTRESULT = vals.DRUGTESTRESULT,
+                    acrs_person_info.EJECTION = vals.EJECTION,
+                    acrs_person_info.EMSRUNREPORTNUMBER = vals.EMSRUNREPORTNUMBER,
+                    acrs_person_info.EMSUNITNUMBER = vals.EMSUNITNUMBER,
+                    acrs_person_info.EQUIPMENTPROBLEM = vals.EQUIPMENTPROBLEM,
+                    acrs_person_info.GOINGDIRECTION = vals.GOINGDIRECTION,
+                    acrs_person_info.HASCDL = vals.HASCDL,
+                    acrs_person_info.INJURYSEVERITY = vals.INJURYSEVERITY,
+                    acrs_person_info.PEDESTRIANACTIONS = vals.PEDESTRIANACTIONS,
+                    acrs_person_info.PEDESTRIANLOCATION = vals.PEDESTRIANLOCATION,
+                    acrs_person_info.PEDESTRIANMOVEMENT = vals.PEDESTRIANMOVEMENT,
+                    acrs_person_info.PEDESTRIANOBEYTRAFFICSIGNAL = vals.PEDESTRIANOBEYTRAFFICSIGNAL,
+                    acrs_person_info.PEDESTRIANTYPE = vals.PEDESTRIANTYPE,
+                    acrs_person_info.PEDESTRIANVISIBILITY = vals.PEDESTRIANVISIBILITY,
+                    acrs_person_info.PERSONID = vals.PERSONID,
+                    acrs_person_info.REPORTNUMBER = vals.REPORTNUMBER,
+                    acrs_person_info.SAFETYEQUIPMENT = vals.SAFETYEQUIPMENT,
+                    acrs_person_info.SEAT = vals.SEAT,
+                    acrs_person_info.SEATINGLOCATION = vals.SEATINGLOCATION,
+                    acrs_person_info.SEATINGROW = vals.SEATINGROW,
+                    acrs_person_info.SUBSTANCEUSE = vals.SUBSTANCEUSE,
+                    acrs_person_info.UNITNUMBERFIRSTSTRIKE = vals.UNITNUMBERFIRSTSTRIKE,
+                    acrs_person_info.VEHICLEID = vals.VEHICLEID
                 WHEN NOT MATCHED THEN
                     INSERT (AIRBAGDEPLOYED, ALCOHOLTESTINDICATOR, ALCOHOLTESTTYPE, ATFAULT, BAC, CONDITION,
                         CONTINUEDIRECTION, DRIVERDISTRACTEDBY, DRUGTESTINDICATOR, DRUGTESTRESULT, EJECTION,
@@ -929,21 +920,23 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                         vals.PEDESTRIANOBEYTRAFFICSIGNAL, vals.PEDESTRIANTYPE, vals.PEDESTRIANVISIBILITY, vals.PERSONID,
                         vals.REPORTNUMBER, vals.SAFETYEQUIPMENT, vals.SEAT, vals.SEATINGLOCATION, vals.SEATINGROW,
                         vals.SUBSTANCEUSE, vals.UNITNUMBERFIRSTSTRIKE, vals.VEHICLEID);
-                """.format(table_name=self.person_info_table), data
+                """, data
             )
 
         return ret
 
     @check_and_log('reportdoc_dict')
-    def _read_report_documents_data(self, reportdoc_dict: List[ReportDocumentType]):  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_report_documents_data(self, reportdoc_dict: List[
+        ReportDocumentType]):  # pylint:disable=unsubscriptable-object ; see comment at top
         """Populates the acrs_report_docs table. Currently a stub until we get the schema or example data for this"""
 
     @check_and_log('reportphotos_dict')
-    def _read_report_photos_data(self, reportphotos_dict: List[ReportPhotoType]):  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_report_photos_data(self, reportphotos_dict: List[
+        ReportPhotoType]):  # pylint:disable=unsubscriptable-object ; see comment at top
         """Populates the acrs_report_photos table. Currently a stub until we get the schema or example data for this"""
 
     @check_and_log('roadway_dict')
-    def _read_roadway_data(self, roadway_dict: RoadwayType) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_roadway_data(self, roadway_dict: RoadwayType) -> bool:
         """
         Populates the acrs_roadway table. Expects the ROADWAY tag contents
         :param roadway_dict: OrderedDict from the ROADWAY tag
@@ -968,31 +961,31 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_execute(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
+            ret = self._safe_sql_execute(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_roadway USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ) as vals ( COUNTY, LOGMILE_DIR, MILEPOINT, MUNICIPAL, MUNICIPAL_AREA_CODE, REFERENCE_MUNI,
                 REFERENCE_ROADNAME, REFERENCE_ROUTE_NUMBER, REFERENCE_ROUTE_SUFFIX, REFERENCE_ROUTE_TYPE, ROADID,
                 ROAD_NAME, ROUTE_NUMBER, ROUTE_SUFFIX, ROUTE_TYPE)
-                ON ({table_name}.roadid = vals.roadid )
+                ON (acrs_roadway.roadid = vals.roadid )
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.COUNTY = vals.COUNTY,
-                    {table_name}.LOGMILE_DIR = vals.LOGMILE_DIR,
-                    {table_name}.MILEPOINT = vals.MILEPOINT,
-                    {table_name}.MUNICIPAL = vals.MUNICIPAL,
-                    {table_name}.MUNICIPAL_AREA_CODE = vals.MUNICIPAL_AREA_CODE,
-                    {table_name}.REFERENCE_MUNI = vals.REFERENCE_MUNI,
-                    {table_name}.REFERENCE_ROADNAME = vals.REFERENCE_ROADNAME,
-                    {table_name}.REFERENCE_ROUTE_NUMBER = vals.REFERENCE_ROUTE_NUMBER,
-                    {table_name}.REFERENCE_ROUTE_SUFFIX = vals.REFERENCE_ROUTE_SUFFIX,
-                    {table_name}.REFERENCE_ROUTE_TYPE = vals.REFERENCE_ROUTE_TYPE,
-                    {table_name}.ROAD_NAME = vals.ROAD_NAME,
-                    {table_name}.ROUTE_NUMBER = vals.ROUTE_NUMBER,
-                    {table_name}.ROUTE_SUFFIX = vals.ROUTE_SUFFIX,
-                    {table_name}.ROUTE_TYPE = vals.ROUTE_TYPE
+                    acrs_roadway.COUNTY = vals.COUNTY,
+                    acrs_roadway.LOGMILE_DIR = vals.LOGMILE_DIR,
+                    acrs_roadway.MILEPOINT = vals.MILEPOINT,
+                    acrs_roadway.MUNICIPAL = vals.MUNICIPAL,
+                    acrs_roadway.MUNICIPAL_AREA_CODE = vals.MUNICIPAL_AREA_CODE,
+                    acrs_roadway.REFERENCE_MUNI = vals.REFERENCE_MUNI,
+                    acrs_roadway.REFERENCE_ROADNAME = vals.REFERENCE_ROADNAME,
+                    acrs_roadway.REFERENCE_ROUTE_NUMBER = vals.REFERENCE_ROUTE_NUMBER,
+                    acrs_roadway.REFERENCE_ROUTE_SUFFIX = vals.REFERENCE_ROUTE_SUFFIX,
+                    acrs_roadway.REFERENCE_ROUTE_TYPE = vals.REFERENCE_ROUTE_TYPE,
+                    acrs_roadway.ROAD_NAME = vals.ROAD_NAME,
+                    acrs_roadway.ROUTE_NUMBER = vals.ROUTE_NUMBER,
+                    acrs_roadway.ROUTE_SUFFIX = vals.ROUTE_SUFFIX,
+                    acrs_roadway.ROUTE_TYPE = vals.ROUTE_TYPE
                 WHEN NOT MATCHED THEN
                     INSERT (COUNTY, LOGMILE_DIR, MILEPOINT, MUNICIPAL, MUNICIPAL_AREA_CODE, REFERENCE_MUNI,
                         REFERENCE_ROADNAME, REFERENCE_ROUTE_NUMBER, REFERENCE_ROUTE_SUFFIX, REFERENCE_ROUTE_TYPE,
@@ -1001,7 +994,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                         vals.REFERENCE_MUNI, vals.REFERENCE_ROADNAME, vals.REFERENCE_ROUTE_NUMBER,
                         vals.REFERENCE_ROUTE_SUFFIX, vals.REFERENCE_ROUTE_TYPE, vals.ROADID, vals.ROAD_NAME,
                         vals.ROUTE_NUMBER, vals.ROUTE_SUFFIX, vals.ROUTE_TYPE);
-                """.format(table_name=self.roadway_table), data
+                """, data
             )
 
         return ret
@@ -1034,44 +1027,45 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_towed_unit USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ) as vals (INSURANCEPOLICYNUMBER, INSURER, LICENSEPLATENUMBER, LICENSEPLATESTATE, OWNERID, TOWEDID,
                 UNITNUMBER, VEHICLEID, VEHICLEMAKE, VEHICLEMODEL, VEHICLEYEAR, VIN)
-                ON ({table_name}.TOWEDID = vals.TOWEDID AND
-                    {table_name}.VEHICLEID = vals.VEHICLEID AND
-                    {table_name}.OWNERID = vals.OWNERID
+                ON (acrs_towed_unit.TOWEDID = vals.TOWEDID AND
+                    acrs_towed_unit.VEHICLEID = vals.VEHICLEID AND
+                    acrs_towed_unit.OWNERID = vals.OWNERID
                 )
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.INSURANCEPOLICYNUMBER = vals.INSURANCEPOLICYNUMBER,
-                    {table_name}.INSURER = vals.INSURER,
-                    {table_name}.LICENSEPLATENUMBER = vals.LICENSEPLATENUMBER,
-                    {table_name}.LICENSEPLATESTATE = vals.LICENSEPLATESTATE,
-                    {table_name}.OWNERID = vals.OWNERID,
-                    {table_name}.TOWEDID = vals.TOWEDID,
-                    {table_name}.UNITNUMBER = vals.UNITNUMBER,
-                    {table_name}.VEHICLEID = vals.VEHICLEID,
-                    {table_name}.VEHICLEMAKE = vals.VEHICLEMAKE,
-                    {table_name}.VEHICLEMODEL = vals.VEHICLEMODEL,
-                    {table_name}.VEHICLEYEAR = vals.VEHICLEYEAR,
-                    {table_name}.VIN = vals.VIN
+                    acrs_towed_unit.INSURANCEPOLICYNUMBER = vals.INSURANCEPOLICYNUMBER,
+                    acrs_towed_unit.INSURER = vals.INSURER,
+                    acrs_towed_unit.LICENSEPLATENUMBER = vals.LICENSEPLATENUMBER,
+                    acrs_towed_unit.LICENSEPLATESTATE = vals.LICENSEPLATESTATE,
+                    acrs_towed_unit.OWNERID = vals.OWNERID,
+                    acrs_towed_unit.TOWEDID = vals.TOWEDID,
+                    acrs_towed_unit.UNITNUMBER = vals.UNITNUMBER,
+                    acrs_towed_unit.VEHICLEID = vals.VEHICLEID,
+                    acrs_towed_unit.VEHICLEMAKE = vals.VEHICLEMAKE,
+                    acrs_towed_unit.VEHICLEMODEL = vals.VEHICLEMODEL,
+                    acrs_towed_unit.VEHICLEYEAR = vals.VEHICLEYEAR,
+                    acrs_towed_unit.VIN = vals.VIN
                 WHEN NOT MATCHED THEN
                     INSERT (INSURANCEPOLICYNUMBER, INSURER, LICENSEPLATENUMBER, LICENSEPLATESTATE, OWNERID, TOWEDID,
                     UNITNUMBER, VEHICLEID, VEHICLEMAKE, VEHICLEMODEL, VEHICLEYEAR, VIN)
                     VALUES (vals.INSURANCEPOLICYNUMBER, vals.INSURER, vals.LICENSEPLATENUMBER, vals.LICENSEPLATESTATE,
                     vals.OWNERID, vals.TOWEDID, vals.UNITNUMBER, vals.VEHICLEID, vals.VEHICLEMAKE, vals.VEHICLEMODEL,
                     vals.VEHICLEYEAR, vals.VIN);
-                """.format(table_name=self.towed_unit_table), data
+                """, data
             )
 
         return ret
 
     @check_and_log('vehicle_dict')
-    def _read_acrs_vehicle_data(self, vehicle_dict: List[VehicleType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_acrs_vehicle_data(self, vehicle_dict: List[
+        VehicleType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_vehicles table
         :param vehicle_dict: List of OrderedDicts from the ACRSVEHICLE tag
@@ -1140,9 +1134,9 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_vehicles USING (
                 VALUES
                     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ) as vals (CONTINUEDIRECTION, DAMAGEEXTENT, DRIVERLESSVEHICLE, EMERGENCYMOTORVEHICLEUSE,
@@ -1151,40 +1145,40 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                 REPORTNUMBER, SFVEHICLEINTRANSPORT, SPEEDLIMIT, TOWEDUNITTYPE, UNITNUMBER, VEHICLEBODYTYPE, VEHICLEID,
                 VEHICLEMAKE, VEHICLEMODEL, VEHICLEMOVEMENT, VEHICLEREMOVEDBY, VEHICLEREMOVEDTO, VEHICLETOWEDAWAY,
                 VEHICLEYEAR, VIN)
-                ON ({table_name}.REPORTNUMBER = vals.REPORTNUMBER AND
-                    {table_name}.VEHICLEID = vals.VEHICLEID)
+                ON (acrs_vehicles.REPORTNUMBER = vals.REPORTNUMBER AND
+                    acrs_vehicles.VEHICLEID = vals.VEHICLEID)
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.CONTINUEDIRECTION = vals.CONTINUEDIRECTION,
-                    {table_name}.DAMAGEEXTENT = vals.DAMAGEEXTENT,
-                    {table_name}.DRIVERLESSVEHICLE = vals.DRIVERLESSVEHICLE,
-                    {table_name}.EMERGENCYMOTORVEHICLEUSE = vals.EMERGENCYMOTORVEHICLEUSE,
-                    {table_name}.FIRE = vals.FIRE,
-                    {table_name}.FIRSTIMPACT = vals.FIRSTIMPACT,
-                    {table_name}.GOINGDIRECTION = vals.GOINGDIRECTION,
-                    {table_name}.HITANDRUN = vals.HITANDRUN,
-                    {table_name}.INSURANCEPOLICYNUMBER = vals.INSURANCEPOLICYNUMBER,
-                    {table_name}.INSURER = vals.INSURER,
-                    {table_name}.LICENSEPLATENUMBER = vals.LICENSEPLATENUMBER,
-                    {table_name}.LICENSEPLATESTATE = vals.LICENSEPLATESTATE,
-                    {table_name}.MAINIMPACT = vals.MAINIMPACT,
-                    {table_name}.MOSTHARMFULEVENT = vals.MOSTHARMFULEVENT,
-                    {table_name}.OWNERID = vals.OWNERID,
-                    {table_name}.PARKEDVEHICLE = vals.PARKEDVEHICLE,
-                    {table_name}.REGISTRATIONEXPIRATIONYEAR = vals.REGISTRATIONEXPIRATIONYEAR,
-                    {table_name}.SFVEHICLEINTRANSPORT = vals.SFVEHICLEINTRANSPORT,
-                    {table_name}.SPEEDLIMIT = vals.SPEEDLIMIT,
-                    {table_name}.TOWEDUNITTYPE = vals.TOWEDUNITTYPE,
-                    {table_name}.UNITNUMBER = vals.UNITNUMBER,
-                    {table_name}.VEHICLEBODYTYPE = vals.VEHICLEBODYTYPE,
-                    {table_name}.VEHICLEMAKE = vals.VEHICLEMAKE,
-                    {table_name}.VEHICLEMODEL = vals.VEHICLEMODEL,
-                    {table_name}.VEHICLEMOVEMENT = vals.VEHICLEMOVEMENT,
-                    {table_name}.VEHICLEREMOVEDBY = vals.VEHICLEREMOVEDBY,
-                    {table_name}.VEHICLEREMOVEDTO = vals.VEHICLEREMOVEDTO,
-                    {table_name}.VEHICLETOWEDAWAY = vals.VEHICLETOWEDAWAY,
-                    {table_name}.VEHICLEYEAR = vals.VEHICLEYEAR,
-                    {table_name}.VIN = vals.VIN
+                    acrs_vehicles.CONTINUEDIRECTION = vals.CONTINUEDIRECTION,
+                    acrs_vehicles.DAMAGEEXTENT = vals.DAMAGEEXTENT,
+                    acrs_vehicles.DRIVERLESSVEHICLE = vals.DRIVERLESSVEHICLE,
+                    acrs_vehicles.EMERGENCYMOTORVEHICLEUSE = vals.EMERGENCYMOTORVEHICLEUSE,
+                    acrs_vehicles.FIRE = vals.FIRE,
+                    acrs_vehicles.FIRSTIMPACT = vals.FIRSTIMPACT,
+                    acrs_vehicles.GOINGDIRECTION = vals.GOINGDIRECTION,
+                    acrs_vehicles.HITANDRUN = vals.HITANDRUN,
+                    acrs_vehicles.INSURANCEPOLICYNUMBER = vals.INSURANCEPOLICYNUMBER,
+                    acrs_vehicles.INSURER = vals.INSURER,
+                    acrs_vehicles.LICENSEPLATENUMBER = vals.LICENSEPLATENUMBER,
+                    acrs_vehicles.LICENSEPLATESTATE = vals.LICENSEPLATESTATE,
+                    acrs_vehicles.MAINIMPACT = vals.MAINIMPACT,
+                    acrs_vehicles.MOSTHARMFULEVENT = vals.MOSTHARMFULEVENT,
+                    acrs_vehicles.OWNERID = vals.OWNERID,
+                    acrs_vehicles.PARKEDVEHICLE = vals.PARKEDVEHICLE,
+                    acrs_vehicles.REGISTRATIONEXPIRATIONYEAR = vals.REGISTRATIONEXPIRATIONYEAR,
+                    acrs_vehicles.SFVEHICLEINTRANSPORT = vals.SFVEHICLEINTRANSPORT,
+                    acrs_vehicles.SPEEDLIMIT = vals.SPEEDLIMIT,
+                    acrs_vehicles.TOWEDUNITTYPE = vals.TOWEDUNITTYPE,
+                    acrs_vehicles.UNITNUMBER = vals.UNITNUMBER,
+                    acrs_vehicles.VEHICLEBODYTYPE = vals.VEHICLEBODYTYPE,
+                    acrs_vehicles.VEHICLEMAKE = vals.VEHICLEMAKE,
+                    acrs_vehicles.VEHICLEMODEL = vals.VEHICLEMODEL,
+                    acrs_vehicles.VEHICLEMOVEMENT = vals.VEHICLEMOVEMENT,
+                    acrs_vehicles.VEHICLEREMOVEDBY = vals.VEHICLEREMOVEDBY,
+                    acrs_vehicles.VEHICLEREMOVEDTO = vals.VEHICLEREMOVEDTO,
+                    acrs_vehicles.VEHICLETOWEDAWAY = vals.VEHICLETOWEDAWAY,
+                    acrs_vehicles.VEHICLEYEAR = vals.VEHICLEYEAR,
+                    acrs_vehicles.VIN = vals.VIN
                 WHEN NOT MATCHED THEN
                     INSERT (CONTINUEDIRECTION, DAMAGEEXTENT, DRIVERLESSVEHICLE, EMERGENCYMOTORVEHICLEUSE, FIRE,
                         FIRSTIMPACT, GOINGDIRECTION, HITANDRUN, INSURANCEPOLICYNUMBER, INSURER, LICENSEPLATENUMBER,
@@ -1200,7 +1194,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
                         vals.TOWEDUNITTYPE, vals.UNITNUMBER, vals.VEHICLEBODYTYPE, vals.VEHICLEID, vals.VEHICLEMAKE,
                         vals.VEHICLEMODEL, vals.VEHICLEMOVEMENT, vals.VEHICLEREMOVEDBY, vals.VEHICLEREMOVEDTO,
                         vals.VEHICLETOWEDAWAY, vals.VEHICLEYEAR, vals.VIN);
-                """.format(table_name=self.vehicle_table), data
+                """, data
             )
 
         return ret
@@ -1221,21 +1215,21 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_vehicle_uses USING (
                 VALUES
                     (?, ?, ?)
                 ) as vals (ID, VEHICLEID, VEHICLEUSECODE)
-                ON ({table_name}.ID = vals.ID AND
-                    {table_name}.VEHICLEID = vals.VEHICLEID)
+                ON (acrs_vehicle_uses.ID = vals.ID AND
+                    acrs_vehicle_uses.VEHICLEID = vals.VEHICLEID)
                 WHEN MATCHED THEN
                     UPDATE SET
-                    {table_name}.VEHICLEUSECODE = vals.VEHICLEUSECODE
+                    acrs_vehicle_uses.VEHICLEUSECODE = vals.VEHICLEUSECODE
                 WHEN NOT MATCHED THEN
                 INSERT (ID, VEHICLEID, VEHICLEUSECODE)
                 VALUES (vals.ID, vals.VEHICLEID, vals.VEHICLEUSECODE);
-                """.format(table_name=self.vehicle_users_table), data
+                """, data
             )
 
         return ret
@@ -1256,26 +1250,28 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy
+            self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_damaged_areas USING (
                 VALUES
                     (?, ?, ?)
                 ) as vals (DAMAGEID, IMPACTTYPE, VEHICLEID)
-                ON ({table_name}.DAMAGEID = vals.DAMAGEID AND
-                    {table_name}.VEHICLEID = vals.VEHICLEID)
+                ON (acrs_damaged_areas.DAMAGEID = vals.DAMAGEID AND
+                    acrs_damaged_areas.VEHICLEID = vals.VEHICLEID)
                 WHEN MATCHED THEN
                     UPDATE SET
                     IMPACTTYPE = vals.IMPACTTYPE
                 WHEN NOT MATCHED THEN
                     INSERT (DAMAGEID, IMPACTTYPE, VEHICLEID)
                     VALUES (vals.DAMAGEID, vals.IMPACTTYPE, vals.VEHICLEID);
-                """.format(table_name=self.damaged_areas_table), data)
+                """, data
+            )
 
         return ret
 
     @check_and_log('witness_dict')
-    def _read_witness_data(self, witness_dict: List[WitnessType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _read_witness_data(self, witness_dict: List[
+        WitnessType]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Populates the acrs_witnesses table
         :param witness_dict: The list of OrderedDicts from the WITNESSes tag
@@ -1292,24 +1288,25 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
         ret: bool = True
         if data:
-            ret = self._safe_sql_executemany(  # nosec ; Sql injection vulnerability addressed when we move to SQLAlchemy ; pylint:disable=line-too-long
+            ret = self._safe_sql_executemany(
                 """
-                MERGE {table_name} USING (
+                MERGE acrs_witnesses USING (
                 VALUES
                     (?, ?)
                 ) as vals (PERSONID, REPORTNUMBER)
-                ON ({table_name}.PERSONID = vals.PERSONID AND
-                    {table_name}.REPORTNUMBER = vals.REPORTNUMBER)
+                ON (acrs_witnesses.PERSONID = vals.PERSONID AND
+                    acrs_witnesses.REPORTNUMBER = vals.REPORTNUMBER)
                 WHEN NOT MATCHED THEN
                     INSERT (PERSONID, REPORTNUMBER)
                     VALUES (vals.PERSONID, vals.REPORTNUMBER);
-                """.format(table_name=self.witnesses_table), data
+                """, data
             )
 
         return ret
 
     @staticmethod
-    def is_element_nil(element: Optional[OrderedDict]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def is_element_nil(
+            element: Optional[OrderedDict]) -> bool:  # pylint:disable=unsubscriptable-object ; see comment at top
         """
         Checks if a tag is nil, because xmltodict returns an ordereddict with a nil element
         :param element: (ordereddict) The ordereddict to check for nil
@@ -1322,8 +1319,8 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
             return False
 
         return (len(element) == 1) and \
-            isinstance(element, OrderedDict) and \
-            element.get('@i:nil') == 'true'  # pylist:disable=isinstance-second-argument-not-valid-type ; see comment
+               isinstance(element, OrderedDict) and \
+               element.get('@i:nil') == 'true'  # pylist:disable=isinstance-second-argument-not-valid-type ; see comment
 
     @staticmethod
     def _convert_to_date(val: Optional[str]) -> str:  # pylint:disable=unsubscriptable-object ; see comment at top
@@ -1351,7 +1348,8 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
         return int(bool(val == 'y'))
 
     @staticmethod
-    def _validate_uniqueidentifier(uid: Optional[str]) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _validate_uniqueidentifier(uid: Optional[str]) -> Optional[
+        str]:  # pylint:disable=unsubscriptable-object ; see comment at top
         """Checks for null uniqueidentifiers"""
         if not uid:
             return None
@@ -1365,7 +1363,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
 
     def _safe_sql(self,
                   query: str,
-                  data: Sequence,  # pylint:disable=unsubscriptable-object ; see comment at top
+                  data: Sequence,
                   many: bool) -> bool:
         """
         Executes a sql query and checks for things that normally error out
@@ -1385,7 +1383,7 @@ class CrashDataReader:  # pylint:disable=too-many-instance-attributes
             else:
                 self.cursor.execute(query, data)
         except (pyodbc.ProgrammingError, pyodbc.DataError, pyodbc.IntegrityError) as err:
-            self.log.error('SQL data error: %s\nError: %s\nQuery: %s', data, err, query)
+            LOGGER.error('SQL data error: %s\nError: %s\nQuery: %s', data, err, query)
             traceback.print_stack()
             return False
 
