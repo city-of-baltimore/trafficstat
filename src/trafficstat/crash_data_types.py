@@ -5,6 +5,10 @@ from typing import Any, List, Optional, Sequence, Tuple, TypedDict, Union
 from datetime import date, datetime
 from uuid import UUID
 
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.types import Boolean, Date, DateTime, Float, Integer, String
+from sqlalchemy import Column
+
 # The 'unsubscriptable-object' disable is because of issue https://github.com/PyCQA/pylint/issues/3882 with subscripting
 # Optional. When thats fixed, we can remove those disables.
 # pylint:disable=unsubscriptable-object
@@ -13,6 +17,8 @@ from uuid import UUID
 # https://github.com/PyCQA/pylint/issues/3876. When that's fixed, we can remove those disables
 
 # pylint:disable=too-few-public-methods
+
+Base = declarative_base()
 
 # definitions for typing
 SingleAttrElement = OrderedDict[str, Optional[str]]
@@ -418,8 +424,92 @@ class VehiclesType(TypedDict):  # pylint:disable=inherit-non-class ; See comment
     ACRSVEHICLE: List[VehicleType]
 
 
+##################
+#   acrs_crashes #
+##################
+class Crashes(Base):
+    """Sqlalchemy: Data for table acrs_crashes"""
+    __tablename__ = "test_acrs_crashes"
+
+    ACRSREPORTTIMESTAMP = Column(DateTime)  # <xs:element type="xs:dateTime" name="ACRSREPORTTIMESTAMP"/>
+    AGENCYIDENTIFIER = Column(String)  # <xs:element type="xs:string" name="AGENCYIDENTIFIER"/>
+    AGENCYNAME = Column(String)  # <xs:element type="xs:string" name="AGENCYNAME"/>
+    # APPROVALDATA: ApprovalDataType  # <xs:element type="cras:APPROVALDATAType" name="APPROVALDATA" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    AREA = Column(String)  # <xs:element type="xs:string" name="AREA"/>
+    # CIRCUMSTANCES: CircumstancesType  # <xs:element type="cras:CIRCUMSTANCESType" name="CIRCUMSTANCES" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    COLLISIONTYPE = Column(Integer)  # <xs:element type="xs:byte" name="COLLISIONTYPE"/>
+    CONMAINCLOSURE = Column(String)  # <xs:element name="CONMAINCLOSURE" nillable="true"> (restricted to values 00, 01, 02, 03, 04, 88, 99, and ''
+    CONMAINLOCATION = Column(String)  # <xs:element name="CONMAINLOCATION" nillable="true"> (restricted to values 00, 01, 02, 03, 04, 05, 88, 99, and '')
+    CONMAINWORKERSPRESENT = Column(String)  # <xs:element name="CONMAINWORKERSPRESENT" nillable="true"> (restricted to Y, N, U, '')
+    CONMAINZONE = Column(Boolean, nullable=True)  # <xs:element name="CONMAINWORKERSPRESENT" nillable="true">
+    CRASHDATE = Column(Date)  # <xs:element type="xs:dateTime" name="CRASHDATE"/>
+    CRASHTIME = Column(DateTime)  # <xs:element type="xs:dateTime" name="CRASHTIME"/>
+    CURRENTASSIGNMENT = Column(String)  # <xs:element name="CURRENTASSIGNMENT"> (restricted to values 999, BCPD, and '')
+    CURRENTGROUP = Column(String)  # <xs:element type="xs:string" name="CURRENTGROUP"/>
+    DEFAULTASSIGNMENT = Column(String)  # <xs:element name="DEFAULTASSIGNMENT"> (restricted to values 999, BCPD, and '')
+    DEFAULTGROUP = Column(String)  # <xs:element type="xs:string" name="DEFAULTGROUP"/>
+    # DIAGRAM: CrashDiagramType  # <xs:element type="cras:DIAGRAMType" name="DIAGRAM" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    DOCTYPE = Column(String)  # <xs:element type="xs:string" name="DOCTYPE"/>
+    # EMSes: EmsesType  # <xs:element type="cras:EMSType" name="EMS" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    FIXEDOBJECTSTRUCK = Column(Float)  # <xs:element type="xs:float" name="FIXEDOBJECTSTRUCK"/>
+    HARMFULEVENTONE = Column(Float)  # <xs:element type="xs:float" name="HARMFULEVENTONE"/>
+    HARMFULEVENTTWO = Column(Float)  # <xs:element type="xs:float" name="HARMFULEVENTTWO"/>
+    HITANDRUN = Column(Boolean)  # <xs:element name="HITANDRUN">
+    INSERTDATE = Column(DateTime)  # <xs:element type="xs:dateTime" name="INSERTDATE"/>
+    INTERCHANGEAREA = Column(String)  # <xs:element name="INTERCHANGEAREA"> (restricted to 00, 01, 02, 03, 04, 05, 06, 88, 99, and '')
+    INTERCHANGEIDENTIFICATION = Column(String, nullable=True)  # <xs:element type="xs:string" name="INTERCHANGEIDENTIFICATION" nillable="true"/>
+    INTERSECTIONTYPE = Column(String)  # <xs:element name="INTERSECTIONTYPE">
+    INVESTIGATINGOFFICERUSERNAME = Column(String)  # <xs:element type="xs:string" name="INVESTIGATINGOFFICERUSERNAME"/>
+    INVESTIGATOR = Column(String)  # <xs:element type="xs:string" name="INVESTIGATOR" nillable="true"/>
+    JUNCTION = Column(String)  # <xs:element type="xs:string" name="JUNCTION"/>
+    LANEDIRECTION = Column(String)  # <xs:element name="LANEDIRECTION"> (restricted to N, S, E, W, U and '')
+    LANENUMBER = Column(String)  # <xs:element name="LANENUMBER"> (restricted to 1, 2, 3, 4, 5, 6 or '')
+    LANETYPE = Column(String, nullable=True)  # <xs:element type="xs:string" name="LANETYPE" nillable="true"/>
+    LATITUDE = Column(Float)  # <xs:element type="xs:float" name="LATITUDE"/>
+    LIGHT = Column(Float)  # <xs:element name="LIGHT">
+    LOCALCASENUMBER = Column(String)  # <xs:element type="xs:string" name="LOCALCASENUMBER"/>
+    LOCALCODES = Column(String)  # <xs:element type="xs:string" name="LOCALCODES" nillable="true"/>
+    LONGITUDE = Column(Float)  # <xs:element type="xs:float" name="LONGITUDE"/>
+    MILEPOINTDIRECTION = Column(String)  # <xs:element name="MILEPOINTDIRECTION"> (restrcted to N, S, E, W, U, and '')
+    MILEPOINTDISTANCE = Column(String)  # <xs:element type="xs:string" name="MILEPOINTDISTANCE"/>
+    MILEPOINTDISTANCEUNITS = Column(String)  # <xs:element name="MILEPOINTDISTANCEUNITS"> (restricted to M, F, U, and '')
+    NARRATIVE = Column(String)  # <xs:element type="xs:string" name="NARRATIVE"/>
+    # NONMOTORISTs: NonMotoristsType  # <xs:element type="cras:NONMOTORISTType" name="NONMOTORIST" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    NONTRAFFIC = Column(Boolean)  # <xs:element name="NONTRAFFIC">
+    NUMBEROFLANES = Column(String)  # <xs:element type="xs:string" name="NUMBEROFLANES"/>
+    OFFROADDESCRIPTION = Column(String, nullable=True)  # <xs:element type="xs:string" name="OFFROADDESCRIPTION" nillable="true"/>
+    # PDFREPORTs: PdfReportsType  # <xs:element type="cras:PDFREPORTsType" name="PDFREPORTs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    PHOTOSTAKEN = Column(Boolean)  # <xs:element name="PHOTOSTAKEN">
+    # People: PeopleType  # <xs:element type="cras:PeopleType" name="People" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    RAMP = Column(String)  # <xs:element type="xs:string" name="RAMP" nillable="true"/>
+    REPORTCOUNTYLOCATION = Column(Integer)  # <xs:element name="REPORTCOUNTYLOCATION"> (restricted to 03, 23, 24, and 88)
+    # REPORTDOCUMENTs: ReportDocumentsType  # <xs:element type="xs:string" name="REPORTDOCUMENTs" nillable="true"/>
+    REPORTNUMBER = Column(String, primary_key=True)  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    # REPORTPHOTOes: ReportPhotoesType  # <xs:element type="xs:string" name="REPORTPHOTOes" nillable="true"/>
+    REPORTTYPE = Column(String)  # <xs:element name="REPORTTYPE"> (restricted to 'Property Damage Crash', 'Injury Crash', and 'Fatal Crash')
+    ROADALIGNMENT = Column(String)  # <xs:element name="ROADALIGNMENT"> (restricted to 00, 01, 02, 03, 88, 99 and '')
+    ROADCONDITION = Column(String)  # <xs:element type="xs:string" name="ROADCONDITION"/>
+    ROADDIVISION = Column(String)  # <xs:element name="ROADDIVISION"> (restricted to 00, 01, 02, 03, 04, 05.01, 88, 99 and '')
+    ROADGRADE = Column(String)  # <xs:element name="ROADGRADE"> (restricted to 00, 01, 02, 03, 04, 05, 06, 88, 99 and '')
+    ROADID = Column(String)  # <xs:element type="xs:string" name="ROADID"/> (this is a six digit number, not a UUID)
+    # ROADWAY: RoadwayType  # <xs:element type="cras:ROADWAYType" name="ROADWAY" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    SCHOOLBUSINVOLVEMENT = Column(Integer)  # <xs:element name="SCHOOLBUSINVOLVEMENT"> (restricted to 00, 01, 02, 03, and 99)
+    STATEGOVERNMENTPROPERTYNAME = Column(String, nullable=True) # <xs:element type="xs:string" name="STATEGOVERNMENTPROPERTYNAME" nillable="true"/>
+    SUPERVISOR = Column(String)  # <xs:element type="xs:string" name="SUPERVISOR" nillable="true"/>
+    SUPERVISORUSERNAME = Column(String)  # <xs:element type="xs:string" name="SUPERVISORUSERNAME"/>
+    SUPERVISORYDATE = Column(DateTime)  # <xs:element type="xs:dateTime" name="SUPERVISORYDATE"/>
+    SURFACECONDITION = Column(String)  # <xs:element type="xs:string" name="SURFACECONDITION"/>
+    TRAFFICCONTROL = Column(Integer)  # <xs:element type="xs:byte" name="TRAFFICCONTROL"/>
+    TRAFFICCONTROLFUNCTIONING = Column(String)  # <xs:element name="TRAFFICCONTROLFUNCTIONING"> (restricted to Y, N, U, and '')
+    UPDATEDATE = Column(DateTime)  # <xs:element type="xs:string" name="UPDATEDATE"/>
+    UPLOADVERSION = Column(String)  # <xs:element type="xs:string" name="UPLOADVERSION"/>
+    # VEHICLEs: VehiclesType  # <xs:element type="cras:VEHICLEsType" name="VEHICLEs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    VERSIONNUMBER = Column(Integer)  # <xs:element name="VERSIONNUMBER">
+    WEATHER = Column(Float)  # <xs:element type="xs:float" name="WEATHER"/>
+    # WITNESSes: WitnessesType
+
 class CrashDataType(TypedDict):  # pylint:disable=inherit-non-class ; See comment above
-    """Data for table acrs_crashes"""
+    """Typing: Data for table acrs_crashes"""
     ACRSREPORTTIMESTAMP: datetime  # <xs:element type="xs:dateTime" name="ACRSREPORTTIMESTAMP"/>
     AGENCYIDENTIFIER: str  # <xs:element type="xs:string" name="AGENCYIDENTIFIER"/>
     AGENCYNAME: str  # <xs:element type="xs:string" name="AGENCYNAME"/>
@@ -453,7 +543,7 @@ class CrashDataType(TypedDict):  # pylint:disable=inherit-non-class ; See commen
     JUNCTION: str  # <xs:element type="xs:string" name="JUNCTION"/>
     LANEDIRECTION: Optional[str]  # <xs:element name="LANEDIRECTION"> (restricted to N, S, E, W, U and '')
     LANENUMBER: str  # <xs:element name="LANENUMBER"> (restricted to 1, 2, 3, 4, 5, 6 or '')
-    LANETYPE: str  # <xs:element type="xs:string" name="LANETYPE" nillable="true"/>
+    LANETYPE: Optional[str]  # <xs:element type="xs:string" name="LANETYPE" nillable="true"/>
     LATITUDE: float  # <xs:element type="xs:float" name="LATITUDE"/>
     LIGHT: float  # <xs:element name="LIGHT">
     LOCALCASENUMBER: str  # <xs:element type="xs:string" name="LOCALCASENUMBER"/>
@@ -466,7 +556,7 @@ class CrashDataType(TypedDict):  # pylint:disable=inherit-non-class ; See commen
     NONMOTORISTs: NonMotoristsType  # <xs:element type="cras:NONMOTORISTType" name="NONMOTORIST" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     NONTRAFFIC: bool  # <xs:element name="NONTRAFFIC">
     NUMBEROFLANES: str  # <xs:element type="xs:string" name="NUMBEROFLANES"/>
-    OFFROADDESCRIPTION: str  # <xs:element type="xs:string" name="OFFROADDESCRIPTION" nillable="true"/>
+    OFFROADDESCRIPTION: Optional[str]  # <xs:element type="xs:string" name="OFFROADDESCRIPTION" nillable="true"/>
     PDFREPORTs: PdfReportsType  # <xs:element type="cras:PDFREPORTsType" name="PDFREPORTs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     PHOTOSTAKEN: bool  # <xs:element name="PHOTOSTAKEN">
     People: PeopleType  # <xs:element type="cras:PeopleType" name="People" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>

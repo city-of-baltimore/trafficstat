@@ -26,7 +26,7 @@ toml~=0.10.2
 PyYAML~=5.3.1
 smmap~=3.0.4
 isort~=5.7.0
-numpy~=1.19.4
+numpy~=1.19.5
 stevedore~=3.3.0
 pyflakes~=2.2.0
 python-dateutil~=2.8.1
@@ -45,3 +45,5 @@ packaging~=20.8
 coverage~=5.3.1
 distlib~=0.3.1
 appdirs~=1.4.4
+
+git+git://github.com/sqlalchemy/sqlalchemy.git@rel_1_4_0b1#egg=sqlalchemy
