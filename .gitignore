@@ -187,3 +187,4 @@ venv*/
 
 # Project specific location cache
 geo.pickle
+/crash.db

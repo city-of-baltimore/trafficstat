@@ -6,9 +6,6 @@ import uuid
 import pyodbc  # type: ignore
 import xlsxwriter  # type: ignore
 
-# The 'unsubscriptable-object' disable is because of issue https://github.com/PyCQA/pylint/issues/3882 with subscripting
-# Optional. When thats fixed, we can remove those disables.
-
 SEX = {
     '01': 'Male',
     '02': 'Female',
@@ -544,7 +541,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                                    None))
                     self.road_circum_ws_row += 1
 
-    def _validate_vehicle_value(self, val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _validate_vehicle_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for vehicles """
         master_dict = {}
         master_dict.update(TANG_VEHICLE)
@@ -559,7 +556,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_person_value(self, val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _validate_person_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for persons """
         master_dict = {}
         master_dict.update(TANG_PERSON)
@@ -574,7 +571,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_weather_value(self, val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _validate_weather_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for weather """
         master_dict = {}
         master_dict.update(TANG_WEATHER)
@@ -589,7 +586,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_road_value(self, val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _validate_road_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for road """
         master_dict = {}
         master_dict.update(TANG_ROAD)
@@ -605,7 +602,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         return ret
 
     @staticmethod
-    def _validate_value(val: str, master_dict: Dict) -> str:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _validate_value(val: str, master_dict: Dict) -> str:
         if val is None:
             return None
 
@@ -615,7 +612,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         return val
 
     @staticmethod
-    def _lookup_sex(val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _lookup_sex(val: str) -> Optional[str]:
         master_dict = {}
         master_dict.update(TANG_MASTER)
         master_dict.update(SEX)
@@ -623,7 +620,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         return master_dict.get(val)
 
     @staticmethod
-    def _lookup_direction(val: str) -> Optional[str]:  # pylint:disable=unsubscriptable-object ; see comment at top
+    def _lookup_direction(val: str) -> Optional[str]:
         master_dict = {}
         master_dict.update(TANG_MASTER)
         master_dict.update(DIRECTION)
