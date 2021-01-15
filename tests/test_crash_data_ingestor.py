@@ -1,370 +1,456 @@
 """Pytest suite for src/crash_data_ingestor"""
+# pylint:disable=protected-access
+# pylint:disable=R0801 ; copied code
+import os
+import shutil
+import tempfile
 from collections import OrderedDict
+from datetime import datetime
+from typing import List, Optional, Tuple, Union
+from uuid import UUID
 
+import decorator
 import pytest
+from pandas import to_datetime  # type: ignore
+from sqlalchemy import engine as enginetype, inspect  # type: ignore
+from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
 
+from trafficstat.crash_data_types import Approval, Base, Crashes, Circumstance, CitationCode, CommercialVehicles, \
+    CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicles, VehicleUse, \
+    Witness
 from . import constants_test_data
 
 
-def check_database_rows(cursor, table_name: str, expected_rows: int):
+def check_database_rows(session, model: DeclarativeMeta, expected_rows: int):
     """Does a simple check that the number of rows in the table is what we expect"""
-    cursor.execute('SELECT * FROM {}'.format(table_name))
-    records = cursor.fetchall()
-    assert len(records) == expected_rows
+    qry = session.query(model).filter_by()
+    assert qry.count() == expected_rows
 
 
-def test_read_crash_data_file(crash_data_reader, acrs_crashes_table, acrs_approval_table, acrs_circumstances_table,
-                              acrs_citation_codes_table, acrs_crash_diagrams_table, acrs_commercial_vehicle_table,
-                              acrs_damaged_areas_table, acrs_ems_table, acrs_events_table, acrs_pdf_report_table,
-                              acrs_person_table, acrs_person_info_table, acrs_report_docs_table,
-                              acrs_report_photos_table, acrs_roadway_table, acrs_towed_unit_table, acrs_vehicles_table,
-                              acrs_vehicle_use_table, acrs_witnesses_table, cursor):
-    crash_data_reader.read_crash_data('C:/Users/brian.seel/Desktop/tmp/testfiles/BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml', '')
-    check_database_rows(cursor, 'acrs_test_approval', 1)
-    check_database_rows(cursor, 'acrs_test_circumstances', 3)
-    check_database_rows(cursor, 'acrs_test_citation_codes', 0)
-    check_database_rows(cursor, 'acrs_test_crash_diagrams', 1)
-    check_database_rows(cursor, 'acrs_test_crashes', 1)
-    check_database_rows(cursor, 'acrs_test_commercial_vehicles', 1)
-    check_database_rows(cursor, 'acrs_test_damaged_areas', 1)
-    check_database_rows(cursor, 'acrs_test_ems', 1)
-    check_database_rows(cursor, 'acrs_test_events', 1)
-    check_database_rows(cursor, 'acrs_test_pdf_report', 1)
-    check_database_rows(cursor, 'acrs_test_person', 5)
-    check_database_rows(cursor, 'acrs_test_person_info', 2)
-    check_database_rows(cursor, 'acrs_test_roadway', 1)
-    check_database_rows(cursor, 'acrs_test_towed_unit', 1)
-    check_database_rows(cursor, 'acrs_test_vehicles', 1)
-    check_database_rows(cursor, 'acrs_test_vehicle_uses', 1)
-    check_database_rows(cursor, 'acrs_test_witnesses', 1)
+def clean(model: Union[DeclarativeMeta, Tuple[DeclarativeMeta]]):
+    """Decorator that deletes all rows in the table referenced in the model. Expects the first arg of the function to
+    be decorated is a CrashDataReader pytest fixture"""
 
-    # crash_data_reader.read_crash_data('C:/Users/brian.seel/Desktop/tmp/testfiles/BALTIMORE_acrs_ADK378000C.xml', '')
+    def _clean(func):
+        def wrapper(_func, *args, **kwargs):
+            engine = args[0].engine
+            _model = (model,) if not isinstance(model, tuple) else model
+
+            with Session(engine) as session:
+                for mod in _model:
+                    session.query(mod).delete()
+                session.commit()
+            return _func(*args, **kwargs)
+
+        return decorator.decorator(wrapper, func)
+
+    return _clean
 
 
-def test_read_crash_data(crash_data_reader, acrs_crashes_table, cursor):  # pylint:disable=unused-argument
+def is_element_nil(element: Optional[OrderedDict]) -> bool:
+    """
+    Checks if a tag is nil, because xmltodict returns an ordereddict with a nil element
+    :param element: (ordereddict) The ordereddict to check for nil
+    :return: True if its nil, False otherwise
+    """
+    if not element:
+        return True
+
+    if not isinstance(element, OrderedDict):
+        return False
+
+    return (len(element) == 1) and \
+        isinstance(element, OrderedDict) and \
+        element.get('@i:nil') == 'true'
+
+
+def verify_results(model: Base, engine: enginetype, expected: List[OrderedDict]) -> None:
+    """
+    Does verification on the values in the database after a test inserts data
+    :param model: The ORM model to query
+    :param engine: Sqlalchemy engine to use
+    :param expected: The data that was inserted into the database
+    """
+    with Session(engine) as session:
+        primary_keys = [x.key for x in inspect(model).primary_key]
+        actual = session.query(model).filter_by()
+
+        # Verify the number of results
+        assert actual.count() == len(expected)
+
+        # Verify that all of the expected columns are in the results
+        exp_cols = [x for x in expected[0].keys() if not isinstance(x, OrderedDict) and is_element_nil(x)]
+        act_cols = actual.column_descriptions[0]['type'].__table__.columns.keys()
+        assert all(x in act_cols for x in exp_cols), \
+            "All expected columns were not in the results.\nExpected: {}\nActual: {}\n".format(exp_cols, act_cols)
+
+        for exp in expected:
+            args = {}
+            for primary_key in primary_keys:
+                args[primary_key] = exp[primary_key]
+
+            act = actual.filter_by(**args)
+            assert act.count() == 1  # if its a primary key, there should be exactly one result
+            for col in exp_cols:
+                exp_val = exp[col]
+                if is_element_nil(exp_val):
+                    # handle the various null conditions
+                    exp_val = None
+                if isinstance(act[0].__dict__[col], datetime):
+                    exp_val = to_datetime(exp_val)
+                if isinstance(act[0].__dict__[col], int):
+                    exp_val = int(exp_val)
+                if isinstance(act[0].__dict__[col], float):
+                    exp_val = float(exp_val)
+                if isinstance(act[0].__dict__[col], UUID):
+                    exp_val = UUID(exp_val)
+                assert act[0].__dict__[col] == exp_val
+
+
+def check_single_entries(_session, i, checks=None):
+    """Helper for the test_read_crash_data_* tests to check the tables that should all have i entries per XML"""
+    if checks is None:
+        checks = [Approval, CrashDiagram, Crashes, PdfReport, Roadway]
+    for model in checks:
+        check_database_rows(_session, model, i)
+
+
+@clean((Approval, Crashes, Circumstance, CitationCode, CommercialVehicles, CrashDiagram, DamagedArea, Ems, Event,
+        PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicles, VehicleUse, Witness))
+def test_read_crash_data_file(crash_data_reader):  # pylint:disable=too-many-statements
+    """Rudamentary check that there are the right number of records after a few xml files are read in"""
+    with Session(crash_data_reader.engine) as session:
+        # test with witness and a nonmotorist, which also moves the file to a processed dir
+        if os.path.exists('.processed'):
+            shutil.rmtree('.processed')
+        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'),
+                        os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml'))
+
+        crash_data_reader.read_crash_data(
+            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml'),
+            copy=True)
+
+        assert os.path.exists('.processed/BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml')
+
+        check_single_entries(session, 1)
+        check_database_rows(session, Circumstance, 3)
+        check_database_rows(session, CitationCode, 0)
+        check_database_rows(session, CommercialVehicles, 1)
+        check_database_rows(session, DamagedArea, 1)
+        check_database_rows(session, Ems, 1)
+        check_database_rows(session, Event, 1)
+        check_database_rows(session, Person, 5)
+        check_database_rows(session, PersonInfo, 2)
+        check_database_rows(session, TowedUnit, 1)
+        check_database_rows(session, Vehicles, 1)
+        check_database_rows(session, VehicleUse, 1)
+        check_database_rows(session, Witness, 1)
+
+        # do the same test to make sure primary keys are handled properly
+        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'),
+                        os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml'))
+        crash_data_reader.read_crash_data(
+            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml'),
+            copy=True)
+        assert os.path.exists('.processed/BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml_1')
+
+        check_single_entries(session, 1)
+        check_database_rows(session, Circumstance, 3)
+        check_database_rows(session, CitationCode, 0)
+        check_database_rows(session, CommercialVehicles, 1)
+        check_database_rows(session, DamagedArea, 1)
+        check_database_rows(session, Ems, 1)
+        check_database_rows(session, Event, 1)
+        check_database_rows(session, Person, 5)
+        check_database_rows(session, PersonInfo, 2)
+        check_database_rows(session, TowedUnit, 1)
+        check_database_rows(session, Vehicles, 1)
+        check_database_rows(session, VehicleUse, 1)
+        check_database_rows(session, Witness, 1)
+
+        # File with citation codes
+        crash_data_reader.read_crash_data(
+            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'),
+            copy=False)
+        check_single_entries(session, 2)
+        check_database_rows(session, Circumstance, 5)
+        check_database_rows(session, CitationCode, 1)
+        check_database_rows(session, CommercialVehicles, 1)
+        check_database_rows(session, DamagedArea, 5)
+        check_database_rows(session, Ems, 1)
+        check_database_rows(session, Event, 1)
+        check_database_rows(session, Person, 10)
+        check_database_rows(session, PersonInfo, 5)
+        check_database_rows(session, TowedUnit, 1)
+        check_database_rows(session, Vehicles, 3)
+        check_database_rows(session, VehicleUse, 3)
+        check_database_rows(session, Witness, 1)
+
+        # File with passenger information
+        crash_data_reader.read_crash_data(
+            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'),
+            copy=False)
+        check_single_entries(session, 3)
+        check_database_rows(session, Circumstance, 7)
+        check_database_rows(session, CitationCode, 1)
+        check_database_rows(session, CommercialVehicles, 1)
+        check_database_rows(session, DamagedArea, 9)
+        check_database_rows(session, Ems, 1)
+        check_database_rows(session, Event, 1)
+        check_database_rows(session, Person, 18)
+        check_database_rows(session, PersonInfo, 12)
+        check_database_rows(session, TowedUnit, 1)
+        check_database_rows(session, Vehicles, 5)
+        check_database_rows(session, VehicleUse, 5)
+        check_database_rows(session, Witness, 1)
+
+        # File with multiple vehicles
+        crash_data_reader.read_crash_data(
+            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'),
+            copy=False)
+        check_single_entries(session, 4)
+        check_database_rows(session, Circumstance, 13)
+        check_database_rows(session, CitationCode, 1)
+        check_database_rows(session, CommercialVehicles, 1)
+        check_database_rows(session, DamagedArea, 13)
+        check_database_rows(session, Ems, 1)
+        check_database_rows(session, Event, 3)
+        check_database_rows(session, Person, 21)
+        check_database_rows(session, PersonInfo, 14)
+        check_database_rows(session, TowedUnit, 1)
+        check_database_rows(session, Vehicles, 7)
+        check_database_rows(session, VehicleUse, 7)
+        check_database_rows(session, Witness, 1)
+
+        # File with witnesses
+        crash_data_reader.read_crash_data(
+            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'),
+            copy=False)
+        check_single_entries(session, 5)
+        check_database_rows(session, Circumstance, 15)
+        check_database_rows(session, CitationCode, 1)
+        check_database_rows(session, CommercialVehicles, 2)
+        check_database_rows(session, DamagedArea, 14)
+        check_database_rows(session, Ems, 2)
+        check_database_rows(session, Event, 4)
+        check_database_rows(session, Person, 27)
+        check_database_rows(session, PersonInfo, 16)
+        check_database_rows(session, TowedUnit, 2)
+        check_database_rows(session, Vehicles, 8)
+        check_database_rows(session, VehicleUse, 8)
+        check_database_rows(session, Witness, 3)
+
+
+@clean((Approval, Crashes, Circumstance, CitationCode, CommercialVehicles, CrashDiagram, DamagedArea, Ems, Event,
+        PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicles, VehicleUse, Witness))
+def test_read_crash_data_dir(crash_data_reader):  # pylint:disable=too-many-statements
+    """Rudamentary check that there are the right number of records after a few xml files are read in"""
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'),
+                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'))
+        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'),
+                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADJ2200021-passenger.xml'))
+        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'),
+                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'))
+        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'),
+                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'))
+        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'),
+                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADK378000C-witnesses.xml'))
+
+        if os.path.exists('.processed'):
+            shutil.rmtree('.processed')
+
+        with Session(crash_data_reader.engine) as session:
+            crash_data_reader.read_crash_data(dir_name=tmpdirname, copy=False)
+            assert not os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'))
+            assert not os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'))
+            assert not os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'))
+            assert not os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'))
+            assert not os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'))
+
+            crash_data_reader.read_crash_data(dir_name=tmpdirname, copy=True)
+
+            assert os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'))
+            assert os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'))
+            assert os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'))
+            assert os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'))
+            assert os.path.exists(
+                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'))
+
+            check_single_entries(session, 5)
+            check_database_rows(session, Circumstance, 15)
+            check_database_rows(session, CitationCode, 1)
+            check_database_rows(session, CommercialVehicles, 2)
+            check_database_rows(session, DamagedArea, 14)
+            check_database_rows(session, Ems, 2)
+            check_database_rows(session, Event, 4)
+            check_database_rows(session, Person, 27)
+            check_database_rows(session, PersonInfo, 16)
+            check_database_rows(session, TowedUnit, 2)
+            check_database_rows(session, Vehicles, 8)
+            check_database_rows(session, VehicleUse, 8)
+            check_database_rows(session, Witness, 3)
+
+
+@clean((Approval, Crashes, Circumstance, CitationCode, CommercialVehicles, CrashDiagram, DamagedArea, Ems, Event,
+        PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicles, VehicleUse, Witness))
+def test_read_crash_data_file_dne(crash_data_reader):  # pylint:disable=too-many-statements
+    """Rudamentary check that there are the right number of records after a few xml files are read in"""
+    with Session(crash_data_reader.engine) as session:
+        crash_data_reader.read_crash_data(file_name='NONEXISTANT', copy=False)
+        check_single_entries(session, 0, [Approval, Crashes, Circumstance, CitationCode, CommercialVehicles,
+                                          CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway,
+                                          TowedUnit, Vehicles, VehicleUse, Witness])
+
+
+@clean(Crashes)
+def test_read_crash_data(crash_data_reader):
     """Testing the elements in the REPORTS tag"""
-    assert crash_data_reader._read_main_crash_data(  # pylint:disable=protected-access
-        crash_dict=constants_test_data.crash_test_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_crashes')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.crash_test_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.crash_test_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_main_crash_data(crash_dict=constants_test_data.crash_test_input_data)
+    verify_results(Crashes, crash_data_reader.engine, [constants_test_data.crash_test_input_data])
 
 
-def test_read_approval_data(crash_data_reader, acrs_approval_table, cursor):  # pylint:disable=unused-argument
+@clean(Approval)
+def test_read_approval_data(crash_data_reader):
     """Testing the elements in the APPROVALDATA tag"""
-    assert crash_data_reader._read_approval_data(  # pylint:disable=protected-access
-        approval_dict=constants_test_data.approval_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_approval')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.approval_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.approval_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_approval_data(approval_dict=constants_test_data.approval_input_data)
+    verify_results(Approval, crash_data_reader.engine, [constants_test_data.approval_input_data])
 
 
-def test_read_circumstance_data(crash_data_reader, acrs_circumstances_table, cursor):  # pylint:disable=unused-argument
+@clean(Circumstance)
+def test_read_circumstance_data(crash_data_reader):
     """Testing the elements in the CIRCUMSTANCES tag"""
-    assert crash_data_reader._read_circumstance_data(  # pylint:disable=protected-access
-        circumstance_dict=constants_test_data.circum_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_circumstances')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.circum_exp_data)
-
-    for i, _ in enumerate(records):
-        for j, _ in enumerate(records[i]):
-            assert constants_test_data.circum_exp_data[i][j] == records[i][j]
+    crash_data_reader._read_circumstance_data(circumstance_dict=constants_test_data.circum_input_data)
+    verify_results(Circumstance, crash_data_reader.engine, constants_test_data.circum_input_data)
 
 
-def test_read_citation_data(crash_data_reader, acrs_citation_codes_table, cursor):  # pylint:disable=unused-argument
+@clean(CitationCode)
+def test_read_citation_data(crash_data_reader):
     """Testing the elements in the CITATIONCODES tag"""
-    assert crash_data_reader._read_citation_data(  # pylint:disable=protected-access
-        citation_dict=constants_test_data.citation_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_citation_codes')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.citation_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.citation_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_citation_data(citation_dict=constants_test_data.citation_input_data)
+    verify_results(CitationCode, crash_data_reader.engine, constants_test_data.citation_input_data)
 
 
-def test_read_crash_diagrams_data(crash_data_reader, acrs_crash_diagrams_table, cursor):  # pylint:disable=unused-argument
+@clean(CrashDiagram)
+def test_read_crash_diagrams_data(crash_data_reader):
     """Testing the elements in the DIAGRAM tag"""
-    assert crash_data_reader._read_crash_diagrams_data(  # pylint:disable=protected-access
-        crash_diagram_dict=constants_test_data.crash_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_crash_diagrams')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.crash_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.crash_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_crash_diagrams_data(crash_diagram_dict=constants_test_data.crash_input_data)
+    verify_results(CrashDiagram, crash_data_reader.engine, [constants_test_data.crash_input_data])
 
 
-def test_read_commercial_vehicle_data(crash_data_reader, acrs_commercial_vehicle_table, cursor):  # pylint:disable=unused-argument
+@clean(CommercialVehicles)
+def test_read_commercial_vehicle_data(crash_data_reader):
     """Testing the OrderedDict from the COMMERCIALVEHICLE tag"""
-    assert crash_data_reader._read_commercial_vehicle_data(  # pylint:disable=protected-access
-        commvehicle_dict=constants_test_data.commveh_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_commercial_vehicles')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.commveh_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.commveh_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_commercial_vehicle_data(commvehicle_dict=constants_test_data.commveh_input_data)
+    verify_results(CommercialVehicles, crash_data_reader.engine, [constants_test_data.commveh_input_data])
 
 
-def test_read_damaged_areas_data(crash_data_reader, acrs_damaged_areas_table, cursor):  # pylint:disable=unused-argument
+@clean(DamagedArea)
+def test_read_damaged_areas_data(crash_data_reader):
     """Testing the OrderedDict from the DAMAGEDAREAs tag"""
-    assert crash_data_reader._read_damaged_areas_data(  # pylint:disable=protected-access
-        damaged_dict=constants_test_data.damaged_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_damaged_areas')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.damaged_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.damaged_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_damaged_areas_data(damaged_dict=constants_test_data.damaged_input_data)
+    verify_results(DamagedArea, crash_data_reader.engine, constants_test_data.damaged_input_data)
 
 
-def test_read_ems_data(crash_data_reader, acrs_ems_table, cursor):  # pylint:disable=unused-argument
+@clean(Ems)
+def test_read_ems_data(crash_data_reader):
     """Testing the OrderedDict from the EMSes tag"""
-    assert crash_data_reader._read_ems_data(  # pylint:disable=protected-access
-        ems_dict=constants_test_data.ems_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_ems')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.ems_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.ems_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_ems_data(ems_dict=constants_test_data.ems_input_data)
+    verify_results(Ems, crash_data_reader.engine, constants_test_data.ems_input_data)
 
 
-def test_read_event_data(crash_data_reader, acrs_events_table, cursor):  # pylint:disable=unused-argument
+@clean(Event)
+def test_read_event_data(crash_data_reader):
     """Testing the OrderedDict from the EVENTS tag"""
-    assert crash_data_reader._read_event_data(  # pylint:disable=protected-access
-        event_dict=constants_test_data.event_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_events')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.event_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.event_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_event_data(event_dict=constants_test_data.event_input_data)
+    verify_results(Event, crash_data_reader.engine, constants_test_data.event_input_data)
 
 
-def test_read_pdf_data(crash_data_reader, acrs_pdf_report_table, cursor):  # pylint:disable=unused-argument
+@clean(PdfReport)
+def test_read_pdf_data(crash_data_reader):
     """Testing the OrderedDict from the PDFREPORTs tag"""
-    assert crash_data_reader._read_pdf_data(  # pylint:disable=protected-access
-        pdfreport_dict=constants_test_data.pdf_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_pdf_report')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.pdf_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.pdf_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_pdf_data(pdfreport_dict=constants_test_data.pdf_input_data)
+    verify_results(PdfReport, crash_data_reader.engine, constants_test_data.pdf_input_data)
 
 
-def test_read_acrs_person_data(crash_data_reader, acrs_person_table, acrs_citation_codes_table, cursor):  # pylint:disable=unused-argument
+@clean(Person)
+def test_read_acrs_person_data(crash_data_reader):
     """Tests the OrderedDict from the PERSON/OWNER tag"""
-    assert crash_data_reader._read_acrs_person_data(person_dict=constants_test_data.person_input_data)  # pylint:disable=protected-access
-
-    cursor.execute('SELECT * FROM acrs_test_person')
-    person_records = cursor.fetchall()
-
-    cursor.execute('SELECT * FROM acrs_test_citation_codes')
-    citation_records = cursor.fetchall()
-
-    assert len(person_records) == len(constants_test_data.person_exp_data)
-    assert len(citation_records) == len(constants_test_data.person_citation_exp_data)
-
-    for i, _ in enumerate(person_records):
-        assert len(constants_test_data.person_exp_data[i]) == len(person_records[i])
-        for j, _ in enumerate(person_records[i]):
-            assert constants_test_data.person_exp_data[i][j] == person_records[i][j]
-
-    for i, _ in enumerate(citation_records[0]):
-        assert constants_test_data.person_citation_exp_data[0][i] == citation_records[0][i]
+    crash_data_reader._read_acrs_person_data(person_dict=constants_test_data.person_input_data)
+    verify_results(Person, crash_data_reader.engine, constants_test_data.person_input_data)
 
 
-def test_read_person_info_data_driver(crash_data_reader, cursor,
-                                      acrs_person_info_table, acrs_person_table, acrs_citation_codes_table):  # pylint:disable=unused-argument
+@clean(PersonInfo)
+def test_read_person_info_data_driver(crash_data_reader):
     """Tests the OrderedDict from the DRIVERs tag"""
-    assert crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_driver_input_data)  # pylint:disable=protected-access
-
-    cursor.execute('SELECT * FROM acrs_test_person_info')
-    records = cursor.fetchall()
-
-    cursor.execute('SELECT * FROM acrs_test_person')
-    person_records = cursor.fetchall()
-
-    cursor.execute('SELECT * FROM acrs_test_citation_codes')
-    citation_records = cursor.fetchall()
-
-    assert len(records) == len(constants_test_data.person_info_driver_exp_data)
-    assert len(person_records) == len(constants_test_data.person_info_driver_person_exp_data)
-    assert len(citation_records) == len(constants_test_data.person_info_driver_citations_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.person_info_driver_exp_data[0][i] == records[0][i]
-
-    for i, _ in enumerate(person_records):
-        assert len(constants_test_data.person_info_driver_person_exp_data[i]) == len(person_records[i])
-        for j, _ in enumerate(person_records[i]):
-            assert constants_test_data.person_info_driver_person_exp_data[i][j] == person_records[i][j]
-
-    for i, _ in enumerate(citation_records[0]):
-        assert constants_test_data.person_info_driver_citations_exp_data[0][i] == citation_records[0][i]
+    crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_driver_input_data)
+    verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_driver_input_data)
 
 
-def test_read_person_info_data_passenger(crash_data_reader, acrs_person_info_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
+@clean(PersonInfo)
+def test_read_person_info_data_passenger(crash_data_reader):
     """Tests the OrderedDict from the PASSENGERs tag"""
-    assert crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_input_data)  # pylint:disable=protected-access
-
-    cursor.execute('SELECT * FROM acrs_test_person_info')
-    records = cursor.fetchall()
-
-    cursor.execute('SELECT * FROM acrs_test_person')
-    person_records = cursor.fetchall()
-
-    assert len(records) == len(constants_test_data.person_info_pass_exp_data)
-    assert len(person_records) == len(constants_test_data.person_info_person_pass_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.person_info_pass_exp_data[0][i] == records[0][i]
-
-    for i, _ in enumerate(person_records):
-        assert len(constants_test_data.person_info_person_pass_exp_data[i]) == len(person_records[i])
-        for j, _ in enumerate(person_records[i]):
-            assert constants_test_data.person_info_person_pass_exp_data[i][j] == person_records[i][j]
+    crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_input_data)
+    verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_pass_input_data)
 
 
-def test_read_person_info_data_passenger_multiple(crash_data_reader, acrs_person_info_table, acrs_person_table,  # pylint:disable=unused-argument
-                                                  cursor):
+@clean(PersonInfo)
+def test_read_person_info_data_passenger_multiple(crash_data_reader):
     """Tests the OrderedDict that comes from the PASSENGERs tag. This tests the multiple """
-    assert crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_mult_input_data)  # pylint:disable=protected-access
-
-    cursor.execute('SELECT * FROM acrs_test_person_info')
-    records = cursor.fetchall()
-
-    cursor.execute('SELECT * FROM acrs_test_person')
-    person_records = cursor.fetchall()
-
-    assert len(records) == len(constants_test_data.person_info_pass_mult_exp_data)
-    assert len(person_records) == len(constants_test_data.person_info_person_mult_pass_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.person_info_pass_mult_exp_data[0][i] == records[0][i]
-
-    for i, _ in enumerate(person_records):
-        assert len(constants_test_data.person_info_person_mult_pass_exp_data[i]) == len(person_records[i])
-        for j, _ in enumerate(person_records[i]):
-            assert constants_test_data.person_info_person_mult_pass_exp_data[i][j] == person_records[i][j]
+    crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_mult_input_data)
+    verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_pass_mult_input_data)
 
 
-def test_read_person_info_data_nonmotorist(crash_data_reader, acrs_person_info_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
+@clean(PersonInfo)
+def test_read_person_info_data_nonmotorist(crash_data_reader):
     """Tests the OrderedDict that comes from the NONMOTORSTs tag"""
-    assert crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_nonmotorist_input_data)  # pylint:disable=protected-access
-
-    cursor.execute('SELECT * FROM acrs_test_person_info')
-    records = cursor.fetchall()
-
-    cursor.execute('SELECT * FROM acrs_test_person')
-    person_records = cursor.fetchall()
-
-    assert len(records) == len(constants_test_data.person_info_nonmotorist_exp_data)
-    assert len(person_records) == len(constants_test_data.person_info_records_nonmotorist_input_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.person_info_nonmotorist_exp_data[0][i] == records[0][i]
-
-    for i, _ in enumerate(person_records):
-        assert len(constants_test_data.person_info_records_nonmotorist_input_data[i]) == len(person_records[i])
-        for j, _ in enumerate(person_records[i]):
-            assert constants_test_data.person_info_records_nonmotorist_input_data[i][j] == person_records[i][j]
+    crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_nonmotorist_input_data)
+    verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_nonmotorist_input_data)
 
 
-def test_read_roadway_data(crash_data_reader, acrs_roadway_table, cursor):  # pylint:disable=unused-argument
+@clean(Roadway)
+def test_read_roadway_data(crash_data_reader):
     """Tests the OrderedDict from ROADWAY tag"""
-    assert crash_data_reader._read_roadway_data(  # pylint:disable=protected-access
-        roadway_dict=constants_test_data.roadway_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_roadway')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.roadway_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.roadway_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_roadway_data(roadway_dict=constants_test_data.roadway_input_data)
+    verify_results(Roadway, crash_data_reader.engine, [constants_test_data.roadway_input_data])
 
 
-def test_read_towed_vehicle_data(crash_data_reader, acrs_towed_unit_table, cursor):  # pylint:disable=unused-argument
+@clean(TowedUnit)
+def test_read_towed_vehicle_data(crash_data_reader):
     """Tests the OrderedDict from TOWEDUNITs tag"""
-    assert crash_data_reader._read_towed_vehicle_data(  # pylint:disable=protected-access
-        towed_dict=constants_test_data.towed_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_towed_unit')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.towed_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.towed_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_towed_vehicle_data(towed_dict=constants_test_data.towed_input_data)
+    verify_results(TowedUnit, crash_data_reader.engine, constants_test_data.towed_input_data)
 
 
-def test_read_acrs_vehicle_data(crash_data_reader, acrs_vehicles_table, cursor):  # pylint:disable=unused-argument
+@clean(Vehicles)
+def test_read_acrs_vehicle_data(crash_data_reader):
     """Tests the OrderedDict from ACRSVEHICLE"""
-    assert crash_data_reader._read_acrs_vehicle_data(  # pylint:disable=protected-access
-        vehicle_dict=constants_test_data.vehicle_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_vehicles')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.vehicle_exp_data)
-
-    for i, _ in enumerate(records):
-        for j, _ in enumerate(records[i]):
-            print(constants_test_data.vehicle_exp_data[i][j], records[i][j])
-            assert constants_test_data.vehicle_exp_data[i][j] == records[i][j]
+    crash_data_reader._read_acrs_vehicle_data(vehicle_dict=constants_test_data.vehicle_input_data)
+    verify_results(Vehicles, crash_data_reader.engine, constants_test_data.vehicle_input_data)
 
 
-def test_read_acrs_vehicle_use_data(crash_data_reader, acrs_vehicle_use_table, cursor):  # pylint:disable=unused-argument
+@clean(VehicleUse)
+def test_read_acrs_vehicle_use_data(crash_data_reader):
     """Testing the OrderedDict contained in VEHICLEUSEs"""
-    assert crash_data_reader._read_acrs_vehicle_use_data(  # pylint:disable=protected-access
-        vehicleuse_dict=constants_test_data.vehicle_use_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_vehicle_uses')
-    records = cursor.fetchall()
-    assert len(records) == len(constants_test_data.vehicle_use_exp_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.vehicle_use_exp_data[0][i] == records[0][i]
+    crash_data_reader._read_acrs_vehicle_use_data(vehicleuse_dict=constants_test_data.vehicle_use_input_data)
+    verify_results(VehicleUse, crash_data_reader.engine, constants_test_data.vehicle_use_input_data)
 
 
-def test_read_witness_data(crash_data_reader, acrs_witnesses_table, acrs_person_table, cursor):  # pylint:disable=unused-argument
+@clean(Witness)
+def test_read_witness_data(crash_data_reader):
     """Testing the OrderedDict contained in WITNESSes"""
-    assert crash_data_reader._read_witness_data(  # pylint:disable=protected-access
-        witness_dict=constants_test_data.witness_input_data)
-
-    cursor.execute('SELECT * FROM acrs_test_witnesses')
-    records = cursor.fetchall()
-
-    cursor.execute('SELECT * FROM acrs_test_person')
-    person_records = cursor.fetchall()
-
-    assert len(records) == len(constants_test_data.witness_exp_data)
-    assert len(person_records) == len(constants_test_data.witness_records_expt_data)
-
-    for i, _ in enumerate(records[0]):
-        assert constants_test_data.witness_exp_data[0][i] == records[0][i]
-
-    for i, _ in enumerate(person_records):
-        for j, _ in enumerate(person_records[i]):
-            assert constants_test_data.witness_records_expt_data[i][j] == person_records[i][j]
+    crash_data_reader._read_witness_data(witness_dict=constants_test_data.witness_input_data)
+    verify_results(Witness, crash_data_reader.engine, constants_test_data.witness_input_data)
 
 
 def test_is_nil(crash_data_reader):
@@ -373,27 +459,21 @@ def test_is_nil(crash_data_reader):
     assert crash_data_reader.is_element_nil(None)
 
 
-def test_convert_to_date(crash_data_reader):
-    """Testing the results of _convert_to_date"""
-    assert crash_data_reader._convert_to_date(  # pylint:disable=protected-access
-        '2020-11-28T21:59:53.0000000') == '2020-11-28'
-
-
 def test_convert_to_bool(crash_data_reader):
     """Testing the results of _convert_to_bool"""
-    assert not crash_data_reader._convert_to_bool('N')  # pylint:disable=protected-access
-    assert crash_data_reader._convert_to_bool('Y')  # pylint:disable=protected-access
-    assert crash_data_reader._convert_to_bool('U') is None  # pylint:disable=protected-access
+    assert not crash_data_reader._convert_to_bool('N')
+    assert crash_data_reader._convert_to_bool('Y')
+    assert crash_data_reader._convert_to_bool('U') is None
 
     with pytest.raises(AssertionError):
-        crash_data_reader._convert_to_bool('X')  # pylint:disable=protected-access
+        crash_data_reader._convert_to_bool('X')
 
 
 def test_validate_uniqueidentifier(crash_data_reader):
     """Testing the results of _validate_uniqueidentifier"""
     uid = '9316ed0c-cddf-481c-94ee-4662e0b77384'
-    assert crash_data_reader._validate_uniqueidentifier(uid) == uid  # pylint:disable=protected-access
-    assert crash_data_reader._validate_uniqueidentifier('') is None  # pylint:disable=protected-access
+    assert crash_data_reader._validate_uniqueidentifier(uid) == uid
+    assert crash_data_reader._validate_uniqueidentifier('') is None
 
 
 def test_get_single_attr(crash_data_reader):
@@ -404,3 +484,25 @@ def test_get_single_attr(crash_data_reader):
 
     with pytest.raises(AssertionError):
         crash_data_reader.get_single_attr('MULTIPLENODE', constants_test_data.single_attr_input_data)
+
+
+def test_file_move(crash_data_reader):
+    """Test _file_move"""
+    file = tempfile.NamedTemporaryFile(delete=False)
+    file.close()
+    tmp_file_name = "{}X".format(file.name)  # temp filename so we can copy the original for each iteration
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for _ in range(6):
+            shutil.copyfile(file.name, tmp_file_name)
+            assert crash_data_reader._file_move(tmp_file_name, temp_dir)
+
+        shutil.copyfile(file.name, tmp_file_name)
+        assert not crash_data_reader._file_move(tmp_file_name, temp_dir)
+
+        assert os.path.exists(os.path.join(temp_dir, os.path.basename(tmp_file_name)))
+        assert os.path.exists(os.path.join(temp_dir, '{}_1'.format(os.path.basename(tmp_file_name))))
+        assert os.path.exists(os.path.join(temp_dir, '{}_2'.format(os.path.basename(tmp_file_name))))
+        assert os.path.exists(os.path.join(temp_dir, '{}_3'.format(os.path.basename(tmp_file_name))))
+        assert os.path.exists(os.path.join(temp_dir, '{}_4'.format(os.path.basename(tmp_file_name))))
+        assert os.path.exists(os.path.join(temp_dir, '{}_5'.format(os.path.basename(tmp_file_name))))
+        assert not os.path.exists(os.path.join(temp_dir, '{}_6'.format(os.path.basename(tmp_file_name))))
