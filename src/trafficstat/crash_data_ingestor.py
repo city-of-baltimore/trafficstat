@@ -205,7 +205,7 @@ class CrashDataReader:
                 CONMAINWORKERSPRESENT=self._convert_to_bool(self.get_single_attr('CONMAINWORKERSPRESENT', crash_dict)),
                 CONMAINZONE=self._convert_to_bool(self.get_single_attr('CONMAINZONE', crash_dict)),
                 CRASHDATE=to_datetime(self.get_single_attr('CRASHDATE', crash_dict)),
-                CRASHTIME=to_datetime(self.get_single_attr('CRASHTIME', crash_dict)),
+                CRASHTIME=to_datetime(self.get_single_attr('CRASHTIME', crash_dict).split('T')[1]),
                 CURRENTASSIGNMENT=self.get_single_attr('CURRENTASSIGNMENT', crash_dict),
                 CURRENTGROUP=self.get_single_attr('CURRENTGROUP', crash_dict),
                 DEFAULTASSIGNMENT=self.get_single_attr('DEFAULTASSIGNMENT', crash_dict),
