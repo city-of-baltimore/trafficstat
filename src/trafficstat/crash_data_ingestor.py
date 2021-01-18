@@ -193,6 +193,11 @@ class CrashDataReader:
     @check_and_log('crash_dict')
     def _read_main_crash_data(self, crash_dict: CrashDataType) -> None:
         """ Populates the acrs_crashes table """
+        # noinspection PyTypeChecker
+        crash_datetime = self.get_single_attr('CRASHTIME', crash_dict)
+        if isinstance(crash_datetime, str) and len(crash_datetime.split('T')) > 1:
+            crash_time = to_datetime(crash_datetime.split('T')[1])
+
         self._insert_or_update(
             Crashes(
                 ACRSREPORTTIMESTAMP=to_datetime(self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict)),
@@ -205,7 +210,7 @@ class CrashDataReader:
                 CONMAINWORKERSPRESENT=self._convert_to_bool(self.get_single_attr('CONMAINWORKERSPRESENT', crash_dict)),
                 CONMAINZONE=self._convert_to_bool(self.get_single_attr('CONMAINZONE', crash_dict)),
                 CRASHDATE=to_datetime(self.get_single_attr('CRASHDATE', crash_dict)),
-                CRASHTIME=to_datetime(self.get_single_attr('CRASHTIME', crash_dict).split('T')[1]),
+                CRASHTIME=crash_time,
                 CURRENTASSIGNMENT=self.get_single_attr('CURRENTASSIGNMENT', crash_dict),
                 CURRENTGROUP=self.get_single_attr('CURRENTGROUP', crash_dict),
                 DEFAULTASSIGNMENT=self.get_single_attr('DEFAULTASSIGNMENT', crash_dict),
