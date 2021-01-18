@@ -1,4 +1,5 @@
 [GENERAL]
+extension-pkg-whitelist=pyodbc
 disable=R0801
 
 [FORMAT]
