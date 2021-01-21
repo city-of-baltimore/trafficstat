@@ -82,7 +82,8 @@ class CrashDataReader:
             for primary_key in primary_keys:
                 qry = qry.filter(cls_type.__dict__[primary_key] == insert_obj.__dict__[primary_key])
 
-            update_vals = {k: v for k, v in insert_obj.__dict__.items() if not k.startswith('_') and k not in primary_keys}
+            update_vals = {k: v for k, v in insert_obj.__dict__.items()
+                           if not k.startswith('_') and k not in primary_keys}
             if update_vals:
                 qry.update(update_vals)
                 try:
