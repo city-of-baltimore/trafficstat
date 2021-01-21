@@ -77,16 +77,19 @@ class CrashDataReader:
             cls_type = type(insert_obj)
 
             qry = session.query(cls_type)
-            for primary_key in sqlalchemyinspect(cls_type).primary_key:
-                qry = qry.filter(cls_type.__dict__[primary_key.key] == insert_obj.__dict__[primary_key.key])
 
-            qry.delete(synchronize_session='evaluate')
-            session.add(insert_obj)
-            try:
-                session.commit()
-                LOGGER.debug("Successfully inserted object: %s", insert_obj)
-            except IntegrityError as err:
-                LOGGER.error("Unable to insert object: %s\nError: %s", insert_obj, err)
+            primary_keys = [i.key for i in sqlalchemyinspect(cls_type).primary_key]
+            for primary_key in primary_keys:
+                qry = qry.filter(cls_type.__dict__[primary_key] == insert_obj.__dict__[primary_key])
+
+            update_vals = {k: v for k, v in insert_obj.__dict__.items() if not k.startswith('_') and k not in primary_keys}
+            if update_vals:
+                qry.update(update_vals)
+                try:
+                    session.commit()
+                    LOGGER.debug("Successfully inserted object: %s", insert_obj)
+                except IntegrityError as err:
+                    LOGGER.error("Unable to insert object: %s\nError: %s", insert_obj, err)
         finally:
             session.close()
 
