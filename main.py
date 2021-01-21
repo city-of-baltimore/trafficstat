@@ -1,7 +1,7 @@
 """Main driver for the traffic stat scripts"""
 import argparse
 
-from src.trafficstat.enrich_data import geocode_acrs, geocode_acrs_sanitized, clean_road_names
+from src.trafficstat.enrich_data import Enrich
 from src.trafficstat.crash_data_ingestor import CrashDataReader
 from src.trafficstat.ms2generator import WorksheetMaker
 
@@ -27,9 +27,10 @@ parser_generate = subparsers.add_parser('ms2export', help='Generate CSV files th
 args = parser.parse_args()
 
 if args.subparser_name == 'enrich':
-    geocode_acrs()
-    geocode_acrs_sanitized()
-    clean_road_names()
+    enricher = Enrich()
+    enricher.geocode_acrs()
+    enricher.geocode_acrs_sanitized()
+    enricher.clean_road_names()
 
 if args.subparser_name == 'parse':
     cls = CrashDataReader(args.conn_str)
