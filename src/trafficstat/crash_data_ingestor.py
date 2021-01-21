@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 from collections import OrderedDict
+from datetime import time
 from typing import List, Mapping, Optional, Union
 
 import xmltodict  # type: ignore
@@ -15,8 +16,8 @@ from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
-from trafficstat.crash_data_types import Approval, Base, Crashes, Circumstance, CitationCode, CommercialVehicles, \
-    CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicles, VehicleUse, \
+from trafficstat.crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
+    CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, \
     Witness
 from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
     CommercialVehicleType, CrashDiagramType, DamagedAreaType, DriverType, EmsType, EventType, NonMotoristType, \
@@ -193,13 +194,16 @@ class CrashDataReader:
     @check_and_log('crash_dict')
     def _read_main_crash_data(self, crash_dict: CrashDataType) -> None:
         """ Populates the acrs_crashes table """
-        # noinspection PyTypeChecker
-        crash_datetime = self.get_single_attr('CRASHTIME', crash_dict)
-        if isinstance(crash_datetime, str) and len(crash_datetime.split('T')) > 1:
-            crash_time = to_datetime(crash_datetime.split('T')[1])
+        crash_time_str = self.get_single_attr('CRASHTIME', crash_dict)
+        if isinstance(crash_time_str, str) and len(crash_time_str.split('T')) > 1:
+            crash_time: Optional[time] = time.fromisoformat(crash_time_str.split('T')[1])
+        elif crash_time_str is None:
+            crash_time = None
+        else:
+            crash_time = time.fromisoformat(crash_time_str)
 
         self._insert_or_update(
-            Crashes(
+            Crash(
                 ACRSREPORTTIMESTAMP=to_datetime(self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict)),
                 AGENCYIDENTIFIER=self.get_single_attr('AGENCYIDENTIFIER', crash_dict),
                 AGENCYNAME=self.get_single_attr('AGENCYNAME', crash_dict),
@@ -207,8 +211,8 @@ class CrashDataReader:
                 COLLISIONTYPE=self.get_single_attr('COLLISIONTYPE', crash_dict),
                 CONMAINCLOSURE=self.get_single_attr('CONMAINCLOSURE', crash_dict),
                 CONMAINLOCATION=self.get_single_attr('CONMAINLOCATION', crash_dict),
-                CONMAINWORKERSPRESENT=self._convert_to_bool(self.get_single_attr('CONMAINWORKERSPRESENT', crash_dict)),
-                CONMAINZONE=self._convert_to_bool(self.get_single_attr('CONMAINZONE', crash_dict)),
+                CONMAINWORKERSPRESENT=self.convert_to_bool(self.get_single_attr('CONMAINWORKERSPRESENT', crash_dict)),
+                CONMAINZONE=self.convert_to_bool(self.get_single_attr('CONMAINZONE', crash_dict)),
                 CRASHDATE=to_datetime(self.get_single_attr('CRASHDATE', crash_dict)),
                 CRASHTIME=crash_time,
                 CURRENTASSIGNMENT=self.get_single_attr('CURRENTASSIGNMENT', crash_dict),
@@ -219,7 +223,7 @@ class CrashDataReader:
                 FIXEDOBJECTSTRUCK=self.get_single_attr('FIXEDOBJECTSTRUCK', crash_dict),
                 HARMFULEVENTONE=self.get_single_attr('HARMFULEVENTONE', crash_dict),
                 HARMFULEVENTTWO=self.get_single_attr('HARMFULEVENTTWO', crash_dict),
-                HITANDRUN=self._convert_to_bool(self.get_single_attr('HITANDRUN', crash_dict)),
+                HITANDRUN=self.convert_to_bool(self.get_single_attr('HITANDRUN', crash_dict)),
                 INSERTDATE=to_datetime(self.get_single_attr('INSERTDATE', crash_dict)),
                 INTERCHANGEAREA=self.get_single_attr('INTERCHANGEAREA', crash_dict),
                 INTERCHANGEIDENTIFICATION=self.get_single_attr('INTERCHANGEIDENTIFICATION', crash_dict),
@@ -239,10 +243,10 @@ class CrashDataReader:
                 MILEPOINTDISTANCE=self.get_single_attr('MILEPOINTDISTANCE', crash_dict),
                 MILEPOINTDISTANCEUNITS=self.get_single_attr('MILEPOINTDISTANCEUNITS', crash_dict),
                 NARRATIVE=self.get_single_attr('NARRATIVE', crash_dict),
-                NONTRAFFIC=self._convert_to_bool(self.get_single_attr('NONTRAFFIC', crash_dict)),
+                NONTRAFFIC=self.convert_to_bool(self.get_single_attr('NONTRAFFIC', crash_dict)),
                 NUMBEROFLANES=self.get_single_attr('NUMBEROFLANES', crash_dict),
                 OFFROADDESCRIPTION=self.get_single_attr('OFFROADDESCRIPTION', crash_dict),
-                PHOTOSTAKEN=self._convert_to_bool(self.get_single_attr('PHOTOSTAKEN', crash_dict)),
+                PHOTOSTAKEN=self.convert_to_bool(self.get_single_attr('PHOTOSTAKEN', crash_dict)),
                 RAMP=self.get_single_attr('RAMP', crash_dict),
                 REPORTCOUNTYLOCATION=self.get_single_attr('REPORTCOUNTYLOCATION', crash_dict),
                 REPORTNUMBER=self.get_single_attr('REPORTNUMBER', crash_dict),
@@ -259,7 +263,7 @@ class CrashDataReader:
                 SUPERVISORYDATE=to_datetime(self.get_single_attr('SUPERVISORYDATE', crash_dict)),
                 SURFACECONDITION=self.get_single_attr('SURFACECONDITION', crash_dict),
                 TRAFFICCONTROL=self.get_single_attr('TRAFFICCONTROL', crash_dict),
-                TRAFFICCONTROLFUNCTIONING=self._convert_to_bool(
+                TRAFFICCONTROLFUNCTIONING=self.convert_to_bool(
                     self.get_single_attr('TRAFFICCONTROLFUNCTIONING', crash_dict)),
                 UPDATEDATE=to_datetime(self.get_single_attr('UPDATEDATE', crash_dict)),
                 UPLOADVERSION=self.get_single_attr('UPLOADVERSION', crash_dict),
@@ -359,7 +363,7 @@ class CrashDataReader:
         :return:
         """
         self._insert_or_update(
-            CommercialVehicles(
+            CommercialVehicle(
                 BODYTYPE=self.get_single_attr('BODYTYPE', commvehicle_dict),
                 BUSUSE=self.get_single_attr('BUSUSE', commvehicle_dict),
                 CARRIERCLASSIFICATION=self.get_single_attr('CARRIERCLASSIFICATION', commvehicle_dict),
@@ -470,7 +474,7 @@ class CrashDataReader:
                     AIRBAGDEPLOYED=self.get_single_attr('AIRBAGDEPLOYED', person),
                     ALCOHOLTESTINDICATOR=self.get_single_attr('ALCOHOLTESTINDICATOR', person),
                     ALCOHOLTESTTYPE=self.get_single_attr('ALCOHOLTESTTYPE', person),
-                    ATFAULT=self._convert_to_bool(self.get_single_attr('ATFAULT', person)),
+                    ATFAULT=self.convert_to_bool(self.get_single_attr('ATFAULT', person)),
                     BAC=self.get_single_attr('BAC', person),
                     CONDITION=self.get_single_attr('CONDITION', person),
                     CONTINUEDIRECTION=self.get_single_attr('CONTINUEDIRECTION', person),
@@ -482,7 +486,7 @@ class CrashDataReader:
                     EMSUNITNUMBER=self.get_single_attr('EMSUNITNUMBER', person),
                     EQUIPMENTPROBLEM=self.get_single_attr('EQUIPMENTPROBLEM', person),
                     GOINGDIRECTION=self.get_single_attr('GOINGDIRECTION', person),
-                    HASCDL=self._convert_to_bool(self.get_single_attr('HASCDL', person)),
+                    HASCDL=self.convert_to_bool(self.get_single_attr('HASCDL', person)),
                     INJURYSEVERITY=self.get_single_attr('INJURYSEVERITY', person),
                     PEDESTRIANACTIONS=self.get_single_attr('PEDESTRIANACTIONS', person),
                     PEDESTRIANLOCATION=self.get_single_attr('PEDESTRIANLOCATION', person),
@@ -592,16 +596,16 @@ class CrashDataReader:
                 self._read_towed_vehicle_data(vehicle['TOWEDUNITs']['TOWEDUNIT'])
 
             self._insert_or_update(
-                Vehicles(
+                Vehicle(
                     CONTINUEDIRECTION=self.get_single_attr('CONTINUEDIRECTION', vehicle),
                     DAMAGEEXTENT=self.get_single_attr('DAMAGEEXTENT', vehicle),
-                    DRIVERLESSVEHICLE=self._convert_to_bool(self.get_single_attr('DRIVERLESSVEHICLE', vehicle)),
-                    EMERGENCYMOTORVEHICLEUSE=self._convert_to_bool(
+                    DRIVERLESSVEHICLE=self.convert_to_bool(self.get_single_attr('DRIVERLESSVEHICLE', vehicle)),
+                    EMERGENCYMOTORVEHICLEUSE=self.convert_to_bool(
                         self.get_single_attr('EMERGENCYMOTORVEHICLEUSE', vehicle)),
-                    FIRE=self._convert_to_bool(self.get_single_attr('FIRE', vehicle)),
+                    FIRE=self.convert_to_bool(self.get_single_attr('FIRE', vehicle)),
                     FIRSTIMPACT=self.get_single_attr('FIRSTIMPACT', vehicle),
                     GOINGDIRECTION=self.get_single_attr('GOINGDIRECTION', vehicle),
-                    HITANDRUN=self._convert_to_bool(self.get_single_attr('HITANDRUN', vehicle)),
+                    HITANDRUN=self.convert_to_bool(self.get_single_attr('HITANDRUN', vehicle)),
                     INSURANCEPOLICYNUMBER=self.get_single_attr('INSURANCEPOLICYNUMBER', vehicle),
                     INSURER=self.get_single_attr('INSURER', vehicle),
                     LICENSEPLATENUMBER=self.get_single_attr('LICENSEPLATENUMBER', vehicle),
@@ -609,7 +613,7 @@ class CrashDataReader:
                     MAINIMPACT=self.get_single_attr('MAINIMPACT', vehicle),
                     MOSTHARMFULEVENT=self.get_single_attr('MOSTHARMFULEVENT', vehicle),
                     OWNERID=self._validate_uniqueidentifier(self.get_single_attr('OWNERID', vehicle)),
-                    PARKEDVEHICLE=self._convert_to_bool(self.get_single_attr('PARKEDVEHICLE', vehicle)),
+                    PARKEDVEHICLE=self.convert_to_bool(self.get_single_attr('PARKEDVEHICLE', vehicle)),
                     REGISTRATIONEXPIRATIONYEAR=self.get_single_attr('REGISTRATIONEXPIRATIONYEAR', vehicle),
                     REPORTNUMBER=self.get_single_attr('REPORTNUMBER', vehicle),
                     SFVEHICLEINTRANSPORT=self.get_single_attr('SFVEHICLEINTRANSPORT', vehicle),
@@ -690,14 +694,17 @@ class CrashDataReader:
             element.get('@i:nil') == 'true'
 
     @staticmethod
-    def _convert_to_bool(val) -> Optional[int]:
+    def convert_to_bool(val: Union[None, str, bool]) -> Optional[int]:
         """
         Converts the XML style 'y', 'n', and 'u' (unknown) to a bit value
         :param val: Value to convert to a bool
         :return: Either True, False, or None (if the input was empty or 'u' for unknown)
         """
-        if not val:
+        if val is None:
             return None
+
+        if isinstance(val, bool):
+            return int(val)
 
         val = val.lower()
         if val not in ['y', 'n', 'u']:
