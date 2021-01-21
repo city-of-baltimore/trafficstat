@@ -23,7 +23,7 @@ To use a different database, pass the connection string with the `--conn_str` ar
 
 To use the Baltimore City SQL Server:
 
-`python main.py parse --directory <path> --conn_str "mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=SQL Server"`
+`python main.py parse --directory <path> --conn_str "mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server"`
 
 ## Data Enrichment
 The State Highway Administration also releases sanitized crash data, which comes without latitude and longitude. After the data is imported from the AACDB files, the enrichment script will add geocoding information.  
