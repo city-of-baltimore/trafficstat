@@ -323,10 +323,13 @@ class CrashDataReader:
     def _read_citation_data(self, citation_dict: List[CitationCodeType]) -> None:
         """ Populates the acrs_citation_codes table """
         for citation in citation_dict:
-            if not self.get_single_attr('CITATIONNUMBER', citation) == 'PENDING':
+            citation_no = self.get_single_attr('CITATIONNUMBER', citation)
+            if isinstance(citation_no, str):
+                citation_no = citation_no.upper()
+            if not citation_no == 'PENDING':
                 self._insert_or_update(
                     CitationCode(
-                        CITATIONNUMBER=self.get_single_attr('CITATIONNUMBER', citation),
+                        CITATIONNUMBER=citation_no,
                         PERSONID=self._validate_uniqueidentifier(self.get_single_attr('PERSONID', citation)),
                         REPORTNUMBER=self.get_single_attr('REPORTNUMBER', citation)
                     ))
