@@ -323,12 +323,13 @@ class CrashDataReader:
     def _read_citation_data(self, citation_dict: List[CitationCodeType]) -> None:
         """ Populates the acrs_citation_codes table """
         for citation in citation_dict:
-            self._insert_or_update(
-                CitationCode(
-                    CITATIONNUMBER=self.get_single_attr('CITATIONNUMBER', citation),
-                    PERSONID=self._validate_uniqueidentifier(self.get_single_attr('PERSONID', citation)),
-                    REPORTNUMBER=self.get_single_attr('REPORTNUMBER', citation)
-                ))
+            if not self.get_single_attr('CITATIONNUMBER', citation) == 'PENDING':
+                self._insert_or_update(
+                    CitationCode(
+                        CITATIONNUMBER=self.get_single_attr('CITATIONNUMBER', citation),
+                        PERSONID=self._validate_uniqueidentifier(self.get_single_attr('PERSONID', citation)),
+                        REPORTNUMBER=self.get_single_attr('REPORTNUMBER', citation)
+                    ))
 
     @check_and_log('crash_diagram_dict')
     def _read_crash_diagrams_data(self, crash_diagram_dict: CrashDiagramType) -> None:
