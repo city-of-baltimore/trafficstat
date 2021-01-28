@@ -348,7 +348,7 @@ class CitationCode(Base):
     CITATIONNUMBER = Column(String(length=15), primary_key=True)  # <xs:element type="xs:string" name="CITATIONNUMBER"/>
     PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'))  # <xs:element type="xs:string" name="PERSONID"/>
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
-                          ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+                          ForeignKey('acrs_crash.REPORTNUMBER'), primary_key=True)  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
 
 ###########################
