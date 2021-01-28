@@ -1,9 +1,19 @@
 """Main driver for the traffic stat scripts"""
 import argparse
+import logging
 
 from src.trafficstat.enrich_data import Enrich
 from src.trafficstat.crash_data_ingestor import CrashDataReader
 from src.trafficstat.ms2generator import WorksheetMaker
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("debug.log"),
+        logging.StreamHandler()
+    ]
+)
 
 parser = argparse.ArgumentParser(description='Traffic Data Parser')
 subparsers = parser.add_subparsers(dest='subparser_name', help='sub-command help')

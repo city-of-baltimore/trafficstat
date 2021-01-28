@@ -19,10 +19,7 @@ from balt_geocoder.geocoder import Geocoder
 from balt_geocoder.geocodio_types import GeocodeResult
 from .creds import GAPI
 
-logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.INFO,
-    datefmt='%Y-%m-%d %H:%M:%S')
+LOGGER = logging.getLogger(__name__)
 
 
 class Enrich:
@@ -56,7 +53,7 @@ class Enrich:
                     data.append((geocode_result['census_tract'], str(row[0])))
                     continue
 
-                logging.warning('No census tract for roadway: %s', row)
+                LOGGER.warning('No census tract for roadway: %s', row)
 
         if data:
             self.cursor.executemany("""
@@ -87,7 +84,7 @@ class Enrich:
                     data.append((geocode_result['census_tract'], row[0]))
                     continue
 
-                logging.warning('No census tract for sanitized roadway: %s', row)
+                LOGGER.warning('No census tract for sanitized roadway: %s', row)
 
         if data:
             self.cursor.executemany("""
