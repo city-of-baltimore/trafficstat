@@ -1,19 +1,21 @@
 """Main driver for the traffic stat scripts"""
 import argparse
-import logging
+import sys
+from loguru import logger
 
 from src.trafficstat.enrich_data import Enrich
 from src.trafficstat.crash_data_ingestor import CrashDataReader
 from src.trafficstat.ms2generator import WorksheetMaker
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("debug.log"),
-        logging.StreamHandler()
-    ]
-)
+config = {
+    "handlers": [
+        {"sink": sys.stdout, "format": "{time} - {message}"},
+        {"sink": "file.log", "serialize": True},
+    ],
+    "extra": {"user": "someone"}
+}
+logger.configure(**config)
+logger.enable('trafficstat')
 
 parser = argparse.ArgumentParser(description='Traffic Data Parser')
 subparsers = parser.add_subparsers(dest='subparser_name', help='sub-command help')
