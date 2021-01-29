@@ -2,7 +2,6 @@
 import collections.abc
 import glob
 import inspect
-import logging
 import os
 import shutil
 from collections import OrderedDict
@@ -10,6 +9,7 @@ from datetime import time
 from typing import List, Mapping, Optional, Union
 
 import xmltodict  # type: ignore
+from loguru import logger
 from pandas import to_datetime  # type: ignore
 from sqlalchemy import create_engine, inspect as sqlalchemyinspect  # type: ignore
 from sqlalchemy.exc import IntegrityError  # type: ignore
@@ -24,7 +24,7 @@ from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, Circum
     PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, TowedUnitType, \
     VehicleType, VehicleUseType, WitnessType
 
-LOGGER = logging.getLogger(__name__)
+logger.disable("trafficstat")
 
 
 def check_and_log(check_dict: str):
@@ -32,7 +32,7 @@ def check_and_log(check_dict: str):
 
     def _check_and_log(func):
         def wrapper(*args, **kwargs):
-            logging.info("Entering %s", func.__name__)
+            logger.info("Entering %s", func.__name__)
 
             # handle positional or keyword args
             args_name = inspect.getfullargspec(func)[0]
@@ -41,7 +41,7 @@ def check_and_log(check_dict: str):
             self = args_dict['self']
 
             if self.is_element_nil(args_dict[check_dict]):
-                LOGGER.warning('No data')
+                logger.warning('No data')
                 return False
 
             return func(*args, **kwargs)
@@ -59,7 +59,7 @@ class CrashDataReader:
         Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
         :param conn_str: sqlalchemy connection string (IE sqlite:///crash.db)
         """
-        LOGGER.info("Creating db with connection string: %s", conn_str)
+        logger.info("Creating db with connection string: %s", conn_str)
         self.engine = create_engine(conn_str, echo=True, future=True)
 
         with self.engine.begin() as connection:
@@ -70,7 +70,7 @@ class CrashDataReader:
         session.add(insert_obj)
         try:
             session.commit()
-            LOGGER.debug("Successfully inserted object: %s", insert_obj)
+            logger.debug("Successfully inserted object: %s", insert_obj)
         except IntegrityError:
             session.rollback()
 
@@ -88,9 +88,9 @@ class CrashDataReader:
                 qry.update(update_vals)
                 try:
                     session.commit()
-                    LOGGER.debug("Successfully inserted object: %s", insert_obj)
+                    logger.debug("Successfully inserted object: %s", insert_obj)
                 except IntegrityError as err:
-                    LOGGER.error("Unable to insert object: %s\nError: %s", insert_obj, err)
+                    logger.error("Unable to insert object: %s\nError: %s", insert_obj, err)
         finally:
             session.close()
 
@@ -108,7 +108,10 @@ class CrashDataReader:
             for acrs_file in glob.glob(os.path.join(dir_name, '*.xml'), recursive=recursive):
                 self._read_file(os.path.join(dir_name, acrs_file))
                 if copy:
-                    self._file_move(acrs_file, os.path.join(dir_name, '.processed'))
+                    try:
+                        self._file_move(acrs_file, os.path.join(dir_name, '.processed'))
+                    except PermissionError as e:
+                        logger.error("Unable to copy file: %s", e)
 
         if file_name:
             if os.path.exists(file_name):
@@ -117,7 +120,7 @@ class CrashDataReader:
                     self._file_move(file_name, '.processed')
 
     def _read_file(self, file_name: str) -> None:
-        LOGGER.info('Processing %s', file_name)
+        logger.info('Processing %s', file_name)
         with open(file_name, encoding='utf-8') as acrs_file:
             crash_file = acrs_file.read()
 
@@ -130,6 +133,9 @@ class CrashDataReader:
 
         crash_dict = root['REPORT']
 
+        self._read_main_crash_data(crash_dict)
+
+        # The following require acrs_crash for their relationships
         if crash_dict.get('APPROVALDATA'):
             self._read_approval_data(crash_dict['APPROVALDATA'])
 
@@ -141,6 +147,9 @@ class CrashDataReader:
 
         if crash_dict.get('EMSes') and crash_dict.get('EMSes', {}).get('EMS'):
             self._read_ems_data(crash_dict['EMSes']['EMS'])
+
+        if crash_dict.get('People') and crash_dict.get('People', {}).get('ACRSPERSON'):
+            self._read_acrs_person_data(crash_dict['People']['ACRSPERSON'])
 
         if crash_dict.get('PDFREPORTs') and crash_dict.get('PDFREPORTs', {}).get('PDFREPORT'):
             self._read_pdf_data(crash_dict['PDFREPORTs']['PDFREPORT'])
@@ -154,9 +163,7 @@ class CrashDataReader:
         if crash_dict.get('ROADWAY'):
             self._read_roadway_data(crash_dict['ROADWAY'])
 
-        if crash_dict.get('People') and crash_dict.get('People', {}).get('ACRSPERSON'):
-            self._read_acrs_person_data(crash_dict['People']['ACRSPERSON'])
-
+        # These require acrs_crash and acrs_person
         if crash_dict.get('VEHICLEs') and crash_dict.get('VEHICLEs', {}).get('ACRSVEHICLE'):
             self._read_acrs_vehicle_data(crash_dict['VEHICLEs']['ACRSVEHICLE'])
 
@@ -165,8 +172,6 @@ class CrashDataReader:
 
         if crash_dict.get('WITNESSes') and crash_dict.get('WITNESSes', {}).get('WITNESS'):
             self._read_witness_data(crash_dict['WITNESSes']['WITNESS'])
-
-        self._read_main_crash_data(crash_dict)
 
     @staticmethod
     def _file_move(file_name: str, processed_dir: str) -> bool:
@@ -192,7 +197,7 @@ class CrashDataReader:
                 return True
             i += 1
 
-        LOGGER.error('Error moving file. It will not be moved to the processed directory: %s', file_name)
+        logger.error('Error moving file. It will not be moved to the processed directory: %s', file_name)
         return False
 
     @check_and_log('crash_dict')
