@@ -32,7 +32,7 @@ def check_and_log(check_dict: str):
 
     def _check_and_log(func):
         def wrapper(*args, **kwargs):
-            logger.info("Entering %s", func.__name__)
+            logger.info("Entering {}", func.__name__)
 
             # handle positional or keyword args
             args_name = inspect.getfullargspec(func)[0]
@@ -59,7 +59,7 @@ class CrashDataReader:
         Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
         :param conn_str: sqlalchemy connection string (IE sqlite:///crash.db)
         """
-        logger.info("Creating db with connection string: %s", conn_str)
+        logger.info("Creating db with connection string: {}", conn_str)
         self.engine = create_engine(conn_str, echo=True, future=True)
 
         with self.engine.begin() as connection:
@@ -70,7 +70,7 @@ class CrashDataReader:
         session.add(insert_obj)
         try:
             session.commit()
-            logger.debug("Successfully inserted object: %s", insert_obj)
+            logger.debug("Successfully inserted object: {}", insert_obj)
         except IntegrityError:
             session.rollback()
 
@@ -88,9 +88,9 @@ class CrashDataReader:
                 qry.update(update_vals)
                 try:
                     session.commit()
-                    logger.debug("Successfully inserted object: %s", insert_obj)
+                    logger.debug("Successfully inserted object: {}", insert_obj)
                 except IntegrityError as err:
-                    logger.error("Unable to insert object: %s\nError: %s", insert_obj, err)
+                    logger.error("Unable to insert object: {}\nError: {}", insert_obj, err)
         finally:
             session.close()
 
@@ -110,8 +110,8 @@ class CrashDataReader:
                 if copy:
                     try:
                         self._file_move(acrs_file, os.path.join(dir_name, '.processed'))
-                    except PermissionError as e:
-                        logger.error("Unable to copy file: %s", e)
+                    except PermissionError as err:
+                        logger.error("Unable to copy file: {}", err)
 
         if file_name:
             if os.path.exists(file_name):
@@ -120,7 +120,7 @@ class CrashDataReader:
                     self._file_move(file_name, '.processed')
 
     def _read_file(self, file_name: str) -> None:
-        logger.info('Processing %s', file_name)
+        logger.info('Processing {}', file_name)
         with open(file_name, encoding='utf-8') as acrs_file:
             crash_file = acrs_file.read()
 
@@ -139,8 +139,7 @@ class CrashDataReader:
         if crash_dict.get('APPROVALDATA'):
             self._read_approval_data(crash_dict['APPROVALDATA'])
 
-        if crash_dict.get('CIRCUMSTANCES') and crash_dict.get('CIRCUMSTANCES', {}).get('CIRCUMSTANCE'):
-            self._read_circumstance_data(crash_dict['CIRCUMSTANCES']['CIRCUMSTANCE'])
+
 
         if crash_dict.get('DIAGRAM'):
             self._read_crash_diagrams_data(crash_dict['DIAGRAM'])
@@ -197,7 +196,7 @@ class CrashDataReader:
                 return True
             i += 1
 
-        logger.error('Error moving file. It will not be moved to the processed directory: %s', file_name)
+        logger.error('Error moving file. It will not be moved to the processed directory: {}', file_name)
         return False
 
     @check_and_log('crash_dict')
@@ -440,9 +439,6 @@ class CrashDataReader:
         :param person_dict: OrderedDict from the PERSON, OWNER, PASSENGER, or NONMOTORIST tags
         """
         for person in person_dict:
-            if person.get('CITATIONCODES') and person.get('CITATIONCODES', {}).get('CITATIONCODE'):
-                self._read_citation_data(person['CITATIONCODES']['CITATIONCODE'])
-
             self._insert_or_update(
                 Person(
                     ADDRESS=self.get_single_attr('ADDRESS', person),
@@ -466,6 +462,9 @@ class CrashDataReader:
                     STATE=self.get_single_attr('STATE', person),
                     ZIP=self.get_single_attr('ZIP', person)
                 ))
+
+            if person.get('CITATIONCODES') and person.get('CITATIONCODES', {}).get('CITATIONCODE'):
+                self._read_citation_data(person['CITATIONCODES']['CITATIONCODE'])
 
     @check_and_log('person_dict')
     def _read_person_info_data(
