@@ -205,7 +205,7 @@ class Circumstance(Base):
     __tablename__ = "acrs_circumstance"
 
     CIRCUMSTANCECODE = Column(Float)  # <xs:element type="xs:float" name="CIRCUMSTANCECODE"/>
-    CIRCUMSTANCEID = Column(Integer, primary_key=True)  # <xs:element type="xs:int" name="CIRCUMSTANCEID"/>
+    CIRCUMSTANCEID = Column(Integer, primary_key=True, autoincrement=False)  # <xs:element type="xs:int" name="CIRCUMSTANCEID"/>
     CIRCUMSTANCETYPE = Column(
         String)  # <xs:element name="CIRCUMSTANCETYPE"> (restricted to values 'weather', 'road', 'person', and 'vehicle')
     PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'))  # <xs:element type="xs:string" name="PERSONID" nillable="true"/>
@@ -226,7 +226,7 @@ class CrashDiagram(Base):
     CRASHDIAGRAMNATIVE = Column(String)  # <xs:element type="xs:string" name="CRASHDIAGRAMNATIVE"/>
     CRASHES = relationship('Crash', back_populates='DIAGRAM')
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN), ForeignKey('acrs_crash.REPORTNUMBER'),
-                          primary_key=True)  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+                          primary_key=True, autoincrement=False)  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
 
 ####################
@@ -363,7 +363,7 @@ class PdfReport(Base):
     CRASHES = relationship('Crash', back_populates='PDFREPORTs')
     DATESTATUSCHANGED = Column(DateTime)  # <xs:element type="xs:dateTime" name="DATESTATUSCHANGED"/>
     PDFREPORT1 = Column(String)  # <xs:element type="xs:string" name="PDFREPORT1"/>
-    PDF_ID = Column(Integer, primary_key=True)  # <xs:element type="xs:int" name="PDF_ID"/>
+    PDF_ID = Column(Integer, primary_key=True, autoincrement=False)  # <xs:element type="xs:int" name="PDF_ID"/>
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
                           ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
     STATUS = Column(String)  # <xs:element type="xs:string" name="STATUS"/>
@@ -375,7 +375,7 @@ class PdfReport(Base):
 class ReportDocument(Base):
     """Sqlalchemy: Data for table acrs_report_doc"""
     __tablename__ = "acrs_report_doc"
-    NULLCOLUMN = Column(Integer, primary_key=True)
+    NULLCOLUMN = Column(Integer, primary_key=True, autoincrement=False)
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
                           ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
@@ -386,7 +386,7 @@ class ReportDocument(Base):
 class ReportPhoto(Base):
     """Sqlalchemy: Data for table acrs_report_photo"""
     __tablename__ = "acrs_report_photo"
-    NULLCOLUMN = Column(Integer, primary_key=True)
+    NULLCOLUMN = Column(Integer, primary_key=True, autoincrement=False)
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
                           ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
@@ -543,7 +543,7 @@ class DamagedArea(Base):
     """Sqlalchemy: Data for table acrs_damaged_areas"""
     __tablename__ = "acrs_damaged_area"
 
-    DAMAGEID = Column(Integer, primary_key=True)  # <xs:element type="xs:int" name="DAMAGEID"/>
+    DAMAGEID = Column(Integer, primary_key=True, autoincrement=False)  # <xs:element type="xs:int" name="DAMAGEID"/>
     IMPACTTYPE = Column(Integer)  # <xs:element type="xs:byte" name="IMPACTTYPE"/>
     VEHICLEID = Column(GUID, ForeignKey('acrs_vehicle.VEHICLEID'))  # <xs:element type="xs:string" name="VEHICLEID"/>
 
@@ -556,7 +556,7 @@ class Event(Base):
     """Sqlalchemy: Data for table acrs_events"""
     __tablename__ = "acrs_event"
 
-    EVENTID = Column(Integer, primary_key=True)  # <xs:element type="xs:int" name="EVENTID"/>
+    EVENTID = Column(Integer, primary_key=True, autoincrement=False)  # <xs:element type="xs:int" name="EVENTID"/>
     EVENTSEQUENCE = Column(Integer)  # <xs:element type="xs:byte" name="EVENTSEQUENCE"/>
     EVENTTYPE = Column(Integer)  # <xs:element type="xs:byte" name="EVENTTYPE"/>
     VEHICLEID = Column(GUID, ForeignKey('acrs_vehicle.VEHICLEID'))  # <xs:element type="xs:string" name="VEHICLEID"/>
@@ -593,6 +593,6 @@ class VehicleUse(Base):
     """Sqlalchemy: Data for table acrs_vehicle_use"""
     __tablename__ = "acrs_vehicle_use"
 
-    ID = Column(Integer, primary_key=True)  # <xs:element type="xs:int" name="ID"/>
+    ID = Column(Integer, primary_key=True, autoincrement=False)  # <xs:element type="xs:int" name="ID"/>
     VEHICLEID = Column(GUID, ForeignKey('acrs_vehicle.VEHICLEID'))  # <xs:element type="xs:string" name="VEHICLEID"/>
     VEHICLEUSECODE = Column(Integer)  # <xs:element name="VEHICLEUSECODE"> (restricted to 00, 01, 02, and 03)
