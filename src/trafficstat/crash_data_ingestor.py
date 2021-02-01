@@ -133,13 +133,15 @@ class CrashDataReader:
 
         crash_dict = root['REPORT']
 
+        if crash_dict.get('ROADWAY'):
+            self._read_roadway_data(crash_dict['ROADWAY'])
+
+        # The following requires acrs_roadway for its relationships
         self._read_main_crash_data(crash_dict)
 
         # The following require acrs_crash for their relationships
         if crash_dict.get('APPROVALDATA'):
             self._read_approval_data(crash_dict['APPROVALDATA'])
-
-
 
         if crash_dict.get('DIAGRAM'):
             self._read_crash_diagrams_data(crash_dict['DIAGRAM'])
@@ -158,9 +160,6 @@ class CrashDataReader:
 
         if crash_dict.get('REPORTPHOTOes') and crash_dict.get('REPORTPHOTOes', {}).get('REPORTPHOTO'):
             self._read_report_photos_data(crash_dict['REPORTPHOTOes']['REPORTPHOTO'])
-
-        if crash_dict.get('ROADWAY'):
-            self._read_roadway_data(crash_dict['ROADWAY'])
 
         # These require acrs_crash and acrs_person
         if crash_dict.get('VEHICLEs') and crash_dict.get('VEHICLEs', {}).get('ACRSVEHICLE'):

@@ -5,7 +5,7 @@ tqdm~=4.56.0
 XlsxWriter~=1.3.7
 xmltodict~=0.12.0
 loguru~=0.5.3
-
+sqlalchemy~=1.4.0b1
 git+https://github.com/PyCQA/astroid@c9fd1934e9c49d9052f64439fc7ea82026bce00f#egg=astroid  # Bug in Astroid 2.4.2. Remove after new tag
 git+https://github.com/city-of-baltimore/Geocoder@main#egg=balt-geocoder
-git+https://github.com/sqlalchemy/sqlalchemy.git@rel_1_4_0b1#egg=sqlalchemy
+# git+https://github.com/sqlalchemy/sqlalchemy.git@rel_1_4_0b1#egg=sqlalchemy

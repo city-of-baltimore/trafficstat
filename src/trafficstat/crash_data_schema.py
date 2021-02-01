@@ -144,7 +144,7 @@ class Crash(Base):
         String)  # <xs:element name="ROADDIVISION"> (restricted to 00, 01, 02, 03, 04, 05.01, 88, 99 and '')
     ROADGRADE = Column(
         String)  # <xs:element name="ROADGRADE"> (restricted to 00, 01, 02, 03, 04, 05, 06, 88, 99 and '')
-    ROADID = Column(String(length=36))  # <xs:element type="xs:string" name="ROADID"/`> (this is a six digit number or a UUID). Despite this being a key in the roadway table, this should not be a foreign key.
+    ROADID = Column(String(length=36), ForeignKey('acrs_roadway.ROADID'))  # <xs:element type="xs:string" name="ROADID"/`> (this is a six digit number or a UUID).
     ROADWAY = relationship('Roadway', uselist=False,
                            back_populates='CRASHES')  # one:one <xs:element type="cras:ROADWAYType" name="ROADWAY" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     SCHOOLBUSINVOLVEMENT = Column(

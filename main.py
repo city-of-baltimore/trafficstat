@@ -29,7 +29,8 @@ parser_parse = subparsers.add_parser('parse', help='Parse ACRS xml crash data fi
                                                    'insert them into a database')
 parser_parse.add_argument('-c', '--conn_str', default='sqlite:///crash.db',
                           help='Custom database connection string (default: sqlite:///crash.db)')
-parser_parse.add_argument('-d', '--directory', help='Directory containing ACRS XML files to parse')
+parser_parse.add_argument('-d', '--directory', help='Directory containing ACRS XML files to parse. If quotes are '
+                                                    'required, use double quotes.')
 
 # Generate
 parser_generate = subparsers.add_parser('ms2export', help='Generate CSV files that MS2 uses to import crash data. Pulls '
