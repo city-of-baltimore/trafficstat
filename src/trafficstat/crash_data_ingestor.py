@@ -12,6 +12,7 @@ import xmltodict  # type: ignore
 from loguru import logger
 from pandas import to_datetime  # type: ignore
 from sqlalchemy import create_engine, inspect as sqlalchemyinspect  # type: ignore
+from sqlalchemy.sql import text  # type: ignore
 from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore

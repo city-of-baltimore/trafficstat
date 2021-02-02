@@ -144,9 +144,9 @@ class Crash(Base):
         String)  # <xs:element name="ROADDIVISION"> (restricted to 00, 01, 02, 03, 04, 05.01, 88, 99 and '')
     ROADGRADE = Column(
         String)  # <xs:element name="ROADGRADE"> (restricted to 00, 01, 02, 03, 04, 05, 06, 88, 99 and '')
-    ROADID = Column(String(length=36), ForeignKey('acrs_roadway.ROADID'))  # <xs:element type="xs:string" name="ROADID"/`> (this is a six digit number or a UUID).
-    ROADWAY = relationship('Roadway', uselist=False,
-                           back_populates='CRASHES')  # one:one <xs:element type="cras:ROADWAYType" name="ROADWAY" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    ROADID = Column(String(length=36), ForeignKey(
+        'acrs_roadway.ROADID'))  # <xs:element type="xs:string" name="ROADID"/`> (this is a six digit number or a UUID).
+    ROADWAY = relationship('Roadway', back_populates='CRASHES')  # one:one <xs:element type="cras:ROADWAYType" name="ROADWAY" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     SCHOOLBUSINVOLVEMENT = Column(
         Integer)  # <xs:element name="SCHOOLBUSINVOLVEMENT"> (restricted to 00, 01, 02, 03, and 99)
     STATEGOVERNMENTPROPERTYNAME = Column(String,
@@ -205,13 +205,16 @@ class Circumstance(Base):
     __tablename__ = "acrs_circumstance"
 
     CIRCUMSTANCECODE = Column(Float)  # <xs:element type="xs:float" name="CIRCUMSTANCECODE"/>
-    CIRCUMSTANCEID = Column(Integer, primary_key=True, autoincrement=False)  # <xs:element type="xs:int" name="CIRCUMSTANCEID"/>
+    CIRCUMSTANCEID = Column(Integer, primary_key=True,
+                            autoincrement=False)  # <xs:element type="xs:int" name="CIRCUMSTANCEID"/>
     CIRCUMSTANCETYPE = Column(
         String)  # <xs:element name="CIRCUMSTANCETYPE"> (restricted to values 'weather', 'road', 'person', and 'vehicle')
-    PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'))  # <xs:element type="xs:string" name="PERSONID" nillable="true"/>
+    PERSONID = Column(GUID, ForeignKey(
+        'acrs_person.PERSONID'))  # <xs:element type="xs:string" name="PERSONID" nillable="true"/>
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
                           ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
-    VEHICLEID = Column(GUID, ForeignKey('acrs_vehicle.VEHICLEID'))  # <xs:element type="xs:string" name="VEHICLEID" nillable="true"/>
+    VEHICLEID = Column(GUID, ForeignKey(
+        'acrs_vehicle.VEHICLEID'))  # <xs:element type="xs:string" name="VEHICLEID" nillable="true"/>
 
 
 ###############################
@@ -291,7 +294,8 @@ class PersonInfo(Base):
         Integer)  # <xs:element name="PEDESTRIANTYPE"> (restricted to 01, 02, 03, 05, 06, 07, 88, and 99)
     PEDESTRIANVISIBILITY = Column(
         Integer)  # <xs:element name="PEDESTRIANVISIBILITY"> (restricted to 00, 01, 02, 03, 04, 06, 07, 88 and 99)
-    PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'), primary_key=True)  # <xs:element type="xs:string" name="PERSONID"/>
+    PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'),
+                      primary_key=True)  # <xs:element type="xs:string" name="PERSONID"/>
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
                           ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
     SAFETYEQUIPMENT = Column(Float)  # <xs:element type="xs:float" name="SAFETYEQUIPMENT"/>
@@ -348,7 +352,8 @@ class CitationCode(Base):
     CITATIONNUMBER = Column(String(length=15), primary_key=True)  # <xs:element type="xs:string" name="CITATIONNUMBER"/>
     PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'))  # <xs:element type="xs:string" name="PERSONID"/>
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
-                          ForeignKey('acrs_crash.REPORTNUMBER'), primary_key=True)  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+                          ForeignKey('acrs_crash.REPORTNUMBER'),
+                          primary_key=True)  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
 
 ###########################
@@ -399,7 +404,7 @@ class Roadway(Base):
     __tablename__ = "acrs_roadway"
 
     COUNTY = Column(Integer)  # <xs:element name="COUNTY" minOccurs="0"> (restricted to 3, 23, and 24)
-    CRASHES = relationship('Crash', back_populates='ROADWAY')
+    CRASHES = relationship('Crash', uselist=False, back_populates='ROADWAY')
     LOGMILE_DIR = Column(String,
                          nullable=True)  # <xs:element name="LOGMILE_DIR" minOccurs="0"> (restricted to N, S, E, W, U, and '')
     MILEPOINT = Column(Float, nullable=True)  # <xs:element type="xs:float" name="MILEPOINT" minOccurs="0"/>
@@ -434,17 +439,19 @@ class Vehicle(Base):
     """Sqlalchemy: Data for table acrs_vehicle"""
     __tablename__ = "acrs_vehicle"
 
-    COMMERCIALVEHICLE = relationship(
-        'CommercialVehicle')  # one:many <xs:element name="COMMERCIALVEHICLE" nillable="true">
+    COMMERCIALVEHICLE = relationship('CommercialVehicle', uselist=False,
+                                     back_populates='VEHICLE')  # one:many <xs:element name="COMMERCIALVEHICLE" nillable="true">
     CONTINUEDIRECTION = Column(String)  # <xs:element name="CONTINUEDIRECTION">
     DAMAGEDAREAs = relationship('DamagedArea')  # one:many <xs:element type="cras:DAMAGEDAREAsType" name="DAMAGEDAREAs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     DAMAGEEXTENT = Column(Integer)  # <xs:element name="DAMAGEEXTENT"> (restricted to 00, 01, 02, 03, 04, 05, 88 and 99)
-    DRIVERLESSVEHICLE = Column(Boolean, nullable=True)  # <xs:element name="DRIVERLESSVEHICLE"> (restricted to 'Y', 'N', and 'U')
+    DRIVERLESSVEHICLE = Column(Boolean,
+                               nullable=True)  # <xs:element name="DRIVERLESSVEHICLE"> (restricted to 'Y', 'N', and 'U')
     DRIVERs = relationship(
         'PersonInfo')  # one:many <xs:element type="cras:DRIVERsType" name="DRIVERs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     EMERGENCYMOTORVEHICLEUSE = Column(
         Boolean, nullable=True)  # <xs:element name="EMERGENCYMOTORVEHICLEUSE"> (restricted to 'Y', 'N', and 'U')
-    EVENTS = relationship('Event')  # one:many <xs:element type="cras:EVENTType" name="EVENT" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    EVENTS = relationship(
+        'Event')  # one:many <xs:element type="cras:EVENTType" name="EVENT" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     FIRE = Column(Boolean, nullable=True)  # <xs:element name="FIRE"> (restricted to 'Y', 'N', and 'U')
     FIRSTIMPACT = Column(String)  # <xs:element type="xs:string" name="FIRSTIMPACT"/>
     GOINGDIRECTION = Column(String)  # <xs:element name="GOINGDIRECTION"> (restricted to N, S, E, W, U, and '')
@@ -456,14 +463,16 @@ class Vehicle(Base):
     MAINIMPACT = Column(Integer, nullable=True)  # <xs:element type="xs:string" name="MAINIMPACT"/>
     MOSTHARMFULEVENT = Column(Float)  # <xs:element type="xs:float" name="MOSTHARMFULEVENT"/>
     OWNER = relationship(
-        'Person', back_populates='VEHICLE')  # one:one <xs:element type="cras:OWNERType" name="OWNER" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+        'Person',
+        back_populates='VEHICLE')  # one:one <xs:element type="cras:OWNERType" name="OWNER" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     OWNERID = Column(GUID, ForeignKey('acrs_person.PERSONID'))  # <xs:element type="xs:string" name="OWNERID"/>
     PARKEDVEHICLE = Column(Boolean, nullable=True)  # <xs:element name="PARKEDVEHICLE">
     PASSENGERs = relationship(
         'PersonInfo')  # one:many <xs:element name="PASSENGERs">
     REGISTRATIONEXPIRATIONYEAR = Column(
         String, nullable=True)  # <xs:element type="xs:string" name="REGISTRATIONEXPIRATIONYEAR" nillable="true"/>
-    REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN), ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
+                          ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
     SFVEHICLEINTRANSPORT = Column(Integer)  # <xs:element type="xs:byte" name="SFVEHICLEINTRANSPORT"/>
     SPEEDLIMIT = Column(Integer)  # <xs:element type="xs:byte" name="SPEEDLIMIT"/>
     TOWEDUNITTYPE = Column(Integer)  # <xs:element name="TOWEDUNITTYPE"> (restricted to 00, 01, 03, 06, 07, 88 and 99)
@@ -480,7 +489,8 @@ class Vehicle(Base):
                               nullable=True)  # <xs:element type="xs:string" name="VEHICLEREMOVEDTO" nillable="true"/>
     VEHICLETOWEDAWAY = Column(String(length=1),
                               nullable=True)  # <xs:element name="VEHICLETOWEDAWAY"> (restricted to Y, N, U and '')
-    VEHICLEUSEs = relationship('VehicleUse')  # one:many <xs:element type="cras:VEHICLEUSEsType" name="VEHICLEUSEs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    VEHICLEUSEs = relationship(
+        'VehicleUse')  # one:many <xs:element type="cras:VEHICLEUSEsType" name="VEHICLEUSEs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     VEHICLEYEAR = Column(String)  # <xs:element type="xs:string" name="VEHICLEYEAR"/>
     VIN = Column(String)  # <xs:element type="xs:string" name="VIN"/>
 
@@ -493,8 +503,10 @@ class Witness(Base):
     __tablename__ = "acrs_witness"
 
     # PERSON: PersonType  # <xs:element type="cras:PERSONType" name="PERSON" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
-    PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'), primary_key=True)  # <xs:element type="xs:string" name="PERSONID"/>
-    REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN), ForeignKey('acrs_crash.REPORTNUMBER'), primary_key=True)  # <xs:element type="xs:string" name="REPORTNUMBER"/>
+    PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'),
+                      primary_key=True)  # <xs:element type="xs:string" name="PERSONID"/>
+    REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN), ForeignKey('acrs_crash.REPORTNUMBER'),
+                          primary_key=True)  # <xs:element type="xs:string" name="REPORTNUMBER"/>
 
 
 ####################################
@@ -528,6 +540,7 @@ class CommercialVehicle(Base):
     POSTALCODE = Column(String)  # <xs:element type="xs:string" name="POSTALCODE" minOccurs="0"/>
     STATE = Column(String)  # <xs:element type="xs:string" name="STATE" minOccurs="0"/>
     STREET = Column(String)  # <xs:element type="xs:string" name="STREET" minOccurs="0"/>
+    VEHICLE = relationship('Vehicle', back_populates='COMMERCIALVEHICLE')
     VEHICLEID = Column(GUID, ForeignKey('acrs_vehicle.VEHICLEID'),
                        primary_key=True)  # <xs:element type="xs:string" name="VEHICLEID" minOccurs="0"/>
     WEIGHT = Column(String, nullable=True)  # <xs:element type="xs:string" name="WEIGHT" minOccurs="0" nillable="true"/>
@@ -536,11 +549,11 @@ class CommercialVehicle(Base):
 
 
 ##############################
-#     acrs_damaged_areas     #
+#     acrs_damaged_area      #
 ##############################
 # Inside DAMAGEDAREAs tag
 class DamagedArea(Base):
-    """Sqlalchemy: Data for table acrs_damaged_areas"""
+    """Sqlalchemy: Data for table acrs_damaged_area"""
     __tablename__ = "acrs_damaged_area"
 
     DAMAGEID = Column(Integer, primary_key=True, autoincrement=False)  # <xs:element type="xs:int" name="DAMAGEID"/>
@@ -574,7 +587,8 @@ class TowedUnit(Base):
     INSURER = Column(String)  # <xs:element type="xs:string" name="INSURER"/>
     LICENSEPLATENUMBER = Column(String)  # <xs:element type="xs:string" name="LICENSEPLATENUMBER"/>
     LICENSEPLATESTATE = Column(String)  # <xs:element type="xs:string" name="LICENSEPLATESTATE"/>
-    OWNER = relationship('Person')  # <xs:element type="cras:OWNERType" name="OWNER" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    OWNER = relationship(
+        'Person')  # <xs:element type="cras:OWNERType" name="OWNER" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     OWNERID = Column(GUID, ForeignKey('acrs_person.PERSONID'))  # <xs:element type="xs:string" name="OWNERID"/>
     TOWEDID = Column(GUID, primary_key=True)  # <xs:element type="xs:string" name="TOWEDID"/>
     UNITNUMBER = Column(String)  # <xs:element type="xs:string" name="UNITNUMBER" nillable="true"/>
