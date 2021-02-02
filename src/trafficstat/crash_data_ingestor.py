@@ -12,7 +12,6 @@ import xmltodict  # type: ignore
 from loguru import logger
 from pandas import to_datetime  # type: ignore
 from sqlalchemy import create_engine, inspect as sqlalchemyinspect  # type: ignore
-from sqlalchemy.sql import text  # type: ignore
 from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
@@ -171,6 +170,10 @@ class CrashDataReader:
 
         if crash_dict.get('WITNESSes') and crash_dict.get('WITNESSes', {}).get('WITNESS'):
             self._read_witness_data(crash_dict['WITNESSes']['WITNESS'])
+
+        # These require acrs_crash, acrs_vehicle, and acrs_person
+        if crash_dict.get('CIRCUMSTANCES') and crash_dict.get('CIRCUMSTANCES', {}).get('CIRCUMSTANCE'):
+            self._read_circumstance_data(crash_dict['CIRCUMSTANCES']['CIRCUMSTANCE'])
 
     @staticmethod
     def _file_move(file_name: str, processed_dir: str) -> bool:

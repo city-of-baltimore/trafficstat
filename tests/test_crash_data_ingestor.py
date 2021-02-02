@@ -90,7 +90,7 @@ def check_single_entries(_session, i, checks=None):
 
 @clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
         PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
-def test_read_crash_data_file(crash_data_reader):  # pylint:disable=too-many-statements
+def test_read_crash_data_files(crash_data_reader):  # pylint:disable=too-many-statements
     """Rudamentary check that there are the right number of records after a few xml files are read in"""
     with Session(crash_data_reader.engine) as session:
         # test with witness and a nonmotorist, which also moves the file to a processed dir
