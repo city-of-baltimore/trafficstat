@@ -1,10 +1,18 @@
 """Creates data files that MS2 can use to import data"""
 import datetime
+from loguru import logger
 from typing import Dict, Optional
 import uuid
 
 import pyodbc  # type: ignore
 import xlsxwriter  # type: ignore
+from sqlalchemy import create_engine, select   # type: ignore
+from sqlalchemy.sql.expression import join  # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
+
+from trafficstat.ms2generator_schema import Base, CircumstanceSanitized, CitationCodeSanitized, CrashSanitized, \
+    EmsSanitized, PersonSanitized, RoadwaySanitized, TrailerSanitized, VehicleSanitized
+
 
 SEX = {
     '01': 'Male',
@@ -218,10 +226,15 @@ TANG_ROAD = {
 class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
     """Creates XLSX files with crash data from the DOT_DATA table for MS2"""
 
-    def __init__(self):
-        conn = pyodbc.connect(r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
-        self.cursor = conn.cursor()
+    def __init__(self, conn_str: str, workbook_name: str = 'BaltimoreCrash.xlsx'):
+        logger.info("Creating db with connection string: {}", conn_str)
+        self.engine = create_engine(conn_str, echo=True, future=True)
+
+        with self.engine.begin() as connection:
+            Base.metadata.create_all(connection)
+
         self.workbook = None
+        self.workbook_name = workbook_name
         self.date_fmt = None
 
         self.person_circum_ws = None
@@ -236,7 +249,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         self.person_id_dict = {}
 
     def __enter__(self):
-        self.workbook = xlsxwriter.Workbook('BaltimoreCrash.xlsx')
+        self.workbook = xlsxwriter.Workbook(self.workbook_name)
         self.date_fmt = self.workbook.add_format({'num_format': 'mm/dd/yy'})
 
         # These have to exist, but do not need to be populated
@@ -311,7 +324,10 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                 val = val.zfill(4)
                 return val[:2] + ":" + val[2:] + ":00"
 
-        self.cursor.execute(sql_cmd)
+        with Session(self.engine) as session:
+            res = session.execute(select(CrashSanitized).join(RoadwaySanitized))
+
+        """
         worksheet = self.workbook.add_worksheet("CRASH")
 
         # Build header row
@@ -344,6 +360,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                 else:
                     worksheet.write(row_no, element_no, row[element_no])
             row_no += 1
+        """
 
     def add_person_worksheet(self) -> None:
         """Generates the worksheet for the acrs_person_sanitized table"""
@@ -378,6 +395,10 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                    EMS_UNIT_LABEL
             FROM acrs_person_sanitized"""
 
+        with Session(self.engine) as session:
+            res = session.execute(select(PersonSanitized))
+
+        """    
         self.cursor.execute(sql_cmd)
         worksheet = self.workbook.add_worksheet("PERSON")
 
@@ -412,17 +433,20 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     worksheet.write(row_no, element_no, row[element_no])
 
             row_no += 1
+        """
 
     def add_ems_worksheet(self) -> None:
         """Generates the worksheet for the acrs_ems_sanitized table"""
-        self._create_worksheet("""
-            SELECT REPORT_NO,
-                   EMS_UNIT_TAKEN_BY,
-                   EMS_UNIT_TAKEN_TO,
-                   EMS_UNIT_LABEL,
-                   EMS_TRANSPORT_TYPE_FLAG as EMS_TRANSPORT_TYPE
-            FROM acrs_ems_sanitized
-        """, "EMS")
+        with Session(self.engine) as session:
+            res = session.execute(select(EmsSanitized))
+        #self._create_worksheet("""
+        #    SELECT REPORT_NO,
+        #           EMS_UNIT_TAKEN_BY,
+        #           EMS_UNIT_TAKEN_TO,
+        #           EMS_UNIT_LABEL,
+        #           EMS_TRANSPORT_TYPE_FLAG as EMS_TRANSPORT_TYPE
+        #    FROM acrs_ems_sanitized
+        #""", "EMS")
 
     def add_vehicle_worksheet(self) -> None:
         """Generates the worksheet for the acrs_vehicle_sanitized table"""
@@ -459,7 +483,10 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                    AREA_DAMAGED_CODE_MAIN
             FROM acrs_vehicles_sanitized
         """
+        with Session(self.engine) as session:
+            res = session.execute(select(VehicleSanitized))
 
+        """
         self.cursor.execute(sql_cmd)
         worksheet = self.workbook.add_worksheet("VEHICLE")
 
@@ -499,17 +526,21 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     worksheet.write(row_no, element_no, row[element_no])
 
             row_no += 1
+        """
 
     def add_vehicle_circum(self, report_no: str, vehicle_id: str, vehicle_uuid: str) -> None:
         """ Creates the vehicle_circum sheet"""
-        self.cursor.execute("""
-            SELECT *
-            FROM [acrs_circumstances_sanitized]
-            WHERE [CONTRIB_FLAG] = 'V' AND
-                [REPORT_NO] = ? AND
-                [VEHICLE_ID] = ?
-        """, str(report_no), str(vehicle_id))
+        with Session(self.engine) as session:
+            res = session.execute(select(CircumstanceSanitized))
+        #self.cursor.execute("""
+        #    SELECT *
+        #    FROM [acrs_circumstances_sanitized]
+        #    WHERE [CONTRIB_FLAG] = 'V' AND
+        #        [REPORT_NO] = ? AND
+        #        [VEHICLE_ID] = ?
+        #""", str(report_no), str(vehicle_id))
 
+        """
         for row in self.cursor.fetchall():
             for contrib in set(row[1:5]):
                 val = self._validate_vehicle_value(contrib)
@@ -521,14 +552,18 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                                       None,
                                                       vehicle_uuid))
                     self.vehicle_circum_ws_row += 1
+        """
 
     def add_road_circum(self) -> None:
         """ Creates blank road_circum sheet"""
-        self.cursor.execute("""
-            SELECT *
-            FROM [acrs_circumstances_sanitized]
-            WHERE [CONTRIB_FLAG] = 'R'
-        """)
+        with Session(self.engine) as session:
+            res = session.execute(select(CircumstanceSanitized))
+        #self.cursor.execute("""
+        #    SELECT *
+        #    FROM [acrs_circumstances_sanitized]
+        #    WHERE [CONTRIB_FLAG] = 'R'
+        #""")
+        """
         for row in self.cursor.fetchall():
             for contrib in set(row[1:5]):
                 val = self._validate_road_value(contrib)
@@ -540,6 +575,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                                    None,
                                                    None))
                     self.road_circum_ws_row += 1
+        """
 
     def _validate_vehicle_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for vehicles """
