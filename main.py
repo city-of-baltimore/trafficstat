@@ -50,7 +50,8 @@ if args.subparser_name == 'parse':
     cls.read_crash_data(dir_name=args.directory)
 
 if args.subparser_name == 'ms2export':
-    ws_maker = WorksheetMaker()
+    ws_maker = WorksheetMaker(
+        conn_str="mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server")
     with ws_maker:
         ws_maker.add_crash_worksheet()
         ws_maker.add_person_worksheet()
