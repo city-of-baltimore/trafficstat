@@ -1,4 +1,5 @@
 """Schema information used for SQL Alchemy"""
+# pylint:disable=too-few-public-methods
 from sqlalchemy import Column, ForeignKey  # type: ignore
 from sqlalchemy.ext.declarative import declarative_base  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
@@ -13,7 +14,7 @@ Base: DeclarativeMeta = declarative_base()
 ##########################################
 class CircumstanceSanitized(Base):
     """Sqlalchemy: Data for table acrs_circumstance_sanitized"""
-    __tablename__ = "acrs_circumstance_sanitized"
+    __tablename__ = 'acrs_circumstance_sanitized'
 
     REPORT_NO = Column(String(length=10), ForeignKey('acrs_crash_sanitized.REPORT_NO'))
     CONTRIB_CODE1 = Column(String(length=5), nullable=True)
@@ -33,7 +34,7 @@ class CircumstanceSanitized(Base):
 ##########################################
 class CitationCodeSanitized(Base):
     """Sqlalchemy: Data for table acrs_citation_code_sanitized"""
-    __tablename__ = "acrs_citation_code_sanitized"
+    __tablename__ = 'acrs_citation_code_sanitized'
 
     CITATION = Column(String(length=25), nullable=True)
     PERSON_ID = Column(Float, ForeignKey('acrs_person_sanitized.PERSON_ID'))
@@ -48,13 +49,13 @@ class CitationCodeSanitized(Base):
 ##################################
 class CrashSanitized(Base):
     """Sqlalchemy: Data for table acrs_crash_sanitized"""
-    __tablename__ = "acrs_crash_sanitized"
+    __tablename__ = 'acrs_crash_sanitized'
 
     CIRCUMSTANCE = relationship('CircumstanceSanitized')
     CITATION = relationship('CitationCodeSanitized')
     EMS = relationship('EmsSanitized')
     PERSON = relationship('PersonSanitized')
-    ROADWAY = relationship('RoadwaySanitized')
+    ROADWAY = relationship('RoadwaySanitized', back_populates="CRASH")
     TRAILER = relationship('TrailerSanitized')
     VEHICLE = relationship('VehicleSanitized')
 
@@ -116,7 +117,7 @@ class CrashSanitized(Base):
 ################################
 class EmsSanitized(Base):
     """Sqlalchemy: Data for table acrs_ems_sanitized"""
-    __tablename__ = "acrs_ems_sanitized"
+    __tablename__ = 'acrs_ems_sanitized'
 
     EMS_ID = Column(Float, primary_key=True)
     REPORT_NO = Column(String(length=10), ForeignKey('acrs_crash_sanitized.REPORT_NO'))
@@ -135,7 +136,7 @@ class EmsSanitized(Base):
 ###################################
 class PersonSanitized(Base):
     """Sqlalchemy: Data for table acrs_person_sanitized"""
-    __tablename__ = "acrs_person_sanitized"
+    __tablename__ = 'acrs_person_sanitized'
 
     CIRCUMSTANCE = relationship('CircumstanceSanitized')
     CITATION = relationship('CitationCodeSanitized')
@@ -205,7 +206,9 @@ class PersonSanitized(Base):
 ####################################
 class RoadwaySanitized(Base):
     """Sqlalchemy: Data for table acrs_roadway_sanitized"""
-    __tablename__ = "acrs_roadway_sanitized"
+    __tablename__ = 'acrs_roadway_sanitized'
+
+    CRASH = relationship(CrashSanitized)
 
     REPORT_NO = Column(String(length=10), ForeignKey('acrs_crash_sanitized.REPORT_NO'), primary_key=True)
     ROUTE_NUMBER = Column(Numeric(precision=5, scale=0), nullable=True)
@@ -245,7 +248,7 @@ class RoadwaySanitized(Base):
 ####################################
 class TrailerSanitized(Base):
     """Sqlalchemy: Data for table acrs_trailer_sanitized"""
-    __tablename__ = "acrs_trailer_sanitized"
+    __tablename__ = 'acrs_trailer_sanitized'
 
     TRAILER_RECORD_ID = Column(Float, primary_key=True)
     REPORT_NO = Column(String(length=10), ForeignKey('acrs_crash_sanitized.REPORT_NO'))
@@ -267,7 +270,7 @@ class TrailerSanitized(Base):
 ####################################
 class VehicleSanitized(Base):
     """Sqlalchemy: Data for table acrs_vehicle_sanitized"""
-    __tablename__ = "acrs_vehicle_sanitized"
+    __tablename__ = 'acrs_vehicle_sanitized'
 
     CIRCUMSTANCE = relationship('CircumstanceSanitized')
 
@@ -284,7 +287,7 @@ class VehicleSanitized(Base):
     VEH_MODEL = Column(String(length=30), nullable=True)
     TOWED_AWAY_FLAG = Column(String(length=1), nullable=True)
     NUM_AXLES = Column(String(length=2), nullable=True)
-    GVW = Column(String(length=6), nullable=True)
+    GVW_CODE = Column('GVW', String(length=6), nullable=True)
     GOING_DIRECTION_CODE = Column(String(length=5), nullable=True)
     BODY_TYPE_CODE = Column(String(length=5), nullable=True)
     DRIVERLESS_FLAG = Column(String(length=1), nullable=True)
@@ -294,8 +297,9 @@ class VehicleSanitized(Base):
     SPEED_LIMIT = Column(String(length=2), nullable=True)
     HIT_AND_RUN_FLAG = Column(String(length=1), nullable=True)
     HAZMAT_SPILL_FLAG = Column(String(length=1), nullable=True)
-    VEHICLE_ID = Column(Float, primary_key=True)
-    TOWED_VEHICLE_CODE1 = Column(String(length=5), nullable=True)
+    VIN_NO = Column('VEHICLE_ID', Float, primary_key=True)
+    # VEHICLE_ID = Column(Float, primary_key=True)  # this is a duplicate, but thats required
+    TOWED_VEHICLE_CONFIG_CODE = Column('TOWED_VEHICLE_CODE1', String(length=5), nullable=True)
     TOWED_VEHICLE_CODE2 = Column(String(length=5), nullable=True)
     TOWED_VEHICLE_CODE3 = Column(String(length=5), nullable=True)
     PLATE_STATE = Column(String(length=2), nullable=True)
@@ -316,7 +320,7 @@ class VehicleSanitized(Base):
     EMERGENCY_USE_FLAG = Column(String(length=1), nullable=True)
     CV_CONFIG_CODE = Column(String(length=5), nullable=True)
     BUS_USE_CODE = Column(String(length=5), nullable=True)
-    HZM_NAME = Column(String(length=40), nullable=True)
+    HZM_NUM = Column('HZM_NAME', String(length=40), nullable=True)
     PLACARD_VISIBLE_FLAG = Column(String(length=1), nullable=True)
     VEHICLE_WEIGHT_CODE = Column(String(length=5), nullable=True)
     OWNER_STATE_CODE = Column(String(length=2), nullable=True)

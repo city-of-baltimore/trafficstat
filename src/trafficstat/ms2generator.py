@@ -1,18 +1,16 @@
 """Creates data files that MS2 can use to import data"""
 import datetime
-from loguru import logger
-from typing import Dict, Optional
 import uuid
+from typing import Dict, Optional
 
-import pyodbc  # type: ignore
+from loguru import logger
 import xlsxwriter  # type: ignore
-from sqlalchemy import create_engine, select   # type: ignore
-from sqlalchemy.sql.expression import join  # type: ignore
+from sqlalchemy import and_, create_engine, select  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
+from sqlalchemy.engine.result import ChunkedIteratorResult  # type: ignore
 
-from trafficstat.ms2generator_schema import Base, CircumstanceSanitized, CitationCodeSanitized, CrashSanitized, \
-    EmsSanitized, PersonSanitized, RoadwaySanitized, TrailerSanitized, VehicleSanitized
-
+from trafficstat.ms2generator_schema import Base, CircumstanceSanitized, CrashSanitized, EmsSanitized, \
+     PersonSanitized, RoadwaySanitized, VehicleSanitized
 
 SEX = {
     '01': 'Male',
@@ -39,6 +37,7 @@ REPORT_TYPE = {'01': 'Fatal Crash', '02': 'Injury Crash', '03': 'Property Damage
 
 # Applies to all code fields
 TANG_MASTER = {
+    '0': 'NOT APPLICABLE',
     '00': 'NOT APPLICABLE',
     '88': 'OTHER',
     '99': 'UNKNOWN',
@@ -85,13 +84,21 @@ TANG_VEHICLE = {
 # PERSON VALUES
 ACRS_PERSON = {
     '00': 'Not Applicable',
+    '1': 'Under Influence of Drugs',
     '01': 'Under Influence of Drugs',
+    '2': 'Under Influence of Alcohol',
     '02': 'Under Influence of Alcohol',
+    '3': 'Under Influence of Medication',
     '03': 'Under Influence of Medication',
+    '4': 'Under Combined Influence',
     '04': 'Under Combined Influence',
+    '5': 'Physical/Mental Difficulty',
     '05': 'Physical/Mental Difficulty',
+    '6': 'Fell Asleep, Fainted, Etc.',
     '06': 'Fell Asleep, Fainted, Etc.',
+    '7': 'Failed to Give Full Time and Attention',
     '07': 'Failed to Give Full Time and Attention',
+    '8': 'Did Not Comply with License Restrictions',
     '08': 'Did Not Comply with License Restrictions',
     '10': 'Improper Right Turn on Red',
     '11': 'Failed to Yield Right of Way',
@@ -233,22 +240,11 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         with self.engine.begin() as connection:
             Base.metadata.create_all(connection)
 
-        self.workbook = None
         self.workbook_name = workbook_name
-        self.date_fmt = None
 
-        self.person_circum_ws = None
-        self.weather_circum_ws = None
-        self.vehicle_circum_ws = None
-        self.road_circum_ws = None
+        self.vehicle_id_dict: dict = {}
+        self.person_id_dict: dict = {}
 
-        self.road_circum_ws_row = None
-        self.vehicle_circum_ws_row = None
-
-        self.vehicle_id_dict = {}
-        self.person_id_dict = {}
-
-    def __enter__(self):
         self.workbook = xlsxwriter.Workbook(self.workbook_name)
         self.date_fmt = self.workbook.add_format({'num_format': 'mm/dd/yy'})
 
@@ -264,318 +260,324 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         self.road_circum_ws.write_row(0, 0, ("REPORT_NO", "CONTRIB_TYPE", "CONTRIB_CODE", "PERSON_ID", "VEHICLE_ID"))
         self.road_circum_ws_row = 1
 
+    def __enter__(self):
+        return self
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.workbook.close()
 
     def add_crash_worksheet(self) -> None:
         """Generates the worksheet for the acrs_crash_sanitized table"""
-        sql_cmd = """
-            SELECT [acrs_crashes_sanitized].[LIGHT_CODE],
-                   [acrs_crashes_sanitized].[COUNTY_NO],
-                   [acrs_crashes_sanitized].[MUNI_CODE],
-                   [acrs_crashes_sanitized].[JUNCTION_CODE],
-                   [acrs_crashes_sanitized].[COLLISION_TYPE_CODE],
-                   [acrs_crashes_sanitized].[SURF_COND_CODE],
-                   [acrs_crashes_sanitized].[LANE_CODE],
-                   [acrs_crashes_sanitized].[RD_COND_CODE],
-                   [acrs_roadway_sanitized].[RD_DIV_CODE],
-                   [acrs_crashes_sanitized].[FIX_OBJ_CODE],
-                   [acrs_crashes_sanitized].[REPORT_NO],
-                   [acrs_crashes_sanitized].[REPORT_TYPE_CODE] as REPORT_TYPE,
-                   [acrs_crashes_sanitized].[WEATHER_CODE],
-                   [acrs_crashes_sanitized].[ACC_DATE],
-                   [acrs_crashes_sanitized].[ACC_TIME],
-                   [acrs_crashes_sanitized].[LOC_CODE],
-                   [acrs_crashes_sanitized].[SIGNAL_FLAG],
-                   [acrs_crashes_sanitized].[C_M_ZONE_FLAG],
-                   [acrs_crashes_sanitized].[AGENCY_CODE],
-                   [acrs_crashes_sanitized].[AREA_CODE],
-                   [acrs_crashes_sanitized].[HARM_EVENT_CODE1],
-                   [acrs_crashes_sanitized].[HARM_EVENT_CODE2],
-                   [acrs_roadway_sanitized].[ROUTE_NUMBER] as RTE_NO,
-                   [acrs_roadway_sanitized].[ROUTE_TYPE_CODE],
-                   [acrs_roadway_sanitized].[ROUTE_SUFFIX] as RTE_SUFFIX,
-                   [acrs_roadway_sanitized].[LOG_MILE],
-                   [acrs_roadway_sanitized].[LOGMILE_DIR_FLAG],
-                   [acrs_roadway_sanitized].[ROAD_NAME] as MAINROAD_NAME,
-                   [acrs_roadway_sanitized].[DISTANCE],
-                   [acrs_roadway_sanitized].[FEET_MILES_FLAG],
-                   [acrs_roadway_sanitized].[DISTANCE_DIR_FLAG],
-                   [acrs_roadway_sanitized].[REFERENCE_NUMBER] as REFERENCE_NO,
-                   [acrs_roadway_sanitized].[REFERENCE_TYPE_CODE],
-                   [acrs_roadway_sanitized].[REFERENCE_SUFFIX],
-                   [acrs_roadway_sanitized].[REFERENCE_ROAD_NAME],
-                   [acrs_roadway_sanitized].[X_COORDINATES] as LATITUDE,
-                   [acrs_roadway_sanitized].[Y_COORDINATES] as LONGITUDE
-            FROM acrs_crashes_sanitized
-            JOIN acrs_roadway_sanitized
-            on acrs_crashes_sanitized.REPORT_NO = acrs_roadway_sanitized.REPORT_NO
-        """
-
-        def standardize_time(val: str) -> str:
-            """ Convert int that is the 24 hour time into a standardized timestamp """
-
-            val = str(val)
-
-            try:
-                val.index(":")
-                return val
-            except ValueError:
-                val = val.zfill(4)
-                return val[:2] + ":" + val[2:] + ":00"
-
         with Session(self.engine) as session:
-            res = session.execute(select(CrashSanitized).join(RoadwaySanitized))
+            qry = session.query(CrashSanitized.LIGHT_CODE,
+                                CrashSanitized.COUNTY_NO,
+                                CrashSanitized.MUNI_CODE,
+                                CrashSanitized.JUNCTION_CODE,
+                                CrashSanitized.COLLISION_TYPE_CODE,
+                                CrashSanitized.SURF_COND_CODE,
+                                CrashSanitized.LANE_CODE,
+                                CrashSanitized.RD_COND_CODE,
+                                RoadwaySanitized.RD_DIV_CODE,
+                                CrashSanitized.FIX_OBJ_CODE,
+                                CrashSanitized.REPORT_NO,
+                                CrashSanitized.REPORT_TYPE_CODE,  # REPORT_TYPE_CODE as REPORT_TYPE,
+                                CrashSanitized.WEATHER_CODE,
+                                CrashSanitized.ACC_DATE,
+                                CrashSanitized.ACC_TIME,
+                                CrashSanitized.LOC_CODE,
+                                CrashSanitized.SIGNAL_FLAG,
+                                CrashSanitized.C_M_ZONE_FLAG,
+                                CrashSanitized.AGENCY_CODE,
+                                CrashSanitized.AREA_CODE,
+                                CrashSanitized.HARM_EVENT_CODE1,
+                                CrashSanitized.HARM_EVENT_CODE2,
+                                RoadwaySanitized.ROUTE_NUMBER,  # ROUTE_NUMBER as RTE_NO,
+                                RoadwaySanitized.ROUTE_TYPE_CODE,
+                                RoadwaySanitized.ROUTE_SUFFIX,  # ROUTE_SUFFIX as RTE_SUFFIX,
+                                RoadwaySanitized.LOG_MILE,
+                                RoadwaySanitized.LOGMILE_DIR_FLAG,
+                                RoadwaySanitized.ROAD_NAME,  # ROAD_NAME as MAINROAD_NAME,
+                                RoadwaySanitized.DISTANCE,
+                                RoadwaySanitized.FEET_MILES_FLAG,
+                                RoadwaySanitized.DISTANCE_DIR_FLAG,
+                                RoadwaySanitized.REFERENCE_NUMBER,  # REFERENCE_NUMBER as REFERENCE_NO,
+                                RoadwaySanitized.REFERENCE_TYPE_CODE,
+                                RoadwaySanitized.REFERENCE_SUFFIX,
+                                RoadwaySanitized.REFERENCE_ROAD_NAME,
+                                RoadwaySanitized.X_COORDINATES,  # X_COORDINATES as LATITUDE,
+                                RoadwaySanitized.Y_COORDINATES  # Y_COORDINATES as LONGITUDE
+                                ).join(CrashSanitized.ROADWAY)
 
-        """
-        worksheet = self.workbook.add_worksheet("CRASH")
+            worksheet = self.workbook.add_worksheet("CRASH")
+            key_subs = {
+                'REPORT_TYPE_CODE': 'REPORT_TYPE',
+                'ROUTE_NUMBER': 'RTE_NO',
+                'ROUTE_SUFFIX': 'RTE_SUFFIX',
+                'ROAD_NAME': 'MAINROAD_NAME',
+                'REFERENCE_NUMBER': 'REFERENCE_NO',
+                'X_COORDINATES': 'LATITUDE',
+                'Y_COORDINATES': 'LONGITUDE',
+            }
 
-        # Build header row
-        header_list = [i[0] for i in self.cursor.description]
-        worksheet.write_row(0, 0, header_list)
+            row_no = 0
+            for row in qry.all():
+                if row_no == 0:
+                    # Build header row
+                    header_list = list(row.keys())
+                    for orig, repl in key_subs.items():
+                        header_list[header_list.index(orig)] = repl
+                    worksheet.write_row(0, 0, header_list)
 
-        # Find the indexes of the special cases we need to deal with
-        accident_date_index = header_list.index('ACC_DATE')
-        accident_time_index = header_list.index('ACC_TIME')
-        report_id_index = header_list.index('REPORT_TYPE')
+                    # Find the indexes of the special cases we need to deal with
+                    accident_date_index = header_list.index('ACC_DATE')
+                    accident_time_index = header_list.index('ACC_TIME')
+                    report_id_index = header_list.index('REPORT_TYPE')
 
-        if accident_date_index == -1 or accident_time_index == -1:
-            raise AssertionError("Unable to find all crash indexes")
+                    row_no += 1
 
-        row_no = 1
-        for row in self.cursor.fetchall():
-            for element_no, _ in enumerate(row):
+                for element_no, _ in enumerate(row):
 
-                # Deal with the special cases
-                if element_no == accident_date_index:
-                    worksheet.write(row_no, element_no, row[element_no].strftime('%m/%d/%Y'))
-                elif element_no == accident_time_index:
-                    worksheet.write(row_no, element_no, standardize_time(row[element_no]))
-                elif element_no == report_id_index:
-                    worksheet.write(row_no, element_no, REPORT_TYPE.get(row[element_no]))
+                    # Deal with the special cases
+                    if element_no == accident_date_index:
+                        worksheet.write(row_no, element_no, row[element_no].strftime('%m/%d/%Y'))
+                    elif element_no == accident_time_index:
+                        worksheet.write(row_no, element_no, str(row[element_no]).zfill(4))
+                    elif element_no == report_id_index:
+                        worksheet.write(row_no, element_no, REPORT_TYPE.get(row[element_no]))
 
-                # Other cases
-                elif isinstance(row[element_no], datetime.datetime):
-                    worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
-                else:
-                    worksheet.write(row_no, element_no, row[element_no])
-            row_no += 1
-        """
+                    # Other cases
+                    elif isinstance(row[element_no], datetime.datetime):
+                        worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
+                    else:
+                        worksheet.write(row_no, element_no, row[element_no])
+                row_no += 1
 
     def add_person_worksheet(self) -> None:
         """Generates the worksheet for the acrs_person_sanitized table"""
-        sql_cmd = """
-            SELECT SEX as SEX_CODE,
-                   CONDITION_CODE,
-                   INJ_SEVER_CODE,
-                   REPORT_NO,
-                   OCC_SEAT_POS_CODE,
-                   PED_VISIBLE_CODE,
-                   PED_LOCATION_CODE,
-                   PED_OBEY_CODE,
-                   PED_TYPE_CODE,
-                   MOVEMENT_CODE,
-                   PERSON_TYPE,
-                   ALCO_TEST_CODE as ALCOHOL_TEST_CODE,
-                   ALCO_TEST_TYPE_CODE as ALCOHOL_TESTTYPE_CODE,
-                   DRUG_TEST_CODE,
-                   DRUG_TEST_RESULT_FLAG as DRUG_TESTRESULT_CODE,
-                   BAC as BAC_CODE,
-                   FAULT_FLAG,
-                   EQUIP_PROB_CODE,
-                   SAF_EQUIP_CODE,
-                   EJECT_CODE,
-                   AIR_BAG_CODE as AIRBAG_DEPLOYED,
-                   DRIVER_DOB as DATE_OF_BIRTH,
-                   PERSON_ID,
-                   STATE_CODE as LICENSE_STATE_CODE,
-                   CLASS,
-                   CDL_FLAG,
-                   VEHICLE_ID,
-                   EMS_UNIT_LABEL
-            FROM acrs_person_sanitized"""
-
         with Session(self.engine) as session:
-            res = session.execute(select(PersonSanitized))
+            qry = session.execute(select(PersonSanitized.SEX,
+                                         PersonSanitized.CONDITION_CODE,
+                                         PersonSanitized.INJ_SEVER_CODE,
+                                         PersonSanitized.REPORT_NO,
+                                         PersonSanitized.OCC_SEAT_POS_CODE,
+                                         PersonSanitized.PED_VISIBLE_CODE,
+                                         PersonSanitized.PED_LOCATION_CODE,
+                                         PersonSanitized.PED_OBEY_CODE,
+                                         PersonSanitized.PED_TYPE_CODE,
+                                         PersonSanitized.MOVEMENT_CODE,
+                                         PersonSanitized.PERSON_TYPE,
+                                         PersonSanitized.ALCO_TEST_CODE,  # ALCO_TEST_CODE as ALCOHOL_TEST_CODE,
+                                         PersonSanitized.ALCO_TEST_TYPE_CODE,
+                                         # ALCO_TEST_TYPE_CODE as ALCOHOL_TESTTYPE_CODE,
+                                         PersonSanitized.DRUG_TEST_CODE,
+                                         PersonSanitized.DRUG_TEST_RESULT_FLAG,
+                                         # DRUG_TEST_RESULT_FLAG as DRUG_TESTRESULT_CODE,
+                                         PersonSanitized.BAC,  # BAC as BAC_CODE,
+                                         PersonSanitized.FAULT_FLAG,
+                                         PersonSanitized.EQUIP_PROB_CODE,
+                                         PersonSanitized.SAF_EQUIP_CODE,
+                                         PersonSanitized.EJECT_CODE,
+                                         PersonSanitized.AIR_BAG_CODE,  # AIR_BAG_CODE as AIRBAG_DEPLOYED,
+                                         PersonSanitized.DRIVER_DOB,  # DRIVER_DOB as DATE_OF_BIRTH,
+                                         PersonSanitized.PERSON_ID,
+                                         PersonSanitized.STATE_CODE,  # STATE_CODE as LICENSE_STATE_CODE,
+                                         PersonSanitized.CLASS,
+                                         PersonSanitized.CDL_FLAG,
+                                         PersonSanitized.VEHICLE_ID,
+                                         PersonSanitized.EMS_UNIT_LABEL))
 
-        """    
-        self.cursor.execute(sql_cmd)
-        worksheet = self.workbook.add_worksheet("PERSON")
+            # headers that need to be renamed
+            key_subs = {
+                'ALCO_TEST_CODE': 'ALCOHOL_TEST_CODE',
+                'ALCO_TEST_TYPE_CODE': 'ALCOHOL_TESTTYPE_CODE',
+                'DRUG_TEST_RESULT_FLAG': 'DRUG_TESTRESULT_CODE',
+                'BAC': 'BAC_CODE',
+                'AIR_BAG_CODE': 'AIRBAG_DEPLOYED',
+                'DRIVER_DOB': 'DATE_OF_BIRTH',
+                'STATE_CODE': 'LICENSE_STATE_CODE'
+            }
 
-        # Build header row
-        header_list = [i[0] for i in self.cursor.description]
-        worksheet.write_row(0, 0, header_list)
+            worksheet = self.workbook.add_worksheet("PERSON")
 
-        # Find the indexes of the special cases we need to deal with
-        person_id_index = header_list.index('PERSON_ID')
-        vehicle_id_index = header_list.index('VEHICLE_ID')
-        sex_index = header_list.index('SEX_CODE')
+            row_no = 0
+            for row in qry.fetchall():
+                if row_no == 0:
+                    # Build header row
+                    header_list = list(row.keys())
+                    for orig, repl in key_subs.items():
+                        header_list[header_list.index(orig)] = repl
 
-        if person_id_index == -1 or vehicle_id_index == -1 or sex_index == -1:
-            raise AssertionError("Unable to find person indexes")
+                    worksheet.write_row(0, 0, header_list)
 
-        worksheet.write_row(0, 0, header_list)
-        row_no = 1
-        for row in self.cursor.fetchall():
-            for element_no, _ in enumerate(row):
-                # Deal with the special cases
-                if element_no == person_id_index:
-                    worksheet.write(row_no, element_no, self._get_person_uuid(row[element_no]))
-                elif element_no == vehicle_id_index:
-                    worksheet.write(row_no, element_no, self._get_vehicle_uuid(row[element_no]))
-                elif element_no == sex_index:
-                    worksheet.write(row_no, element_no, self._lookup_sex(row[element_no]))
+                    # Find the indexes of the special cases we need to deal with
+                    person_id_index = header_list.index('PERSON_ID')
+                    vehicle_id_index = header_list.index('VEHICLE_ID')
+                    sex_index = header_list.index('SEX')
 
-                # Other cases
-                elif isinstance(row[element_no], datetime.datetime):
-                    worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
-                else:
-                    worksheet.write(row_no, element_no, row[element_no])
+                    row_no += 1
 
-            row_no += 1
-        """
+                for element_no, _ in enumerate(row):
+                    # Deal with the special cases
+                    if element_no == person_id_index:
+                        worksheet.write(row_no, element_no, self._get_person_uuid(row[element_no]))
+                    elif element_no == vehicle_id_index:
+                        worksheet.write(row_no, element_no, self._get_vehicle_uuid(row[element_no]))
+                    elif element_no == sex_index:
+                        worksheet.write(row_no, element_no, self._lookup_sex(row[element_no]))
+
+                    # Other cases
+                    elif isinstance(row[element_no], datetime.datetime):
+                        worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
+                    else:
+                        worksheet.write(row_no, element_no, row[element_no])
+
+                row_no += 1
 
     def add_ems_worksheet(self) -> None:
         """Generates the worksheet for the acrs_ems_sanitized table"""
         with Session(self.engine) as session:
-            res = session.execute(select(EmsSanitized))
-        #self._create_worksheet("""
-        #    SELECT REPORT_NO,
-        #           EMS_UNIT_TAKEN_BY,
-        #           EMS_UNIT_TAKEN_TO,
-        #           EMS_UNIT_LABEL,
-        #           EMS_TRANSPORT_TYPE_FLAG as EMS_TRANSPORT_TYPE
-        #    FROM acrs_ems_sanitized
-        #""", "EMS")
+            qry = session.execute(select(EmsSanitized.REPORT_NO,
+                                         EmsSanitized.EMS_UNIT_TAKEN_BY,
+                                         EmsSanitized.EMS_UNIT_TAKEN_TO,
+                                         EmsSanitized.EMS_UNIT_LABEL,
+                                         EmsSanitized.EMS_TRANSPORT_TYPE_FLAG))
+
+            worksheet = self.workbook.add_worksheet("EMS")
+            date_fmt = self.workbook.add_format({'num_format': 'mm/dd/yy'})
+            key_subs = {'EMS_TRANSPORT_TYPE_FLAG': 'EMS_TRANSPORT_TYPE'}
+
+            row_no = 0
+            for row in qry.fetchall():
+                if row_no == 0:
+                    header_list = list(row.keys())
+                    for orig, repl in key_subs.items():
+                        header_list[header_list.index(orig)] = repl
+
+                    for col_num, _ in enumerate(header_list):
+                        worksheet.write(0, col_num, header_list[col_num])
+                    row_no += 1
+
+                for element_no, _ in enumerate(row):
+                    if isinstance(row[element_no], datetime.datetime):
+                        worksheet.write(row_no, element_no, row[element_no], date_fmt)
+                    elif isinstance(row[element_no], str) and row[element_no].isdigit():
+                        worksheet.write(row_no, element_no, int(row[element_no]))
+                    else:
+                        worksheet.write(row_no, element_no, row[element_no])
+                row_no += 1
 
     def add_vehicle_worksheet(self) -> None:
         """Generates the worksheet for the acrs_vehicle_sanitized table"""
-        sql_cmd = """
-            SELECT HARM_EVENT_CODE,
-                   CONTI_DIRECTION_CODE,
-                   DAMAGE_CODE,
-                   MOVEMENT_CODE,
-                   VEHICLE_ID as VIN_NO,
-                   REPORT_NO,
-                   CV_BODY_TYPE_CODE,
-                   VEH_YEAR,
-                   VEH_MAKE,
-                   COMMERCIAL_FLAG,
-                   VEH_MODEL,
-                   HZM_NAME as HZM_NUM,
-                   TOWED_AWAY_FLAG,
-                   NUM_AXLES,
-                   GVW as GVW_CODE,
-                   GOING_DIRECTION_CODE,
-                   BODY_TYPE_CODE,
-                   DRIVERLESS_FLAG,
-                   FIRE_FLAG,
-                   PARKED_FLAG,
-                   SPEED_LIMIT,
-                   HIT_AND_RUN_FLAG,
-                   HAZMAT_SPILL_FLAG,
-                   VEHICLE_ID,
-                   TOWED_VEHICLE_CODE1 as TOWED_VEHICLE_CONFIG_CODE,
-                   AREA_DAMAGED_CODE_IMP1,
-                   AREA_DAMAGED_CODE1,
-                   AREA_DAMAGED_CODE2,
-                   AREA_DAMAGED_CODE3,
-                   AREA_DAMAGED_CODE_MAIN
-            FROM acrs_vehicles_sanitized
-        """
         with Session(self.engine) as session:
-            res = session.execute(select(VehicleSanitized))
+            qry = session.execute(select(VehicleSanitized.HARM_EVENT_CODE,
+                                         VehicleSanitized.CONTI_DIRECTION_CODE,
+                                         VehicleSanitized.DAMAGE_CODE,
+                                         VehicleSanitized.MOVEMENT_CODE,
+                                         VehicleSanitized.VIN_NO,  # VEHICLE_ID as VIN_NO,
+                                         VehicleSanitized.REPORT_NO,
+                                         VehicleSanitized.CV_BODY_TYPE_CODE,
+                                         VehicleSanitized.VEH_YEAR,
+                                         VehicleSanitized.VEH_MAKE,
+                                         VehicleSanitized.COMMERCIAL_FLAG,
+                                         VehicleSanitized.VEH_MODEL,
+                                         VehicleSanitized.HZM_NUM,  # HZM_NAME as HZM_NUM,
+                                         VehicleSanitized.TOWED_AWAY_FLAG,
+                                         VehicleSanitized.NUM_AXLES,
+                                         VehicleSanitized.GVW_CODE,  # GVW as GVW_CODE,
+                                         VehicleSanitized.GOING_DIRECTION_CODE,
+                                         VehicleSanitized.BODY_TYPE_CODE,
+                                         VehicleSanitized.DRIVERLESS_FLAG,
+                                         VehicleSanitized.FIRE_FLAG,
+                                         VehicleSanitized.PARKED_FLAG,
+                                         VehicleSanitized.SPEED_LIMIT,
+                                         VehicleSanitized.HIT_AND_RUN_FLAG,
+                                         VehicleSanitized.HAZMAT_SPILL_FLAG,
+                                         VehicleSanitized.VIN_NO,  # duplicate to be renamed VEHICLE_ID
+                                         VehicleSanitized.TOWED_VEHICLE_CONFIG_CODE,
+                                         # TOWED_VEHICLE_CODE1 as TOWED_VEHICLE_CONFIG_CODE,
+                                         VehicleSanitized.AREA_DAMAGED_CODE_IMP1,
+                                         VehicleSanitized.AREA_DAMAGED_CODE1,
+                                         VehicleSanitized.AREA_DAMAGED_CODE2,
+                                         VehicleSanitized.AREA_DAMAGED_CODE3,
+                                         VehicleSanitized.AREA_DAMAGED_CODE_MAIN))
 
-        """
-        self.cursor.execute(sql_cmd)
-        worksheet = self.workbook.add_worksheet("VEHICLE")
+            worksheet = self.workbook.add_worksheet("VEHICLE")
 
-        # Build header row
-        header_list = [i[0] for i in self.cursor.description]
-        worksheet.write_row(0, 0, header_list)
+            row_no = 0
+            for row in qry.fetchall():
 
-        # Find the indexes of the special cases we need to deal with
-        report_no_index = header_list.index('REPORT_NO')
-        vehicle_id_index = header_list.index('VEHICLE_ID')
-        cont_dir_index = header_list.index('CONTI_DIRECTION_CODE')
-        going_dir_index = header_list.index('GOING_DIRECTION_CODE')
+                if row_no == 0:
+                    # Replace the last instane of VIN_NO with VEHICLE_ID, per the spec
+                    header_list = list(row.keys())
+                    header_list[header_list.index('VEHICLE_ID_1')] = 'VEHICLE_ID'
+                    worksheet.write_row(0, 0, header_list)
 
-        if report_no_index == -1 or vehicle_id_index == -1 or cont_dir_index == -1 or going_dir_index == -1:
-            raise AssertionError("Unable to find vehicle index")
+                    # Find the indexes of the special cases we need to deal with
+                    report_no_index = header_list.index('REPORT_NO')
+                    vehicle_id_index = header_list.index('VEHICLE_ID')
+                    cont_dir_index = header_list.index('CONTI_DIRECTION_CODE')
+                    going_dir_index = header_list.index('GOING_DIRECTION_CODE')
 
-        row_no = 1
-        for row in self.cursor.fetchall():
-            self.add_vehicle_circum(row[report_no_index],
-                                    row[vehicle_id_index],
-                                    self.vehicle_id_dict[row[vehicle_id_index]])
+                    row_no += 1
 
-            for element_no, _ in enumerate(row):
+                self.add_vehicle_circum(row[report_no_index],
+                                        row[vehicle_id_index])
 
-                # Deal with the special cases
-                if element_no == vehicle_id_index:
-                    worksheet.write(row_no, element_no, self._get_vehicle_uuid(row[element_no]))
-                elif element_no == cont_dir_index:
-                    worksheet.write(row_no, element_no, self._lookup_direction(row[element_no]))
-                elif element_no == going_dir_index:
-                    worksheet.write(row_no, element_no, self._lookup_direction(row[element_no]))
+                for element_no, _ in enumerate(row):
 
-                # Other cases
-                elif isinstance(row[element_no], datetime.datetime):
-                    worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
-                else:
-                    worksheet.write(row_no, element_no, row[element_no])
+                    # Deal with the special cases
+                    if element_no == vehicle_id_index:
+                        worksheet.write(row_no, element_no, self._get_vehicle_uuid(row[element_no]))
+                    elif element_no == cont_dir_index:
+                        worksheet.write(row_no, element_no, self._lookup_direction(row[element_no]))
+                    elif element_no == going_dir_index:
+                        worksheet.write(row_no, element_no, self._lookup_direction(row[element_no]))
 
-            row_no += 1
-        """
+                    # Other cases
+                    elif isinstance(row[element_no], datetime.datetime):
+                        worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
+                    else:
+                        worksheet.write(row_no, element_no, row[element_no])
 
-    def add_vehicle_circum(self, report_no: str, vehicle_id: str, vehicle_uuid: str) -> None:
+                row_no += 1
+
+    def add_vehicle_circum(self, report_no: str, vehicle_id: str) -> None:
         """ Creates the vehicle_circum sheet"""
         with Session(self.engine) as session:
-            res = session.execute(select(CircumstanceSanitized))
-        #self.cursor.execute("""
-        #    SELECT *
-        #    FROM [acrs_circumstances_sanitized]
-        #    WHERE [CONTRIB_FLAG] = 'V' AND
-        #        [REPORT_NO] = ? AND
-        #        [VEHICLE_ID] = ?
-        #""", str(report_no), str(vehicle_id))
+            qry = session.execute(select(CircumstanceSanitized.CONTRIB_CODE1, CircumstanceSanitized.CONTRIB_CODE2,
+                                         CircumstanceSanitized.CONTRIB_CODE3, CircumstanceSanitized.CONTRIB_CODE4).
+                                  where(and_(CircumstanceSanitized.CONTRIB_FLAG == 'V',
+                                             CircumstanceSanitized.REPORT_NO == report_no,
+                                             CircumstanceSanitized.VEHICLE_ID == vehicle_id)))
 
-        """
-        for row in self.cursor.fetchall():
-            for contrib in set(row[1:5]):
-                val = self._validate_vehicle_value(contrib)
-                if val is not None:
-                    self.vehicle_circum_ws.write_row(self.vehicle_circum_ws_row, 0,
-                                                     (report_no,
-                                                      'Vehicle',
-                                                      self._validate_vehicle_value(contrib),
-                                                      None,
-                                                      vehicle_uuid))
-                    self.vehicle_circum_ws_row += 1
-        """
+            self._add_circum(qry, 'Vehicle', vehicle_id=vehicle_id)
 
     def add_road_circum(self) -> None:
-        """ Creates blank road_circum sheet"""
+        """ Populates the road sheet"""
         with Session(self.engine) as session:
-            res = session.execute(select(CircumstanceSanitized))
-        #self.cursor.execute("""
-        #    SELECT *
-        #    FROM [acrs_circumstances_sanitized]
-        #    WHERE [CONTRIB_FLAG] = 'R'
-        #""")
+            qry = session.execute(select(CircumstanceSanitized.CONTRIB_CODE1, CircumstanceSanitized.CONTRIB_CODE2,
+                                         CircumstanceSanitized.CONTRIB_CODE3, CircumstanceSanitized.CONTRIB_CODE4).
+                                  where(CircumstanceSanitized.CONTRIB_FLAG == 'R'))
+            self._add_circum(qry, 'Road')
+
+    def _add_circum(self, qry: ChunkedIteratorResult, worksheet_name: str, person_id: Optional[str] = None,
+                    vehicle_id: Optional[str] = None):
         """
-        for row in self.cursor.fetchall():
-            for contrib in set(row[1:5]):
-                val = self._validate_road_value(contrib)
+        Add circumstance information to existing sheets
+        :param qry: result of session.execute
+        :param worksheet_name: name of the worksheet to add the data to
+        """
+        for row in qry.fetchall():
+            for contrib_code in row:
+                val = self._validate_road_value(contrib_code)
                 if val is not None:
                     self.road_circum_ws.write_row(self.road_circum_ws_row, 0,
                                                   (row[0],
-                                                   'Road',
-                                                   contrib,
-                                                   None,
-                                                   None))
+                                                   worksheet_name,
+                                                   contrib_code,
+                                                   self._get_person_uuid(person_id) if person_id else None,
+                                                   self._get_vehicle_uuid(vehicle_id) if vehicle_id else None))
                     self.road_circum_ws_row += 1
-        """
 
     def _validate_vehicle_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for vehicles """
@@ -584,56 +586,40 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         master_dict.update(TANG_MASTER)
         master_dict.update(ACRS_VEHICLE)
 
-        ret = None
-        try:
-            ret = self._validate_value(val, master_dict)
-        except AssertionError:
-            print("Invalid vehicle value: ", val)
+        ret = self._validate_value(val, master_dict)
 
         return ret
 
-    def _validate_person_value(self, val: str) -> Optional[str]:
-        """ Validates circumstance values for persons """
+    def _validate_person_value(self, val: str) -> str:
+        """ Validates circumstance values for persons. Will raise ValueError if val is not a valid person code. """
         master_dict = {}
         master_dict.update(TANG_PERSON)
         master_dict.update(TANG_MASTER)
         master_dict.update(ACRS_PERSON)
 
-        ret = None
-        try:
-            ret = self._validate_value(val, master_dict)
-        except AssertionError:
-            print("Invalid person value: ", val)
+        ret = self._validate_value(val, master_dict)
 
         return ret
 
-    def _validate_weather_value(self, val: str) -> Optional[str]:
-        """ Validates circumstance values for weather """
+    def _validate_weather_value(self, val: str) -> str:
+        """ Validates circumstance values for weather. Will raise ValueError if val is not a valid weather code. """
         master_dict = {}
         master_dict.update(TANG_WEATHER)
         master_dict.update(TANG_MASTER)
         master_dict.update(ACRS_WEATHER)
 
-        ret = None
-        try:
-            ret = self._validate_value(val, master_dict)
-        except AssertionError:
-            print("Invalid weather value: {}", val)
+        ret = self._validate_value(val, master_dict)
 
         return ret
 
-    def _validate_road_value(self, val: str) -> Optional[str]:
-        """ Validates circumstance values for road """
+    def _validate_road_value(self, val: str) -> str:
+        """ Validates circumstance values for road. Will raise ValueError if val is not a valid road code. """
         master_dict = {}
         master_dict.update(TANG_ROAD)
         master_dict.update(TANG_MASTER)
         master_dict.update(ACRS_ROAD)
 
-        ret = None
-        try:
-            ret = self._validate_value(val, master_dict)
-        except AssertionError:
-            print("Invalid road value: {}", val)
+        ret = self._validate_value(val, master_dict)
 
         return ret
 
@@ -644,7 +630,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         val = str(val)
         if val not in master_dict.keys():
-            raise AssertionError("Unable to validate {}. Expected values {}".format(val, master_dict.keys()))
+            raise ValueError("Unable to validate {}. Expected values {}".format(val, master_dict.keys()))
         return val
 
     @staticmethod
@@ -662,33 +648,6 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         master_dict.update(DIRECTION)
 
         return master_dict.get(val)
-
-    def _create_worksheet(self, sql_cmd: str, worksheet_name: str) -> None:
-        """
-        Writes the first line of headers as strings
-        :param sql_cmd: SQL statement to execute
-        :param worksheet_name: Name of the sheet to add
-        :return: None
-        """
-        self.cursor.execute(sql_cmd)
-        worksheet = self.workbook.add_worksheet(worksheet_name)
-        header_list = [i[0] for i in self.cursor.description]
-
-        for col_num, _ in enumerate(header_list):
-            worksheet.write(0, col_num, header_list[col_num])
-
-        date_fmt = self.workbook.add_format({'num_format': 'mm/dd/yy'})
-
-        row_no = 1
-        for row in self.cursor.fetchall():
-            for element_no, _ in enumerate(row):
-                if isinstance(row[element_no], datetime.datetime):
-                    worksheet.write(row_no, element_no, row[element_no], date_fmt)
-                elif isinstance(row[element_no], str) and row[element_no].isdigit():
-                    worksheet.write(row_no, element_no, int(row[element_no]))
-                else:
-                    worksheet.write(row_no, element_no, row[element_no])
-            row_no += 1
 
     def _get_person_uuid(self, person_id: str) -> str:
         """ Safe lookup of the person uuid """
