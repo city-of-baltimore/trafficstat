@@ -117,7 +117,7 @@ class CrashDataReader:
             if os.path.exists(file_name):
                 self._read_file(file_name)
                 if copy:
-                    self._file_move(file_name, '.processed')
+                    self._file_move(file_name, os.path.join(os.path.dirname(file_name), '.processed'))
 
     def _read_file(self, file_name: str) -> None:
         logger.info('Processing {}', file_name)

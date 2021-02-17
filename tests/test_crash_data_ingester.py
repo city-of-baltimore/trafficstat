@@ -13,7 +13,7 @@ from sqlalchemy import engine as enginetype, inspect  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
-from trafficstat.crash_data_ingestor import CrashDataReader
+from trafficstat.crash_data_ingester import CrashDataReader
 from trafficstat.crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
     CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, \
     Witness
@@ -23,7 +23,9 @@ from . import constants_test_data
 def check_database_rows(session, model: DeclarativeMeta, expected_rows: int):
     """Does a simple check that the number of rows in the table is what we expect"""
     qry = session.query(model).filter_by()
-    assert qry.count() == expected_rows
+    assert qry.count() == expected_rows, "Expected database {} to have {} rows. Actual: {}".format(
+        model.__tablename__, expected_rows, qry.count()
+    )
 
 
 def clean(model: Union[DeclarativeMeta, Tuple[DeclarativeMeta]]):
@@ -90,131 +92,116 @@ def check_single_entries(_session, i, checks=None):
 
 @clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
         PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
-def test_read_crash_data_files(crash_data_reader):  # pylint:disable=too-many-statements
-    """Rudamentary check that there are the right number of records after a few xml files are read in"""
+def test_read_crash_data_files_by_dir(crash_data_reader, tmpdir):
+    """Reads in all files in the testfiles dir to make sure they are properly processed"""
+
+    expected_vals_accumulator = {
+        'Singles': 13,
+        'Circumstance': 40,
+        'CitationCode': 6,
+        'CommercialVehicle': 3,
+        'DamagedArea': 47,
+        'Ems': 6,
+        'Event': 15,
+        'Person': 51,
+        'PersonInfo': 30,
+        'TowedUnit': 3,
+        'Vehicle': 22,
+        'VehicleUse': 22,
+        'Witness': 3,
+    }
+
     with Session(crash_data_reader.engine) as session:
-        # test with witness and a nonmotorist, which also moves the file to a processed dir
-        if os.path.exists('.processed'):
-            shutil.rmtree('.processed')
-        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'),
-                        os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml'))
+        test_dir = os.path.join(tmpdir, 'testfiles')
+        shutil.copytree(os.path.join('tests', 'testfiles'), test_dir)
+        crash_data_reader.read_crash_data(dir_name=test_dir)
+        assert os.path.exists(os.path.join(test_dir, '.processed'))
 
-        crash_data_reader.read_crash_data(
-            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml'),
-            copy=True)
-
-        assert os.path.exists('.processed/BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml')
-
-        check_single_entries(session, 1)
-        check_database_rows(session, Circumstance, 3)
-        check_database_rows(session, CitationCode, 0)
-        check_database_rows(session, CommercialVehicle, 1)
-        check_database_rows(session, DamagedArea, 1)
-        check_database_rows(session, Ems, 1)
-        check_database_rows(session, Event, 1)
-        check_database_rows(session, Person, 5)
-        check_database_rows(session, PersonInfo, 2)
-        check_database_rows(session, TowedUnit, 1)
-        check_database_rows(session, Vehicle, 1)
-        check_database_rows(session, VehicleUse, 1)
-        check_database_rows(session, Witness, 1)
-
-        # do the same test to make sure primary keys are handled properly
-        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'),
-                        os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml'))
-        crash_data_reader.read_crash_data(
-            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml'),
-            copy=True)
-        assert os.path.exists('.processed/BALTIMORE_acrs_ADJ5220059-witness-nonmotorist-copy.xml_1')
-
-        check_single_entries(session, 1)
-        check_database_rows(session, Circumstance, 3)
-        check_database_rows(session, CitationCode, 0)
-        check_database_rows(session, CommercialVehicle, 1)
-        check_database_rows(session, DamagedArea, 1)
-        check_database_rows(session, Ems, 1)
-        check_database_rows(session, Event, 1)
-        check_database_rows(session, Person, 5)
-        check_database_rows(session, PersonInfo, 2)
-        check_database_rows(session, TowedUnit, 1)
-        check_database_rows(session, Vehicle, 1)
-        check_database_rows(session, VehicleUse, 1)
-        check_database_rows(session, Witness, 1)
-
-        # File with citation codes
-        crash_data_reader.read_crash_data(
-            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'),
-            copy=False)
-        check_single_entries(session, 2)
-        check_database_rows(session, Circumstance, 5)
-        check_database_rows(session, CitationCode, 1)
-        check_database_rows(session, CommercialVehicle, 1)
-        check_database_rows(session, DamagedArea, 5)
-        check_database_rows(session, Ems, 1)
-        check_database_rows(session, Event, 1)
-        check_database_rows(session, Person, 10)
-        check_database_rows(session, PersonInfo, 5)
-        check_database_rows(session, TowedUnit, 1)
-        check_database_rows(session, Vehicle, 3)
-        check_database_rows(session, VehicleUse, 3)
-        check_database_rows(session, Witness, 1)
-
-        # File with passenger information
-        crash_data_reader.read_crash_data(
-            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'),
-            copy=False)
-        check_single_entries(session, 3)
-        check_database_rows(session, Circumstance, 7)
-        check_database_rows(session, CitationCode, 1)
-        check_database_rows(session, CommercialVehicle, 1)
-        check_database_rows(session, DamagedArea, 9)
-        check_database_rows(session, Ems, 1)
-        check_database_rows(session, Event, 1)
-        check_database_rows(session, Person, 18)
-        check_database_rows(session, PersonInfo, 12)
-        check_database_rows(session, TowedUnit, 1)
-        check_database_rows(session, Vehicle, 5)
-        check_database_rows(session, VehicleUse, 5)
-        check_database_rows(session, Witness, 1)
-
-        # File with multiple vehicles
-        crash_data_reader.read_crash_data(
-            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'),
-            copy=False)
-        check_single_entries(session, 4)
-        check_database_rows(session, Circumstance, 13)
-        check_database_rows(session, CitationCode, 1)
-        check_database_rows(session, CommercialVehicle, 1)
-        check_database_rows(session, DamagedArea, 13)
-        check_database_rows(session, Ems, 1)
-        check_database_rows(session, Event, 3)
-        check_database_rows(session, Person, 21)
-        check_database_rows(session, PersonInfo, 14)
-        check_database_rows(session, TowedUnit, 1)
-        check_database_rows(session, Vehicle, 7)
-        check_database_rows(session, VehicleUse, 7)
-        check_database_rows(session, Witness, 1)
-
-        # File with witnesses
-        crash_data_reader.read_crash_data(
-            file_name=os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'),
-            copy=False)
-        check_single_entries(session, 5)
-        check_database_rows(session, Circumstance, 15)
-        check_database_rows(session, CitationCode, 1)
-        check_database_rows(session, CommercialVehicle, 2)
-        check_database_rows(session, DamagedArea, 14)
-        check_database_rows(session, Ems, 2)
-        check_database_rows(session, Event, 4)
-        check_database_rows(session, Person, 27)
-        check_database_rows(session, PersonInfo, 16)
-        check_database_rows(session, TowedUnit, 2)
-        check_database_rows(session, Vehicle, 8)
-        check_database_rows(session, VehicleUse, 8)
-        check_database_rows(session, Witness, 3)
+        check_single_entries(session, expected_vals_accumulator['Singles'])
+        check_database_rows(session, Circumstance, expected_vals_accumulator['Circumstance'])
+        check_database_rows(session, CitationCode, expected_vals_accumulator['CitationCode'])
+        check_database_rows(session, CommercialVehicle, expected_vals_accumulator['CommercialVehicle'])
+        check_database_rows(session, DamagedArea, expected_vals_accumulator['DamagedArea'])
+        check_database_rows(session, Ems, expected_vals_accumulator['Ems'])
+        check_database_rows(session, Event, expected_vals_accumulator['Event'])
+        check_database_rows(session, Person, expected_vals_accumulator['Person'])
+        check_database_rows(session, PersonInfo, expected_vals_accumulator['PersonInfo'])
+        check_database_rows(session, TowedUnit, expected_vals_accumulator['TowedUnit'])
+        check_database_rows(session, Vehicle, expected_vals_accumulator['Vehicle'])
+        check_database_rows(session, VehicleUse, expected_vals_accumulator['VehicleUse'])
+        check_database_rows(session, Witness, expected_vals_accumulator['Witness'])
 
 
 @clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
+        PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
+def test_read_crash_data_files_by_file(crash_data_reader, tmpdir):  # pylint:disable=too-many-statements
+    """Rudamentary check that there are the right number of records after a few xml files are read in"""
+    expected_vals_accumulator = {
+        'Singles': 0,
+        'Circumstance': 0,
+        'CitationCode': 0,
+        'CommercialVehicle': 0,
+        'DamagedArea': 0,
+        'Ems': 0,
+        'Event': 0,
+        'Person': 0,
+        'PersonInfo': 0,
+        'TowedUnit': 0,
+        'Vehicle': 0,
+        'VehicleUse': 0,
+        'Witness': 0,
+    }
+
+    def check_all_database_rows(src_file_name, expected_vals: dict, accumulate=True):
+        tmp_file_name = os.path.join(tmpdir, os.path.basename(src_file_name))
+        shutil.copyfile(src_file_name, tmp_file_name)
+
+        crash_data_reader.read_crash_data(file_name=tmp_file_name, copy=True)
+        assert os.path.exists(os.path.join(tmpdir, '.processed', os.path.basename(src_file_name)))
+
+        if accumulate:
+            expected_vals_accumulator['Singles'] += 1
+            expected_vals_accumulator['Circumstance'] += expected_vals['Circumstance']
+            expected_vals_accumulator['CitationCode'] += expected_vals['CitationCode']
+            expected_vals_accumulator['CommercialVehicle'] += expected_vals['CommercialVehicle']
+            expected_vals_accumulator['DamagedArea'] += expected_vals['DamagedArea']
+            expected_vals_accumulator['Ems'] += expected_vals['Ems']
+            expected_vals_accumulator['Event'] += expected_vals['Event']
+            expected_vals_accumulator['Person'] += expected_vals['Person']
+            expected_vals_accumulator['PersonInfo'] += expected_vals['PersonInfo']
+            expected_vals_accumulator['TowedUnit'] += expected_vals['TowedUnit']
+            expected_vals_accumulator['Vehicle'] += expected_vals['Vehicle']
+            expected_vals_accumulator['VehicleUse'] += expected_vals['VehicleUse']
+            expected_vals_accumulator['Witness'] += expected_vals['Witness']
+
+        check_single_entries(session, expected_vals_accumulator['Singles'])
+        check_database_rows(session, Circumstance, expected_vals_accumulator['Circumstance'])
+        check_database_rows(session, CitationCode, expected_vals_accumulator['CitationCode'])
+        check_database_rows(session, CommercialVehicle, expected_vals_accumulator['CommercialVehicle'])
+        check_database_rows(session, DamagedArea, expected_vals_accumulator['DamagedArea'])
+        check_database_rows(session, Ems, expected_vals_accumulator['Ems'])
+        check_database_rows(session, Event, expected_vals_accumulator['Event'])
+        check_database_rows(session, Person, expected_vals_accumulator['Person'])
+        check_database_rows(session, PersonInfo, expected_vals_accumulator['PersonInfo'])
+        check_database_rows(session, TowedUnit, expected_vals_accumulator['TowedUnit'])
+        check_database_rows(session, Vehicle, expected_vals_accumulator['Vehicle'])
+        check_database_rows(session, VehicleUse, expected_vals_accumulator['VehicleUse'])
+        check_database_rows(session, Witness, expected_vals_accumulator['Witness'])
+
+    with Session(crash_data_reader.engine) as session:
+
+        first = True
+        for file_name, exp_vals in constants_test_data.TEST_READ_CRASH_DATA_CONST.items():
+            check_all_database_rows(file_name, exp_vals)
+
+            if first:
+                # Insert values twice to make sure primary keys work properly on a single run
+                check_all_database_rows(file_name, exp_vals, False)
+                first = False
+
+
+@clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram,
+        DamagedArea, Ems, Event,
         PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
 def test_read_crash_data_dir(crash_data_reader):  # pylint:disable=too-many-statements
     """Rudamentary check that there are the right number of records after a few xml files are read in"""

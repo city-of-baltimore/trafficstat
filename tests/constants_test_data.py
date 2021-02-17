@@ -1,8 +1,225 @@
 """Constants used in test_crash_data_ingestor"""
 # pylint:disable=too-many-lines
+import os
 import uuid
 from collections import OrderedDict
 from datetime import datetime, date, time
+
+# Constants for the test_read_crash_data_file tests
+TEST_READ_CRASH_DATA_CONST = {
+    # test with witness and a nonmotorist, which also moves the file to a processed dir
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'):
+        {
+            'Circumstance': 3,
+            'CitationCode': 0,
+            'CommercialVehicle': 1,
+            'DamagedArea': 1,
+            'Ems': 1,
+            'Event': 1,
+            'Person': 5,
+            'PersonInfo': 2,
+            'TowedUnit': 1,
+            'Vehicle': 1,
+            'VehicleUse': 1,
+            'Witness': 1
+        },
+
+    # File with citation codes
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 1,
+            'CommercialVehicle': 0,
+            'DamagedArea': 4,
+            'Ems': 0,
+            'Event': 0,
+            'Person': 5,
+            'PersonInfo': 3,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    # File with passenger information
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 4,
+            'Ems': 0,
+            'Event': 0,
+            'Person': 8,
+            'PersonInfo': 7,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    # File with multiple vehicles
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'):
+        {
+            'Circumstance': 6,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 4,
+            'Ems': 0,
+            'Event': 2,
+            'Person': 3,
+            'PersonInfo': 2,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    # File with witnesses
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 1,
+            'DamagedArea': 1,
+            'Ems': 1,
+            'Event': 1,
+            'Person': 6,
+            'PersonInfo': 2,
+            'TowedUnit': 1,
+            'Vehicle': 1,
+            'VehicleUse': 1,
+            'Witness': 2
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADD934004P.xml'):
+        {
+            'Circumstance': 6,
+            'CitationCode': 0,
+            'CommercialVehicle': 1,
+            'DamagedArea': 6,
+            'Ems': 2,
+            'Event': 3,
+            'Person': 5,
+            'PersonInfo': 2,
+            'TowedUnit': 1,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADE5430034.xml'):
+        {
+            'Circumstance': 4,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 6,
+            'Ems': 2,
+            'Event': 1,
+            'Person': 3,
+            'PersonInfo': 3,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADG367003W.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 3,
+            'Ems': 0,
+            'Event': 0,
+            'Person': 1,
+            'PersonInfo': 1,
+            'TowedUnit': 0,
+            'Vehicle': 1,
+            'VehicleUse': 1,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADG877000C.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 5,
+            'CommercialVehicle': 0,
+            'DamagedArea': 5,
+            'Ems': 0,
+            'Event': 2,
+            'Person': 4,
+            'PersonInfo': 2,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADH732004G.xml'):
+        {
+            'Circumstance': 5,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 1,
+            'Ems': 0,
+            'Event': 2,
+            'Person': 3,
+            'PersonInfo': 1,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADH960004K.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 3,
+            'Ems': 0,
+            'Event': 0,
+            'Person': 2,
+            'PersonInfo': 1,
+            'TowedUnit': 0,
+            'Vehicle': 1,
+            'VehicleUse': 1,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADH6490038.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 5,
+            'Ems': 0,
+            'Event': 2,
+            'Person': 3,
+            'PersonInfo': 2,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADI444005P.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 4,
+            'Ems': 0,
+            'Event': 1,
+            'Person': 3,
+            'PersonInfo': 2,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+}
 
 # CRASH
 crash_test_input_data = OrderedDict([
