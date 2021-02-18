@@ -1,10 +1,11 @@
 """Main driver for the traffic stat scripts"""
 import argparse
+import os
 import sys
 from loguru import logger
 
 from src.trafficstat.enrich_data import Enrich
-from src.trafficstat.crash_data_ingestor import CrashDataReader
+from src.trafficstat.crash_data_ingester import CrashDataReader
 from src.trafficstat.ms2generator import WorksheetMaker
 
 config = {
@@ -30,7 +31,9 @@ parser_parse = subparsers.add_parser('parse', help='Parse ACRS xml crash data fi
 parser_parse.add_argument('-c', '--conn_str', default='sqlite:///crash.db',
                           help='Custom database connection string (default: sqlite:///crash.db)')
 parser_parse.add_argument('-d', '--directory', help='Directory containing ACRS XML files to parse. If quotes are '
-                                                    'required, use double quotes.')
+                                                    'required in the path (if there are spaces), use double quotes.')
+parser_parse.add_argument('-f', '--file', help='Path to a single file to process. If quotes are required in the path '
+                                               '(if there are spaces), use double quotes.')
 
 # Generate
 parser_generate = subparsers.add_parser('ms2export', help='Generate CSV files that MS2 uses to import crash data. Pulls '
@@ -47,7 +50,14 @@ if args.subparser_name == 'enrich':
 
 if args.subparser_name == 'parse':
     cls = CrashDataReader(args.conn_str)
-    cls.read_crash_data(dir_name=args.directory)
+    if not (args.directory or args.file):
+        logger.error('Must specify either a directory or file to process')
+    if args.directory:
+        cls.read_crash_data(dir_name=args.directory)
+    if args.file:
+        if not os.path.exists(args.file):
+            logger.error('File does not exist: {}'.format(args.file))
+        cls.read_crash_data(file_name=args.file)
 
 if args.subparser_name == 'ms2export':
     ws_maker = WorksheetMaker(

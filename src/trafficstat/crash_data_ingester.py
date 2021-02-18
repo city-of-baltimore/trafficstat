@@ -15,6 +15,7 @@ from sqlalchemy import create_engine, inspect as sqlalchemyinspect  # type: igno
 from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
+from sqlalchemy.sql import text  # type: ignore
 
 from trafficstat.crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
     CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, \
@@ -24,7 +25,7 @@ from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, Circum
     PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, TowedUnitType, \
     VehicleType, VehicleUseType, WitnessType
 
-logger.disable("trafficstat")
+logger.disable('trafficstat')
 
 
 def check_and_log(check_dict: str):
@@ -32,7 +33,7 @@ def check_and_log(check_dict: str):
 
     def _check_and_log(func):
         def wrapper(*args, **kwargs):
-            logger.info("Entering {}", func.__name__)
+            logger.info('Entering {}', func.__name__)
 
             # handle positional or keyword args
             args_name = inspect.getfullargspec(func)[0]
@@ -59,39 +60,65 @@ class CrashDataReader:
         Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
         :param conn_str: sqlalchemy connection string (IE sqlite:///crash.db)
         """
-        logger.info("Creating db with connection string: {}", conn_str)
+        logger.info('Creating db with connection string: {}', conn_str)
         self.engine = create_engine(conn_str, echo=True, future=True)
 
         with self.engine.begin() as connection:
             Base.metadata.create_all(connection)
 
-    def _insert_or_update(self, insert_obj: DeclarativeMeta):
+    def _insert_or_update(self, insert_obj: DeclarativeMeta, identity_insert=False):
+        """
+        A safe way for the sqlalchemy
+        :param insert_obj:
+        :param identity_insert:
+        :return:
+        """
         session = Session(bind=self.engine, future=True)
+        if identity_insert:
+            session.execute(text('SET IDENTITY_INSERT {} ON'.format(insert_obj.__tablename__)))
+
         session.add(insert_obj)
         try:
             session.commit()
-            logger.debug("Successfully inserted object: {}", insert_obj)
-        except IntegrityError:
+            logger.debug('Successfully inserted object: {}', insert_obj)
+        except IntegrityError as insert_err:
             session.rollback()
 
-            cls_type = type(insert_obj)
+            if '(544)' in insert_err.args[0]:
+                # This is a workaround for an issue with sqlalchemy not properly setting IDENTITY_INSERT on for SQL
+                # Server before we insert values in the primary key. The error is:
+                # (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]
+                # Cannot insert explicit value for identity column in table <table name> when IDENTITY_INSERT is set to
+                # OFF. (544) (SQLExecDirectW)")
+                self._insert_or_update(insert_obj, True)
 
-            qry = session.query(cls_type)
+            elif '(2627)' in insert_err.args[0] or 'UNIQUE constraint failed' in insert_err.args[0]:
+                # Error 2627 is the Sql Server error for inserting when the primary key already exists. 'UNIQUE
+                # constraint failed' is the same for Sqlite
+                cls_type = type(insert_obj)
 
-            primary_keys = [i.key for i in sqlalchemyinspect(cls_type).primary_key]
-            for primary_key in primary_keys:
-                qry = qry.filter(cls_type.__dict__[primary_key] == insert_obj.__dict__[primary_key])
+                qry = session.query(cls_type)
 
-            update_vals = {k: v for k, v in insert_obj.__dict__.items()
-                           if not k.startswith('_') and k not in primary_keys}
-            if update_vals:
-                qry.update(update_vals)
-                try:
-                    session.commit()
-                    logger.debug("Successfully inserted object: {}", insert_obj)
-                except IntegrityError as err:
-                    logger.error("Unable to insert object: {}\nError: {}", insert_obj, err)
+                primary_keys = [i.key for i in sqlalchemyinspect(cls_type).primary_key]
+                for primary_key in primary_keys:
+                    qry = qry.filter(cls_type.__dict__[primary_key] == insert_obj.__dict__[primary_key])
+
+                update_vals = {k: v for k, v in insert_obj.__dict__.items()
+                               if not k.startswith('_') and k not in primary_keys}
+                if update_vals:
+                    qry.update(update_vals)
+                    try:
+                        session.commit()
+                        logger.debug('Successfully inserted object: {}', insert_obj)
+                    except IntegrityError as update_err:
+                        logger.error('Unable to insert object: {}\nError: {}', insert_obj, update_err)
+
+            else:
+                raise AssertionError('Expected error 2627 or "UNIQUE constraint failed". Got {}'.format(insert_err)) \
+                    from insert_err
         finally:
+            if identity_insert:
+                session.execute(text('SET IDENTITY_INSERT {} OFF'.format(insert_obj.__tablename__)))
             session.close()
 
     def read_crash_data(self, dir_name: Optional[str] = None, recursive: bool = False, file_name: Optional[str] = None,
@@ -111,7 +138,7 @@ class CrashDataReader:
                     try:
                         self._file_move(acrs_file, os.path.join(dir_name, '.processed'))
                     except PermissionError as err:
-                        logger.error("Unable to copy file: {}", err)
+                        logger.error('Unable to copy file: {}', err)
 
         if file_name:
             if os.path.exists(file_name):

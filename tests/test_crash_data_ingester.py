@@ -94,7 +94,6 @@ def check_single_entries(_session, i, checks=None):
         PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
 def test_read_crash_data_files_by_dir(crash_data_reader, tmpdir):
     """Reads in all files in the testfiles dir to make sure they are properly processed"""
-
     expected_vals_accumulator = {
         'Singles': 13,
         'Circumstance': 40,
@@ -111,12 +110,7 @@ def test_read_crash_data_files_by_dir(crash_data_reader, tmpdir):
         'Witness': 3,
     }
 
-    with Session(crash_data_reader.engine) as session:
-        test_dir = os.path.join(tmpdir, 'testfiles')
-        shutil.copytree(os.path.join('tests', 'testfiles'), test_dir)
-        crash_data_reader.read_crash_data(dir_name=test_dir)
-        assert os.path.exists(os.path.join(test_dir, '.processed'))
-
+    def check():
         check_single_entries(session, expected_vals_accumulator['Singles'])
         check_database_rows(session, Circumstance, expected_vals_accumulator['Circumstance'])
         check_database_rows(session, CitationCode, expected_vals_accumulator['CitationCode'])
@@ -130,6 +124,20 @@ def test_read_crash_data_files_by_dir(crash_data_reader, tmpdir):
         check_database_rows(session, Vehicle, expected_vals_accumulator['Vehicle'])
         check_database_rows(session, VehicleUse, expected_vals_accumulator['VehicleUse'])
         check_database_rows(session, Witness, expected_vals_accumulator['Witness'])
+
+    with Session(crash_data_reader.engine) as session:
+        test_dir = os.path.join(tmpdir, 'testfiles')
+        shutil.copytree(os.path.join('tests', 'testfiles'), test_dir)
+
+        # test that the non-copy works
+        crash_data_reader.read_crash_data(dir_name=test_dir, copy=False)
+        assert not os.path.exists(os.path.join(test_dir, '.processed'))
+        check()
+
+        # we should be able to do it all over with the same results, and with the files copied
+        crash_data_reader.read_crash_data(dir_name=test_dir)
+        assert os.path.exists(os.path.join(test_dir, '.processed'))
+        check()
 
 
 @clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
