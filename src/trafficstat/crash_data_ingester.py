@@ -613,29 +613,6 @@ class CrashDataReader:
         :param vehicle_dict: List of OrderedDicts from the ACRSVEHICLE tag
         """
         for vehicle in vehicle_dict:
-            if vehicle.get('DAMAGEDAREAs') and vehicle.get('DAMAGEDAREAs', {}).get('DAMAGEDAREA'):
-                self._read_damaged_areas_data(vehicle['DAMAGEDAREAs']['DAMAGEDAREA'])
-
-            if vehicle.get('DRIVERs') and vehicle.get('DRIVERs', {}).get('DRIVER'):
-                self._read_person_info_data(vehicle['DRIVERs']['DRIVER'])
-
-            if vehicle.get('PASSENGERs') and vehicle.get('PASSENGERs', {}).get('PASSENGER'):
-                self._read_person_info_data(vehicle['PASSENGERs']['PASSENGER'])
-
-            if vehicle.get('OWNER'):
-                self._read_acrs_person_data([vehicle['OWNER']])
-
-            if vehicle.get('COMMERCIALVEHICLE'):
-                self._read_commercial_vehicle_data(vehicle['COMMERCIALVEHICLE'])
-
-            if vehicle.get('EVENTS') and vehicle.get('EVENTS', {}).get('EVENT'):
-                self._read_event_data(vehicle['EVENTS']['EVENT'])
-
-            if vehicle.get('VEHICLEUSEs') and vehicle.get('VEHICLEUSEs', {}).get('VEHICLEUSE'):
-                self._read_acrs_vehicle_use_data(vehicle.get('VEHICLEUSEs', {})['VEHICLEUSE'])
-
-            if vehicle.get('TOWEDUNITs') and vehicle.get('TOWEDUNITs', {}).get('TOWEDUNIT'):
-                self._read_towed_vehicle_data(vehicle['TOWEDUNITs']['TOWEDUNIT'])
 
             self._insert_or_update(
                 Vehicle(
@@ -673,6 +650,30 @@ class CrashDataReader:
                     VEHICLEYEAR=self.get_single_attr('VEHICLEYEAR', vehicle),
                     VIN=self.get_single_attr('VIN', vehicle)
                 ))
+
+            if vehicle.get('DAMAGEDAREAs') and vehicle.get('DAMAGEDAREAs', {}).get('DAMAGEDAREA'):
+                self._read_damaged_areas_data(vehicle['DAMAGEDAREAs']['DAMAGEDAREA'])
+
+            if vehicle.get('DRIVERs') and vehicle.get('DRIVERs', {}).get('DRIVER'):
+                self._read_person_info_data(vehicle['DRIVERs']['DRIVER'])
+
+            if vehicle.get('PASSENGERs') and vehicle.get('PASSENGERs', {}).get('PASSENGER'):
+                self._read_person_info_data(vehicle['PASSENGERs']['PASSENGER'])
+
+            if vehicle.get('OWNER'):
+                self._read_acrs_person_data([vehicle['OWNER']])
+
+            if vehicle.get('COMMERCIALVEHICLE'):
+                self._read_commercial_vehicle_data(vehicle['COMMERCIALVEHICLE'])
+
+            if vehicle.get('EVENTS') and vehicle.get('EVENTS', {}).get('EVENT'):
+                self._read_event_data(vehicle['EVENTS']['EVENT'])
+
+            if vehicle.get('VEHICLEUSEs') and vehicle.get('VEHICLEUSEs', {}).get('VEHICLEUSE'):
+                self._read_acrs_vehicle_use_data(vehicle.get('VEHICLEUSEs', {})['VEHICLEUSE'])
+
+            if vehicle.get('TOWEDUNITs') and vehicle.get('TOWEDUNITs', {}).get('TOWEDUNIT'):
+                self._read_towed_vehicle_data(vehicle['TOWEDUNITs']['TOWEDUNIT'])
 
     @check_and_log('vehicleuse_dict')
     def _read_acrs_vehicle_use_data(self, vehicleuse_dict: List[VehicleUseType]) -> None:
