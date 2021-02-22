@@ -1,5 +1,225 @@
 """Constants used in test_crash_data_ingestor"""
+# pylint:disable=too-many-lines
+import os
+import uuid
 from collections import OrderedDict
+from datetime import datetime, date, time
+
+# Constants for the test_read_crash_data_file tests
+TEST_READ_CRASH_DATA_CONST = {
+    # test with witness and a nonmotorist, which also moves the file to a processed dir
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'):
+        {
+            'Circumstance': 3,
+            'CitationCode': 0,
+            'CommercialVehicle': 1,
+            'DamagedArea': 1,
+            'Ems': 1,
+            'Event': 1,
+            'Person': 5,
+            'PersonInfo': 2,
+            'TowedUnit': 1,
+            'Vehicle': 1,
+            'VehicleUse': 1,
+            'Witness': 1
+        },
+
+    # File with citation codes
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 1,
+            'CommercialVehicle': 0,
+            'DamagedArea': 4,
+            'Ems': 0,
+            'Event': 0,
+            'Person': 5,
+            'PersonInfo': 3,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    # File with passenger information
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 4,
+            'Ems': 0,
+            'Event': 0,
+            'Person': 8,
+            'PersonInfo': 7,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    # File with multiple vehicles
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'):
+        {
+            'Circumstance': 6,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 4,
+            'Ems': 0,
+            'Event': 2,
+            'Person': 3,
+            'PersonInfo': 2,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    # File with witnesses
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 1,
+            'DamagedArea': 1,
+            'Ems': 1,
+            'Event': 1,
+            'Person': 6,
+            'PersonInfo': 2,
+            'TowedUnit': 1,
+            'Vehicle': 1,
+            'VehicleUse': 1,
+            'Witness': 2
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADD934004P.xml'):
+        {
+            'Circumstance': 6,
+            'CitationCode': 0,
+            'CommercialVehicle': 1,
+            'DamagedArea': 6,
+            'Ems': 2,
+            'Event': 3,
+            'Person': 5,
+            'PersonInfo': 2,
+            'TowedUnit': 1,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADE5430034.xml'):
+        {
+            'Circumstance': 4,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 6,
+            'Ems': 2,
+            'Event': 1,
+            'Person': 3,
+            'PersonInfo': 3,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADG367003W.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 3,
+            'Ems': 0,
+            'Event': 0,
+            'Person': 1,
+            'PersonInfo': 1,
+            'TowedUnit': 0,
+            'Vehicle': 1,
+            'VehicleUse': 1,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADG877000C.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 5,
+            'CommercialVehicle': 0,
+            'DamagedArea': 5,
+            'Ems': 0,
+            'Event': 2,
+            'Person': 4,
+            'PersonInfo': 2,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADH732004G.xml'):
+        {
+            'Circumstance': 5,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 1,
+            'Ems': 0,
+            'Event': 2,
+            'Person': 3,
+            'PersonInfo': 1,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADH960004K.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 3,
+            'Ems': 0,
+            'Event': 0,
+            'Person': 2,
+            'PersonInfo': 1,
+            'TowedUnit': 0,
+            'Vehicle': 1,
+            'VehicleUse': 1,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADH6490038.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 5,
+            'Ems': 0,
+            'Event': 2,
+            'Person': 3,
+            'PersonInfo': 2,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADI444005P.xml'):
+        {
+            'Circumstance': 2,
+            'CitationCode': 0,
+            'CommercialVehicle': 0,
+            'DamagedArea': 4,
+            'Ems': 0,
+            'Event': 1,
+            'Person': 3,
+            'PersonInfo': 2,
+            'TowedUnit': 0,
+            'Vehicle': 2,
+            'VehicleUse': 2,
+            'Witness': 0
+        },
+}
 
 # CRASH
 crash_test_input_data = OrderedDict([
@@ -80,16 +300,77 @@ crash_test_input_data = OrderedDict([
     ('VEHICLEs', None),  # tested in test_read_acrs_vehicle_data
     ('VERSIONNUMBER', '1'),
     ('WEATHER', '06.01'),
-    ('WITNESSes', None)])
+    ('WITNESSes', None),
+])
 
-crash_test_exp_data = [
-    ('2020-11-28 21:59:32.0096310', 'BALTIMORE', 'Baltimore City Police Department', 'UNK', 3, None, None, False, 'N',
-     '2020-11-28', '19:45:00.0000000', '999', 2519, '999', 2514, 'ACRS', '00', '01', '01', False,
-     '2020-11-28 21:59:53.0000000', 3, None, 2, 'BALTIMORED934', None, '03', 'W', 1, None, 39.25760123456789, '03',
-     '9201107985', '3502', -76.63280123456789, 'W', 80.0, 'F', 'Test narrative', False, 4, None, False, None, 24,
-     'ADD9340058', 'Injury Crash', 1, 1, '03', 1, '9316ed0c-cddf-481c-94ee-4662e0b77384', 1, None, None,
-     'BALTIMOREH923', '2020-12-03 02:27:08.7553310', '02', 3, True, '2020-11-28 21:58:35.0000000', '20.17.02.01', 1,
-     '06.01')]
+crash_test_output_data = [
+    {
+        'ACRSREPORTTIMESTAMP': datetime.fromisoformat('2020-11-28T21:59:32.009631'),
+        'AGENCYIDENTIFIER': 'BALTIMORE',
+        'AGENCYNAME': 'Baltimore City Police Department',
+        'AREA': 'UNK',
+        'COLLISIONTYPE': 3,
+        'CONMAINCLOSURE': None,
+        'CONMAINLOCATION': None,
+        'CONMAINWORKERSPRESENT': False,
+        'CONMAINZONE': False,
+        'CRASHDATE': date.fromisoformat('2020-11-28'),
+        'CRASHTIME': time.fromisoformat('19:45:00'),
+        'CURRENTASSIGNMENT': '999',
+        'CURRENTGROUP': '2519',
+        'DEFAULTASSIGNMENT': '999',
+        'DEFAULTGROUP': '2514',
+        'DOCTYPE': 'ACRS',
+        'FIXEDOBJECTSTRUCK': 0.0,
+        'HARMFULEVENTONE': 1.0,
+        'HARMFULEVENTTWO': 1.0,
+        'HITANDRUN': False,
+        'INSERTDATE': datetime.fromisoformat('2020-11-28T21:59:53'),
+        'INTERCHANGEAREA': '03',
+        'INTERCHANGEIDENTIFICATION': None,
+        'INTERSECTIONTYPE': '02',
+        'INVESTIGATINGOFFICERUSERNAME': 'BALTIMORED934',
+        'INVESTIGATOR': None,
+        'JUNCTION': '03',
+        'LANEDIRECTION': 'W',
+        'LANENUMBER': '1',
+        'LANETYPE': None,
+        'LATITUDE': 39.25760123456789,
+        'LIGHT': 3.0,
+        'LOCALCASENUMBER': '9201107985',
+        'LOCALCODES': '3502',
+        'LONGITUDE': -76.63280123456789,
+        'MILEPOINTDIRECTION': 'W',
+        'MILEPOINTDISTANCE': '80',
+        'MILEPOINTDISTANCEUNITS': 'F',
+        'NARRATIVE': 'Test narrative',
+        'NONTRAFFIC': False,
+        'NUMBEROFLANES': '4',
+        'OFFROADDESCRIPTION': None,
+        'PHOTOSTAKEN': False,
+        'RAMP': None,
+        'REPORTCOUNTYLOCATION': 24,
+        'REPORTNUMBER': 'ADD9340058',
+        'REPORTTYPE': 'Injury Crash',
+        'ROADALIGNMENT': '01',
+        'ROADCONDITION': '01',
+        'ROADDIVISION': '03',
+        'ROADGRADE': '01',
+        'ROADID': '9316ed0c-cddf-481c-94ee-4662e0b77384',
+        'SCHOOLBUSINVOLVEMENT': 1,
+        'STATEGOVERNMENTPROPERTYNAME': None,
+        'SUPERVISOR': None,
+        'SUPERVISORUSERNAME': 'BALTIMOREH923',
+        'SUPERVISORYDATE': datetime.fromisoformat('2020-12-03T02:27:08.755331'),
+        'SURFACECONDITION': '02',
+        'TRAFFICCONTROL': 3,
+        'TRAFFICCONTROLFUNCTIONING': True,
+        'UPDATEDATE': datetime.fromisoformat('2020-11-28T21:58:35'),
+        'UPLOADVERSION': '20.17.02.01',
+        'VERSIONNUMBER': 1,
+        'WEATHER': 6.01,
+    }
+]
 
 # APPROVAL
 approval_input_data = OrderedDict([
@@ -111,10 +392,25 @@ approval_input_data = OrderedDict([
     ('TR_USERNAME', 'BALTIMORED934'),
     ('UNIT_CODE', '999')])
 
-approval_exp_data = [
-    ('BALTIMORE', '2020-08-05 15:30:01.0000000', None, None, '9200708732', '2020-07-29 15:53:20.0000000', 2519, None,
-     '2020-07-28 00:00:00.0000000', None, 'ACRS', 'ADD934004Q', '2020-08-05 11:29:43.0000000', 3, 1, 'BALTIMORED934',
-     '999')]
+approval_output_data = [{
+    'AGENCY': 'BALTIMORE',
+    'APPROVALDATE': datetime.fromisoformat('2020-08-05T15:30:01'),
+    'CADSENT': None,
+    'CADSENT_DATE': None,
+    'CC_NUMBER': '9200708732',
+    'DATE_INITIATED2': datetime.fromisoformat('2020-07-29T15:53:20'),
+    'GROUP_NUMBER': '2519',
+    'HISTORICALAPPROVALDATAs': None,
+    'INCIDENT_DATE': datetime.fromisoformat('2020-07-28T00:00:00'),
+    'INVESTIGATOR': None,
+    'REPORT_TYPE': 'ACRS',
+    'SEQ_GUID': 'ADD934004Q',
+    'STATUS_CHANGE_DATE': datetime.fromisoformat('2020-08-05T11:29:43'),
+    'STATUS_ID': 3,
+    'STEP_NUMBER': 1,
+    'TR_USERNAME': 'BALTIMORED934',
+    'UNIT_CODE': '999',
+}]
 
 # CIRCUMSTANCE
 circum_input_data = [
@@ -161,13 +457,55 @@ circum_input_data = [
          ('REPORTNUMBER', 'ADD934004Q'),
          ('VEHICLEID', 'ddd4ed36-cca5-4634-8209-01e38cc13ced')])]
 
-circum_exp_data = [
-    ('00', 10360030, 'Weather', None, 'ADD934004Q', None),
-    ('00', 10360031, 'Road', None, 'ADD934004Q', None),
-    ('60.88', 10360032, 'Person', '6239E4E7-65B8-452A-BA1E-6BC26B8C5CC4', 'ADD934004Q', None),
-    ('00', 10360033, 'Vehicle', None, 'ADD934004Q', '65CD4028-82AB-401E-A7FA-D392DFB98E03'),
-    ('00', 10360034, 'Person', 'C3E96BDD-5049-426F-B27D-C3BF43B1EECA', 'ADD934004Q', None),
-    ('00', 10360035, 'Vehicle', None, 'ADD934004Q', 'DDD4ED36-CCA5-4634-8209-01E38CC13CED')
+circum_output_data = [
+    {
+        'CIRCUMSTANCECODE': 0.0,
+        'CIRCUMSTANCEID': 10360030,
+        'CIRCUMSTANCETYPE': 'Weather',
+        'PERSONID': None,
+        'REPORTNUMBER': 'ADD934004Q',
+        'VEHICLEID': None
+    },
+    {
+        'CIRCUMSTANCECODE': 0.0,
+        'CIRCUMSTANCEID': 10360031,
+        'CIRCUMSTANCETYPE': 'Road',
+        'PERSONID': None,
+        'REPORTNUMBER': 'ADD934004Q',
+        'VEHICLEID': None
+    },
+    {
+        'CIRCUMSTANCECODE': 60.88,
+        'CIRCUMSTANCEID': 10360032,
+        'CIRCUMSTANCETYPE': 'Person',
+        'PERSONID': uuid.UUID('6239e4e7-65b8-452a-ba1e-6bc26b8c5cc4'),
+        'REPORTNUMBER': 'ADD934004Q',
+        'VEHICLEID': None
+    },
+    {
+        'CIRCUMSTANCECODE': 0.0,
+        'CIRCUMSTANCEID': 10360033,
+        'CIRCUMSTANCETYPE': 'Vehicle',
+        'PERSONID': None,
+        'REPORTNUMBER': 'ADD934004Q',
+        'VEHICLEID': uuid.UUID('65cd4028-82ab-401e-a7fa-d392dfb98e03')
+    },
+    {
+        'CIRCUMSTANCECODE': 0.0,
+        'CIRCUMSTANCEID': 10360034,
+        'CIRCUMSTANCETYPE': 'Person',
+        'PERSONID': uuid.UUID('c3e96bdd-5049-426f-b27d-c3bf43b1eeca'),
+        'REPORTNUMBER': 'ADD934004Q',
+        'VEHICLEID': None
+    },
+    {
+        'CIRCUMSTANCECODE': 0.0,
+        'CIRCUMSTANCEID': 10360035,
+        'CIRCUMSTANCETYPE': 'Vehicle',
+        'PERSONID': None,
+        'REPORTNUMBER': 'ADD934004Q',
+        'VEHICLEID': uuid.UUID('ddd4ed36-cca5-4634-8209-01e38cc13ced')
+    }
 ]
 
 # CITATION
@@ -176,7 +514,11 @@ citation_input_data = [OrderedDict([
     ('PERSONID', '6fffe61c-6bec-476a-8a6e-47c52544fb3c'),
     ('REPORTNUMBER', 'ADD9340058')])]
 
-citation_exp_data = [('KK15676', '6FFFE61C-6BEC-476A-8A6E-47C52544FB3C', 'ADD9340058')]
+citation_output_data = [{
+    'CITATIONNUMBER': 'KK15676',
+    'PERSONID': uuid.UUID('6fffe61c-6bec-476a-8a6e-47c52544fb3c'),
+    'REPORTNUMBER': 'ADD9340058'
+}]
 
 # CRASH
 DUMMY_DATA_LEN = 10
@@ -185,7 +527,11 @@ crash_input_data = OrderedDict([
     ('CRASHDIAGRAMNATIVE', 'X' * DUMMY_DATA_LEN),
     ('REPORTNUMBER', 'ADD9340058')])
 
-crash_exp_data = [('X' * DUMMY_DATA_LEN, 'X' * DUMMY_DATA_LEN, 'ADD9340058')]
+crash_output_data = [{
+    'CRASHDIAGRAM': 'X' * DUMMY_DATA_LEN,
+    'CRASHDIAGRAMNATIVE': 'X' * DUMMY_DATA_LEN,
+    'REPORTNUMBER': 'ADD9340058'
+}]
 
 # COMMERCIAL VEHICLE
 commveh_input_data = OrderedDict([
@@ -212,10 +558,30 @@ commveh_input_data = OrderedDict([
     ('WEIGHT', OrderedDict([('@i:nil', 'true')])),
     ('WEIGHTUNIT', OrderedDict([('@i:nil', 'true')]))])
 
-commveh_exp_data = [(
-    '03', 0, 99, 'BALTIMORE', 3, None, '3430518', 99, '10', None, None, 'N', '111139', 'COMPANY LLC',
-    3, 'U', '21207', 'MD', '34839 PRATT ST', 'EDEAA7CD-06F1-4DDE-B318-66A28EC604E0', None,
-    None)]
+commveh_output_data = [{
+    'BODYTYPE': '03',
+    'BUSUSE': '00',
+    'CARRIERCLASSIFICATION': 99,
+    'CITY': 'BALTIMORE',
+    'CONFIGURATION': 3,
+    'COUNTRY': None,
+    'DOTNUMBER': '3430518',
+    'GVW': 99,
+    'HAZMATCLASS': '10',
+    'HAZMATNAME': None,
+    'HAZMATNUMBER': None,
+    'HAZMATSPILL': 'N',
+    'MCNUMBER': '111139',
+    'NAME': 'COMPANY LLC',
+    'NUMBEROFAXLES': '3',
+    'PLACARDVISIBLE': 'U',
+    'POSTALCODE': '21207',
+    'STATE': 'MD',
+    'STREET': '34839 PRATT ST',
+    'VEHICLEID': uuid.UUID('edeaa7cd-06f1-4dde-b318-66a28ec604e0'),
+    'WEIGHT': None,
+    'WEIGHTUNIT': None
+}]
 
 # DAMAGED
 damaged_input_data = [
@@ -228,8 +594,18 @@ damaged_input_data = [
         ('IMPACTTYPE', '12'),
         ('VEHICLEID', '5ce12003-c7aa-43e1-b5e8-4c0e79160a02')])]
 
-damaged_exp_data = [(6783466, 6, '5CE12003-C7AA-43E1-B5E8-4C0E79160A02'),
-                    (6783467, 12, '5CE12003-C7AA-43E1-B5E8-4C0E79160A02')]
+damaged_output_data = [
+    {
+        'DAMAGEID': 6783466,
+        'IMPACTTYPE': 6,
+        'VEHICLEID': uuid.UUID('5ce12003-c7aa-43e1-b5e8-4c0e79160a02')
+    },
+    {
+        'DAMAGEID': 6783467,
+        'IMPACTTYPE': 12,
+        'VEHICLEID': uuid.UUID('5ce12003-c7aa-43e1-b5e8-4c0e79160a02')
+    }
+]
 
 # EMS
 ems_input_data = [
@@ -238,9 +614,31 @@ ems_input_data = [
         ('EMSUNITNUMBER', 'A'),
         ('INJUREDTAKENBY', 'MEDIC 1'),
         ('INJUREDTAKENTO', 'UNIVERSITY OF MARYLAND'),
-        ('REPORTNUMBER', 'ADJ063005D')])]
+        ('REPORTNUMBER', 'ADJ063005D')]),
+    OrderedDict([
+        ('EMSTRANSPORTATIONTYPE', 'G'),
+        ('EMSUNITNUMBER', 'B'),
+        ('INJUREDTAKENBY', 'MEDIC 1'),
+        ('INJUREDTAKENTO', 'UNIVERSITY OF MARYLAND'),
+        ('REPORTNUMBER', 'ADJ063005D')])
+]
 
-ems_exp_data = [('G', 'A', 'MEDIC 1', 'UNIVERSITY OF MARYLAND', 'ADJ063005D')]
+ems_output_data = [
+    {
+        'EMSTRANSPORTATIONTYPE': 'G',
+        'EMSUNITNUMBER': 'A',
+        'INJUREDTAKENBY': 'MEDIC 1',
+        'INJUREDTAKENTO': 'UNIVERSITY OF MARYLAND',
+        'REPORTNUMBER': 'ADJ063005D'
+    },
+    {
+        'EMSTRANSPORTATIONTYPE': 'G',
+        'EMSUNITNUMBER': 'B',
+        'INJUREDTAKENBY': 'MEDIC 1',
+        'INJUREDTAKENTO': 'UNIVERSITY OF MARYLAND',
+        'REPORTNUMBER': 'ADJ063005D'
+    }
+]
 
 # EVENT
 event_input_data = [
@@ -250,7 +648,12 @@ event_input_data = [
         ('EVENTTYPE', '35'),
         ('VEHICLEID', '5ce12003-c7aa-43e1-b5e8-4c0e79160a02')])]
 
-event_exp_data = [(2685835, 0, 35, '5CE12003-C7AA-43E1-B5E8-4C0E79160A02')]
+event_output_data = [{
+    'EVENTID': 2685835,
+    'EVENTSEQUENCE': 0,
+    'EVENTTYPE': 35,
+    'VEHICLEID': uuid.UUID('5ce12003-c7aa-43e1-b5e8-4c0e79160a02')
+}]
 
 # PDF
 pdf_input_data = [
@@ -262,7 +665,14 @@ pdf_input_data = [
         ('REPORTNUMBER', 'ADD9340058'),
         ('STATUS', 'Active')])]
 
-pdf_exp_data = [('BALTIMOREH923', '2020-12-02 21:27:08.0000000', 'testdata', 774946, 'ADD9340058', 'Active')]
+pdf_output_data = [{
+    'CHANGEDBY': 'BALTIMOREH923',
+    'DATESTATUSCHANGED': datetime.fromisoformat('2020-12-02T21:27:08'),
+    'PDFREPORT1': 'testdata',
+    'PDF_ID': 774946,
+    'REPORTNUMBER': 'ADD9340058',
+    'STATUS': 'Active'
+}]
 
 # PERSON
 person_input_data = [
@@ -315,23 +725,59 @@ person_input_data = [
         ('STATE', 'MD'),
         ('ZIP', '21218')])]
 
-person_exp_data = [
-    (
-        '8848848 CHARLES ST', 'BALTIMORE', None, None, None, None, 'B650589744192', 'MD', '1997-03-13', 'FIRSTNAME',
-        None, 'LASTNAME', None, None, '0BD82E1D-8C96-40C5-B1E4-B4DFC82CB971', None, 'ADD9340058', 'M', 'MD', '21769'),
-    ('0000 PATTERSON PARK ST', 'BALTIMORE', None, None, None, None, 'C636762792077', 'MD', '1980-01-29', 'FIRSTNAME',
-     None, 'LASTNAME', None, None, 'FCD8309C-250A-4FA4-9FDF-D6DAFE2C6946', None, 'ADD9340058', 'M', 'MD', '21218')]
-
-person_citation_exp_data = [('KK15680', 'FCD8309C-250A-4FA4-9FDF-D6DAFE2C6946', 'ADD9340058')]
+person_output_data = [
+    {
+        'ADDRESS': '8848848 CHARLES ST',
+        'CITY': 'BALTIMORE',
+        'COMPANY': None,
+        'COUNTRY': None,
+        'COUNTY': None,
+        'DLCLASS': None,
+        'DLNUMBER': 'B650589744192',
+        'DLSTATE': 'MD',
+        'DOB': date.fromisoformat('1997-03-13'),
+        'FIRSTNAME': 'FIRSTNAME',
+        'HOMEPHONE': None,
+        'LASTNAME': 'LASTNAME',
+        'MIDDLENAME': None,
+        'OTHERPHONE': None,
+        'PERSONID': uuid.UUID('0bd82e1d-8c96-40c5-b1e4-b4dfc82cb971'),
+        'RACE': None,
+        'REPORTNUMBER': 'ADD9340058',
+        'SEX': 'M',
+        'STATE': 'MD',
+        'ZIP': '21769'
+    }, {
+        'ADDRESS': '0000 PATTERSON PARK ST',
+        'CITY': 'BALTIMORE',
+        'COMPANY': None,
+        'COUNTRY': None,
+        'COUNTY': None,
+        'DLCLASS': None,
+        'DLNUMBER': 'C636762792077',
+        'DLSTATE': 'MD',
+        'DOB': date.fromisoformat('1980-01-29'),
+        'FIRSTNAME': 'FIRSTNAME',
+        'HOMEPHONE': None,
+        'LASTNAME': 'LASTNAME',
+        'MIDDLENAME': None,
+        'OTHERPHONE': None,
+        'PERSONID': uuid.UUID('fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
+        'RACE': None,
+        'REPORTNUMBER': 'ADD9340058',
+        'SEX': 'M',
+        'STATE': 'MD',
+        'ZIP': '21218'
+    }]
 
 # PERSON INFO (DRIVER)
 person_info_driver_input_data = [
     OrderedDict([
         ('AIRBAGDEPLOYED', '02'),
         ('ALCOHOLTESTINDICATOR', '00'),
-        ('ALCOHOLTESTTYPE', OrderedDict([('@i:nil', 'true')])),
+        ('ALCOHOLTESTTYPE', 'Type'),
         ('ATFAULT', 'Y'),
-        ('BAC', OrderedDict([('@i:nil', 'true')])),
+        ('BAC', '.08'),
         ('CONDITION', '01'),
         ('DRIVERDISTRACTEDBY', '88'),
         ('DRUGTESTINDICATOR', '00'),
@@ -342,49 +788,32 @@ person_info_driver_input_data = [
         ('EQUIPMENTPROBLEM', '99'),
         ('HASCDL', 'N'),
         ('INJURYSEVERITY', '01'),
-        ('PERSON', OrderedDict(
-            [('ADDRESS', '34838 ROAD ST'),
-             ('CITATIONCODES', OrderedDict([
-                 ('CITATIONCODE', [
-                     OrderedDict(
-                         [('CITATIONNUMBER', 'KK15680'),
-                          ('PERSONID', 'fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
-                          ('REPORTNUMBER', 'ADD9340058')])])])),
-             ('CITY', 'BALTIMORE'),
-             ('COMPANY', OrderedDict([('@i:nil', 'true')])),
-             ('COUNTRY', OrderedDict([('@i:nil', 'true')])),
-             ('COUNTY', OrderedDict([('@i:nil', 'true')])),
-             ('DLCLASS', OrderedDict([('@i:nil', 'true')])),
-             ('DLNUMBER', 'C636762792077'),
-             ('DLSTATE', 'MD'),
-             ('DOB', '1984-01-29T00:00:00'),
-             ('FIRSTNAME', 'FIRSTNAME'),
-             ('HOMEPHONE', OrderedDict([('@i:nil', 'true')])),
-             ('LASTNAME', 'LASTNAME'),
-             ('MIDDLENAME', OrderedDict([('@i:nil', 'true')])),
-             ('OTHERPHONE', OrderedDict([('@i:nil', 'true')])),
-             ('PERSONID', 'fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
-             ('RACE', OrderedDict([('@i:nil', 'true')])),
-             ('REPORTNUMBER', 'ADD9340058'),
-             ('SEX', 'M'),
-             ('STATE', 'MD'),
-             ('ZIP', '21218')])),
         ('PERSONID', 'fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
         ('SAFETYEQUIPMENT', '99'),
         ('SUBSTANCEUSE', '00'),
         ('VEHICLEID', '5f19b3c5-4e3b-4010-9959-506a84632cdb')])]
 
-person_info_driver_exp_data = [
-    (2, 0, None, True, None, '01', None, 88, 0, None, 1, None, None, 99, None, False, 1, None, None, None, None, None,
-     None, 'FCD8309C-250A-4FA4-9FDF-D6DAFE2C6946', 'ADD9340058', '99', None, None, None, 0, None,
-     '5F19B3C5-4E3B-4010-9959-506A84632CDB')]
-
-person_info_driver_person_exp_data = [
-    ('34838 ROAD ST', 'BALTIMORE', None, None, None, None, 'C636762792077', 'MD', '1984-01-29', 'FIRSTNAME', None,
-     'LASTNAME', None, None, 'FCD8309C-250A-4FA4-9FDF-D6DAFE2C6946', None, 'ADD9340058', 'M', 'MD', '21218')]
-
-person_info_driver_citations_exp_data = [
-    ('KK15680', 'FCD8309C-250A-4FA4-9FDF-D6DAFE2C6946', 'ADD9340058')]
+person_info_driver_output_data = [{
+    'AIRBAGDEPLOYED': 2,
+    'ALCOHOLTESTINDICATOR': 0,
+    'ALCOHOLTESTTYPE': 'Type',
+    'ATFAULT': True,
+    'BAC': '.08',
+    'CONDITION': '01',
+    'DRIVERDISTRACTEDBY': 88,
+    'DRUGTESTINDICATOR': 00,
+    'DRUGTESTRESULT': None,
+    'EJECTION': 1,
+    'EMSRUNREPORTNUMBER': None,
+    'EMSUNITNUMBER': None,
+    'EQUIPMENTPROBLEM': 99,
+    'HASCDL': False,
+    'INJURYSEVERITY': 1,
+    'PERSONID': uuid.UUID('fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
+    'SAFETYEQUIPMENT': 99.0,
+    'SUBSTANCEUSE': 0,
+    'VEHICLEID': uuid.UUID('5f19b3c5-4e3b-4010-9959-506a84632cdb')
+}]
 
 # PERSON INFO PASSENGER
 person_info_pass_input_data = [
@@ -395,28 +824,6 @@ person_info_pass_input_data = [
         ('EMSUNITNUMBER', 'A'),
         ('EQUIPMENTPROBLEM', '01'),
         ('INJURYSEVERITY', '02'),
-        ('PERSON', OrderedDict([
-            ('ADDRESS', '3600 W FRANKLIN STREET'),
-            ('CITATIONCODES', None),
-            ('CITY', 'BALTIMORE'),
-            ('COMPANY', OrderedDict([('@i:nil', 'true')])),
-            ('COUNTRY', OrderedDict([('@i:nil', 'true')])),
-            ('COUNTY', OrderedDict([('@i:nil', 'true')])),
-            ('DLCLASS', OrderedDict([('@i:nil', 'true')])),
-            ('DLNUMBER', OrderedDict([('@i:nil', 'true')])),
-            ('DLSTATE', OrderedDict([('@i:nil', 'true')])),
-            ('DOB', '1987-06-24T00:00:00'),
-            ('FIRSTNAME', 'FIRSTNAME'),
-            ('HOMEPHONE', OrderedDict([('@i:nil', 'true')])),
-            ('LASTNAME', 'LASTNAME'),
-            ('MIDDLENAME', OrderedDict([('@i:nil', 'true')])),
-            ('OTHERPHONE', '4439432045'),
-            ('PERSONID', 'fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
-            ('RACE', OrderedDict([('@i:nil', 'true')])),
-            ('REPORTNUMBER', 'ADJ063005D'),
-            ('SEX', 'M'),
-            ('STATE', 'MD'),
-            ('ZIP', '21229')])),
         ('PERSONID', 'fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
         ('SAFETYEQUIPMENT', '13'),
         ('SEAT', '03'),
@@ -424,14 +831,20 @@ person_info_pass_input_data = [
         ('SEATINGROW', '2'),
         ('VEHICLEID', '6dde66e1-433b-4839-9df8-ffb969d35d68')])]
 
-person_info_pass_exp_data = [
-    (1, None, None, None, None, None, None, None, None, None, 1, 'UNK', 'A', 1, None, None, 2, None, None, None, None,
-     None, None, 'FD3DFFBA-C1C6-41DF-9FC5-A45AE4379DB1', 'ADJ063005D', '13', 3, 6, 2, None, None,
-     '6DDE66E1-433B-4839-9DF8-FFB969D35D68')]
-
-person_info_person_pass_exp_data = [
-    ('3600 W FRANKLIN STREET', 'BALTIMORE', None, None, None, None, None, None, '1987-06-24', 'FIRSTNAME', None,
-     'LASTNAME', None, '4439432045', 'FD3DFFBA-C1C6-41DF-9FC5-A45AE4379DB1', None, 'ADJ063005D', 'M', 'MD', '21229')]
+person_info_pass_output_data = [{
+    'AIRBAGDEPLOYED': 1,
+    'EJECTION': 1,
+    'EMSRUNREPORTNUMBER': 'UNK',
+    'EMSUNITNUMBER': 'A',
+    'EQUIPMENTPROBLEM': 1,
+    'INJURYSEVERITY': 2,
+    'PERSONID': uuid.UUID('fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
+    'SAFETYEQUIPMENT': 13.0,
+    'SEAT': 3,
+    'SEATINGLOCATION': 6,
+    'SEATINGROW': 2,
+    'VEHICLEID': uuid.UUID('6dde66e1-433b-4839-9df8-ffb969d35d68')
+}]
 
 # PERSON INFO (PASSENGER) - MULTIPLE
 person_info_pass_mult_input_data = [
@@ -507,20 +920,34 @@ person_info_pass_mult_input_data = [
         ('SEATINGROW', '1'),
         ('VEHICLEID', 'c783f85b-ac08-4ad4-8493-e211e5d8ec6e')])]
 
-person_info_pass_mult_exp_data = [
-    (1, None, None, None, None, None, None, None, None, None, 1, None, None, 1, None, None, 1, None, None, None, None,
-     None, None, '3C348C05-C3C1-44FB-840C-DD5C23CD9811', 'ADD90500BB', '13', 1, 4, 2, None, None,
-     'C783F85B-AC08-4AD4-8493-E211E5D8EC6E'),
-    (1, None, None, None, None, None, None, None, None, None, 1, None, None, 1, None, None, 1, None, None, None, None,
-     None, None, '64f9cda0-1477-4cb9-8891-67087d4163bc', 'ADD90500BB', '13', 3, 3, 1, None, None,
-     'C783F85B-AC08-4AD4-8493-E211E5D8EC6E')]
-
-person_info_person_mult_pass_exp_data = [
-    ('100 W PRATT ST', 'ELLICOTT CITY', None, None, None, None, None, None, '2002-06-01', 'SOME', None, 'ONE',
-     None, '4437453018', '64F9CDA0-1477-4CB9-8891-67087D4163BC', None, 'ADD90500BB', 'F', 'MD', '21043'),
-    ('34983 SOMESTREET ST', 'BALTIMORE', None, None, None, None, None, None, '2002-08-18', 'FIRSTNAMER', None,
-     'LASTNAMER', None, '6677861336', '3C348C05-C3C1-44FB-840C-DD5C23CD9811', None, 'ADD90500BB', 'M', 'MD', '21042')
-]
+person_info_pass_mult_output_data = [
+    {
+        'AIRBAGDEPLOYED': 1,
+        'EJECTION': 1,
+        'EMSRUNREPORTNUMBER': None,
+        'EMSUNITNUMBER': None,
+        'EQUIPMENTPROBLEM': 1,
+        'INJURYSEVERITY': 1,
+        'PERSONID': uuid.UUID('3c348c05-c3c1-44fb-840c-dd5c23cd9811'),
+        'SAFETYEQUIPMENT': 13.0,
+        'SEAT': 1,
+        'SEATINGLOCATION': 4.0,
+        'SEATINGROW': 2,
+        'VEHICLEID': uuid.UUID('c783f85b-ac08-4ad4-8493-e211e5d8ec6e')
+    }, {
+        'AIRBAGDEPLOYED': 1,
+        'EJECTION': 1,
+        'EMSRUNREPORTNUMBER': None,
+        'EMSUNITNUMBER': None,
+        'EQUIPMENTPROBLEM': 1,
+        'INJURYSEVERITY': 1,
+        'PERSONID': uuid.UUID('64f9cda0-1477-4cb9-8891-67087d4163bc'),
+        'SAFETYEQUIPMENT': 13.0,
+        'SEAT': 3,
+        'SEATINGLOCATION': 3.0,
+        'SEATINGROW': 1,
+        'VEHICLEID': uuid.UUID('c783f85b-ac08-4ad4-8493-e211e5d8ec6e')
+    }]
 
 # PERSON INFO (NONMOTORIST)
 person_info_nonmotorist_input_data = [
@@ -571,16 +998,31 @@ person_info_nonmotorist_input_data = [
         ('SUBSTANCEUSE', '01'),
         ('UNITNUMBERFIRSTSTRIKE', '1')])]
 
-person_info_nonmotorist_exp_data = [
-    (
-        None, 0, None, False, None, '01', None, None, 0, None, None, '0000000000', 'C', None, None, None, 3, 1, 88,
-        '88', 0,
-        6, 0, 'D18F27B0-D7E3-40DE-B778-89F7A88CCD4F', 'ADD905004N', '01', None, None, None, 1, 1, None)]
-
-person_info_records_nonmotorist_input_data = [('100 NEWHAM ST', 'BALTIMORE', None, None, None, None, None, None,
-                                               '1962-12-01', 'JAN', None, 'UARY', None, '4435226285',
-                                               'D18F27B0-D7E3-40DE-B778-89F7A88CCD4F', None, 'ADD905004N', 'F', 'MD',
-                                               '21224')]
+person_info_nonmotorist_output_data = [{
+    'ALCOHOLTESTINDICATOR': 0,
+    'ALCOHOLTESTTYPE': None,
+    'ATFAULT': False,
+    'BAC': None,
+    'CONDITION': '01',
+    'CONTINUEDIRECTION': None,
+    'DRUGTESTINDICATOR': 0,
+    'DRUGTESTRESULT': None,
+    'EMSRUNREPORTNUMBER': '0000000000',
+    'EMSUNITNUMBER': 'C',
+    'GOINGDIRECTION': None,
+    'INJURYSEVERITY': 3,
+    'PEDESTRIANACTIONS': 1,
+    'PEDESTRIANLOCATION': 88.0,
+    'PEDESTRIANMOVEMENT': 88.0,
+    'PEDESTRIANOBEYTRAFFICSIGNAL': 00,
+    'PEDESTRIANTYPE': 6,
+    'PEDESTRIANVISIBILITY': 0,
+    'PERSONID': uuid.UUID('d18f27b0-d7e3-40de-b778-89f7a88ccd4f'),
+    'REPORTNUMBER': 'ADD905004N',
+    'SAFETYEQUIPMENT': 1.0,
+    'SUBSTANCEUSE': 1,
+    'UNITNUMBERFIRSTSTRIKE': '1'
+}]
 
 # ROADWAY
 roadway_input_data = OrderedDict([
@@ -600,9 +1042,25 @@ roadway_input_data = OrderedDict([
     ('ROUTE_SUFFIX', OrderedDict([('@i:nil', 'true')])),
     ('ROUTE_TYPE', OrderedDict([('@i:nil', 'true')]))])
 
-roadway_exp_data = [
-    (24, None, 0.0, 0, None, None, 'WATERVIEW AVE', None, None, None, '9316ed0c-cddf-481c-94ee-4662e0b77384',
-     'CHERRY HILL RD', None, None, None, None)]
+roadway_output_data = [
+    {
+        'COUNTY': 24,
+        'LOGMILE_DIR': None,
+        'MILEPOINT': 0.0,
+        'MUNICIPAL': 0,
+        'MUNICIPAL_AREA_CODE': None,
+        'REFERENCE_MUNI': None,
+        'REFERENCE_ROADNAME': 'WATERVIEW AVE',
+        'REFERENCE_ROUTE_NUMBER': None,
+        'REFERENCE_ROUTE_SUFFIX': None,
+        'REFERENCE_ROUTE_TYPE': None,
+        'ROADID': '9316ed0c-cddf-481c-94ee-4662e0b77384',
+        'ROAD_NAME': 'CHERRY HILL RD',
+        'ROUTE_NUMBER': None,
+        'ROUTE_SUFFIX': None,
+        'ROUTE_TYPE': None
+    }
+]
 
 # TOWED
 towed_input_data = [
@@ -621,9 +1079,20 @@ towed_input_data = [
         ('VEHICLEYEAR', '2097'),
         ('VIN', '10123456789ABCDEF')])]
 
-towed_exp_data = [
-    ('0923954101', 'GEICO', 'ARS', 'MD', '0EEA2C7F-3F2C-4FD6-ABC2-4927605D237A', '6671F8B9-B7D0-469D-8766-F1D153F72986',
-     None, '642F511D-FD4B-4DAF-A6B8-5418546BE524', 'CADILLAC', 'ESCALADE', 2097, '10123456789ABCDEF')]
+towed_output_data = [{
+    'INSURANCEPOLICYNUMBER': '0923954101',
+    'INSURER': 'GEICO',
+    'LICENSEPLATENUMBER': 'ARS',
+    'LICENSEPLATESTATE': 'MD',
+    'OWNERID': uuid.UUID('0eea2c7f-3f2c-4fd6-abc2-4927605d237a'),
+    'TOWEDID': uuid.UUID('6671f8b9-b7d0-469d-8766-f1d153f72986'),
+    'UNITNUMBER': None,
+    'VEHICLEID': uuid.UUID('642f511d-fd4b-4daf-a6b8-5418546be524'),
+    'VEHICLEMAKE': 'CADILLAC',
+    'VEHICLEMODEL': 'ESCALADE',
+    'VEHICLEYEAR': 2097,
+    'VIN': '10123456789ABCDEF'
+}]
 
 # VEHICLE DATA
 vehicle_input_data = [
@@ -632,11 +1101,11 @@ vehicle_input_data = [
         ('CONTINUEDIRECTION', 'W'),
         ('DAMAGEDAREAs', None),  # tested in test_read_damaged_areas_data
         ('DAMAGEEXTENT', '02'),
-        ('DRIVERLESSVEHICLE', 'N'),
+        ('DRIVERLESSVEHICLE', 'U'),
         ('DRIVERs', None),  # tested in test_read_person_info_data
         ('EMERGENCYMOTORVEHICLEUSE', 'N'),
         ('EVENTS', None),  # tested in test_read_event_data
-        ('FIRE', OrderedDict([('@i:nil', 'true')])),
+        ('FIRE', 'Y'),
         ('FIRSTIMPACT', '01'),
         ('GOINGDIRECTION', 'W'),
         ('HITANDRUN', 'N'),
@@ -650,7 +1119,7 @@ vehicle_input_data = [
         ('OWNERID', '21732e90-2796-497f-a5c2-5d7877510d4c'),
         ('PARKEDVEHICLE', 'N'),
         ('PASSENGERs', None),  # tested in test_read_person_info_data_passenger
-        ('REGISTRATIONEXPIRATIONYEAR', OrderedDict([('@i:nil', 'true')])),
+        ('REGISTRATIONEXPIRATIONYEAR', '2002'),
         ('REPORTNUMBER', 'ADJ063005D'),
         ('SFVEHICLEINTRANSPORT', '00'),
         ('SPEEDLIMIT', '25'),
@@ -662,9 +1131,9 @@ vehicle_input_data = [
         ('VEHICLEMAKE', 'GMC'),
         ('VEHICLEMODEL', 'ENVOY'),
         ('VEHICLEMOVEMENT', '13'),
-        ('VEHICLEREMOVEDBY', OrderedDict([('@i:nil', 'true')])),
-        ('VEHICLEREMOVEDTO', OrderedDict([('@i:nil', 'true')])),
-        ('VEHICLETOWEDAWAY', OrderedDict([('@i:nil', 'true')])),
+        ('VEHICLEREMOVEDBY', 'FRANKFORD # 90'),
+        ('VEHICLEREMOVEDTO', '6300 BELAIR ROAD'),
+        ('VEHICLETOWEDAWAY', 'Y'),
         ('VEHICLEUSEs', None),  # tested in test_read_acrs_vehicle_use_data
         ('VEHICLEYEAR', '2017'),
         ('VIN', '1234567890123456')]),
@@ -677,7 +1146,7 @@ vehicle_input_data = [
         ('DRIVERs', None),  # tested in test_read_person_info_data_driver
         ('EMERGENCYMOTORVEHICLEUSE', 'N'),
         ('EVENTS', None),  # tested in test_read_event_data
-        ('FIRE', OrderedDict([('@i:nil', 'true')])),
+        ('FIRE', 'U'),
         ('FIRSTIMPACT', '11'),
         ('GOINGDIRECTION', 'W'),
         ('HITANDRUN', 'N'),
@@ -705,18 +1174,80 @@ vehicle_input_data = [
         ('VEHICLEMOVEMENT', '06'),
         ('VEHICLEREMOVEDBY', OrderedDict([('@i:nil', 'true')])),
         ('VEHICLEREMOVEDTO', OrderedDict([('@i:nil', 'true')])),
-        ('VEHICLETOWEDAWAY', OrderedDict([('@i:nil', 'true')])),
+        ('VEHICLETOWEDAWAY', 'N'),
         ('VEHICLEUSEs', None),  # tested in test_read_acrs_vehicle_use_data
         ('VEHICLEYEAR', '2013'),
         ('VIN', '1ASDFGHJKLZXCVBNM')])]
 
-vehicle_exp_data = [
-    (None, 'W', 2, False, False, None, 1, 'W', False, '0123456789AGF', 'USAA', '1ACDEF', 'MD', 1, '01',
-     '21732E90-2796-497F-A5C2-5D7877510D4C', False, None, 'ADJ063005D', 0, 25, 0, '1', '23.08',
-     '01A1AC19-5C24-4FBE-A001-173574C5CBED', 'GMC', 'ENVOY', 13.0, None, None, None, 2017, '1234567890123456'),
-    (None, 'W', 3, False, False, None, 11, 'W', False, 'G00999263900', 'BRISTOL WEST', 'QWERTY', 'PA', 11, '00',
-     'D978BE20-08C7-4FF3-B2E9-A251047AC3A7', False, None, 'ADJ063005D', 0, 0, 0, '2', '23.08',
-     '6DDE66E1-433B-4839-9DF8-FFB969D35D68', 'BUICK', 'ENCLAVE', 6.0, None, None, None, 2013, '1ASDFGHJKLZXCVBNM')]
+vehicle_output_data = [
+    {
+        'CONTINUEDIRECTION': 'W',
+        'DAMAGEEXTENT': 2,
+        'DRIVERLESSVEHICLE': None,
+        'EMERGENCYMOTORVEHICLEUSE': False,
+        'FIRE': True,
+        'FIRSTIMPACT': '01',
+        'GOINGDIRECTION': 'W',
+        'HITANDRUN': False,
+        'INSURANCEPOLICYNUMBER': '0123456789AGF',
+        'INSURER': 'USAA',
+        'LICENSEPLATENUMBER': '1ACDEF',
+        'LICENSEPLATESTATE': 'MD',
+        'MAINIMPACT': 1,
+        'MOSTHARMFULEVENT': 1.0,
+        'OWNERID': uuid.UUID('21732e90-2796-497f-a5c2-5d7877510d4c'),
+        'PARKEDVEHICLE': False,
+        'REGISTRATIONEXPIRATIONYEAR': '2002',
+        'REPORTNUMBER': 'ADJ063005D',
+        'SFVEHICLEINTRANSPORT': 0,
+        'SPEEDLIMIT': 25,
+        'TOWEDUNITTYPE': 0,
+        'UNITNUMBER': 1,
+        'VEHICLEBODYTYPE': '23.08',
+        'VEHICLEID': uuid.UUID('01a1ac19-5c24-4fbe-a001-173574c5cbed'),
+        'VEHICLEMAKE': 'GMC',
+        'VEHICLEMODEL': 'ENVOY',
+        'VEHICLEMOVEMENT': 13.0,
+        'VEHICLEREMOVEDBY': 'FRANKFORD # 90',
+        'VEHICLEREMOVEDTO': '6300 BELAIR ROAD',
+        'VEHICLETOWEDAWAY': 'Y',
+        'VEHICLEYEAR': '2017',
+        'VIN': '1234567890123456',
+    },
+    {
+        'CONTINUEDIRECTION': 'W',
+        'DAMAGEEXTENT': 3,
+        'DRIVERLESSVEHICLE': False,
+        'EMERGENCYMOTORVEHICLEUSE': False,
+        'FIRE': None,
+        'FIRSTIMPACT': '11',
+        'GOINGDIRECTION': 'W',
+        'HITANDRUN': False,
+        'INSURANCEPOLICYNUMBER': 'G00999263900',
+        'INSURER': 'BRISTOL WEST',
+        'LICENSEPLATENUMBER': 'QWERTY',
+        'LICENSEPLATESTATE': 'PA',
+        'MAINIMPACT': 11,
+        'MOSTHARMFULEVENT': 0.0,
+        'OWNERID': uuid.UUID('d978be20-08c7-4ff3-b2e9-a251047ac3a7'),
+        'PARKEDVEHICLE': False,
+        'REGISTRATIONEXPIRATIONYEAR': None,
+        'REPORTNUMBER': 'ADJ063005D',
+        'SFVEHICLEINTRANSPORT': 0,
+        'SPEEDLIMIT': 0,
+        'TOWEDUNITTYPE': 0,
+        'UNITNUMBER': 2,
+        'VEHICLEBODYTYPE': '23.08',
+        'VEHICLEID': uuid.UUID('6dde66e1-433b-4839-9df8-ffb969d35d68'),
+        'VEHICLEMAKE': 'BUICK',
+        'VEHICLEMODEL': 'ENCLAVE',
+        'VEHICLEMOVEMENT': 6,
+        'VEHICLEREMOVEDBY': None,
+        'VEHICLEREMOVEDTO': None,
+        'VEHICLETOWEDAWAY': 'N',
+        'VEHICLEYEAR': '2013',
+        'VIN': '1ASDFGHJKLZXCVBNM',
+    }]
 
 # VEHICLE USE
 vehicle_use_input_data = [
@@ -725,7 +1256,11 @@ vehicle_use_input_data = [
         ('VEHICLEID', '5f19b3c5-4e3b-4010-9959-506a84632cdb'),
         ('VEHICLEUSECODE', '00')])]
 
-vehicle_use_exp_data = [(3696806, '5F19B3C5-4E3B-4010-9959-506A84632CDB', 0)]
+vehicle_use_output_data = [{
+    'ID': 3696806,
+    'VEHICLEID': uuid.UUID('5f19b3c5-4e3b-4010-9959-506a84632cdb'),
+    'VEHICLEUSECODE': 0
+}]
 
 # WITNESS
 witness_input_data = [
@@ -755,10 +1290,10 @@ witness_input_data = [
         ('PERSONID', '6b76fbc7-56e8-4cf5-9d35-dfeb33a4e60d'),
         ('REPORTNUMBER', 'ADJ956004Z')])]
 
-witness_exp_data = [('6B76FBC7-56E8-4CF5-9D35-DFEB33A4E60D', 'ADJ956004Z'), ]
-witness_records_expt_data = [
-    ('3498 SDFJKD RD', 'BALTIMORE', None, None, None, None, None, None, None, 'TONY', '4109037977', 'TONY',
-     'TONY', None, '6B76FBC7-56E8-4CF5-9D35-DFEB33A4E60D', None, 'ADJ956004Z', None, 'MD', '21218'), ]
+witness_output_data = [{
+    'PERSONID': uuid.UUID('6b76fbc7-56e8-4cf5-9d35-dfeb33a4e60d'),
+    'REPORTNUMBER': 'ADJ956004Z'
+}]
 
 # SINGLE ATTR
 single_attr_input_data = OrderedDict([

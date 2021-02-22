@@ -183,7 +183,8 @@ dmypy.json
 
 .idea/
 
-venv*/
+.venv*/
 
 # Project specific location cache
 geo.pickle
+/crash.db

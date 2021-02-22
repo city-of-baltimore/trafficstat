@@ -1,627 +1,765 @@
 """Pytest directory-specific hook implementations"""
-import sys
-from pathlib import PurePath, Path
+import os
 
-import pyodbc
 import pytest
+from pandas import to_datetime  # type: ignore
+from sqlalchemy import create_engine  # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
 
-from trafficstat.crash_data_ingestor import CrashDataReader
+from trafficstat.crash_data_ingester import CrashDataReader
+from trafficstat.ms2generator_schema import Base, CircumstanceSanitized, CitationCodeSanitized, CrashSanitized, \
+    EmsSanitized, PersonSanitized, RoadwaySanitized, TrailerSanitized, VehicleSanitized
 
 
 @pytest.fixture(name='crash_data_reader')
-def crash_data_reader_fixture():
+def crash_data_reader_fixture(tmpdir):
     """Fixture for the CrashDataReader class"""
-    cdr = CrashDataReader(None)
-    cdr.approval_table = 'acrs_test_approval'
-    cdr.circumstance_table = 'acrs_test_circumstances'
-    cdr.citation_codes_table = 'acrs_test_citation_codes'
-    cdr.crash_diagrams_table = 'acrs_test_crash_diagrams'
-    cdr.crashes_table = 'acrs_test_crashes'
-    cdr.commercial_vehicles_table = 'acrs_test_commercial_vehicles'
-    cdr.damaged_areas_table = 'acrs_test_damaged_areas'
-    cdr.ems_table = 'acrs_test_ems'
-    cdr.events_table = 'acrs_test_events'
-    cdr.pdf_table = 'acrs_test_pdf_report'
-    cdr.person_table = 'acrs_test_person'
-    cdr.person_info_table = 'acrs_test_person_info'
-    cdr.roadway_table = 'acrs_test_roadway'
-    cdr.towed_unit_table = 'acrs_test_towed_unit'
-    cdr.vehicle_table = 'acrs_test_vehicles'
-    cdr.vehicle_users_table = 'acrs_test_vehicle_uses'
-    cdr.witnesses_table = 'acrs_test_witnesses'
-
-    return cdr
-
-
-@pytest.fixture(name='conn', scope='module')
-def conn_fixture():
-    """Fixture providing a connection to the DOT_DATA database table"""
-    conn = pyodbc.connect(
-        r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
-    yield conn
-    conn.close()
-
-
-@pytest.fixture(name='cursor')
-def cursor_fixture(conn):
-    """Fixture providing the cursor to the DOT_DATA database table"""
-    cursor = conn.cursor()
-    return cursor
-
-
-@pytest.fixture
-def acrs_crashes_table(cursor):
-    """Fixture providing a clean version of the acrs_crashes table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_crashes];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_crashes](
-            [ACRSREPORTTIMESTAMP] datetime2 NOT NULL,
-            [AGENCYIDENTIFIER] varchar(20),
-            [AGENCYNAME] varchar(50),
-            [AREA] varchar(10),
-            [COLLISIONTYPE] int NOT NULL,
-            [CONMAINCLOSURE] int,
-            [CONMAINLOCATION] int,
-            [CONMAINWORKERSPRESENT] bit,
-            [CONMAINZONE] char(1),
-            [CRASHDATE] date NOT NULL,
-            [CRASHTIME] time NOT NULL,
-            [CURRENTASSIGNMENT] varchar(20) NOT NULL,
-            [CURRENTGROUP] int NOT NULL,
-            [DEFAULTASSIGNMENT] varchar(20) NOT NULL,
-            [DEFAULTGROUP] int NOT NULL,
-            [DOCTYPE] varchar(5),
-            [FIXEDOBJECTSTRUCK] varchar(10) NOT NULL,
-            [HARMFULEVENTONE] varchar(10) NOT NULL,
-            [HARMFULEVENTTWO] varchar(10) NOT NULL,
-            [HITANDRUN] bit NOT NULL,
-            [INSERTDATE] datetime2 NOT NULL,
-            [INTERCHANGEAREA] int NOT NULL,
-            [INTERCHANGEIDENTIFICATION] varchar(max),
-            [INTERSECTIONTYPE] int NOT NULL,
-            [INVESTIGATINGOFFICERUSERNAME] nvarchar(100),
-            [INVESTIGATOR] varchar(max),
-            [JUNCTION] varchar(10) NOT NULL,
-            [LANEDIRECTION] varchar(5),
-            [LANENUMBER] int NOT NULL,
-            [LANETYPE] int,
-            [LATITUDE] float,
-            [LIGHT] varchar(10) NOT NULL,
-            [LOCALCASENUMBER] varchar(50) NOT NULL,
-            [LOCALCODES] varchar(20),
-            [LONGITUDE] float,
-            [MILEPOINTDIRECTION] varchar(2),
-            [MILEPOINTDISTANCE] float NOT NULL,
-            [MILEPOINTDISTANCEUNITS] varchar(5),
-            [NARRATIVE] VARCHAR(MAX),
-            [NONTRAFFIC] bit NOT NULL,
-            [NUMBEROFLANES] int NOT NULL,
-            [OFFROADDESCRIPTION] varchar(max),
-            [PHOTOSTAKEN] bit,
-            [RAMP] varchar(max),
-            [REPORTCOUNTYLOCATION] int NOT NULL,
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL PRIMARY KEY, /* Report number, used as master primary key across all tables */
-            [REPORTTYPE] varchar(max),
-            [ROADALIGNMENT] int NOT NULL,
-            [ROADCONDITION] int NOT NULL,
-            [ROADDIVISION] varchar(10) NOT NULL,
-            [ROADGRADE] int NOT NULL,
-            [ROADID] varchar(50), /* Refers to primary key in acrs_road_id database */
-            [SCHOOLBUSINVOLVEMENT] int NOT NULL,
-            [STATEGOVERNMENTPROPERTYNAME] varchar(max),
-            [SUPERVISOR] varchar(max),
-            [SUPERVISORUSERNAME] varchar(50),
-            [SUPERVISORYDATE] datetime2 NOT NULL,
-            [SURFACECONDITION] varchar(10) NOT NULL,
-            [TRAFFICCONTROL] int,
-            [TRAFFICCONTROLFUNCTIONING] bit,
-            [UPDATEDATE] datetime2 NOT NULL,
-            [UPLOADVERSION] varchar(50),
-            [VERSIONNUMBER] int NOT NULL,
-            [WEATHER] varchar(20)
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_approval_table(cursor):
-    """Fixture providing a clean version of the acrs_approval table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_approval];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_approval] (
-            [AGENCY] varchar(20),
-            [DATE] datetime2 NOT NULL,
-            [CADSENT] varchar(50),
-            [CADSENT_DATE] datetime2,
-            [CC_NUMBER] varchar(50) NOT NULL,
-            [DATE_INITIATED2] datetime2 NOT NULL,
-            [GROUP_NUMBER] int NOT NULL,
-            [HISTORICALAPPROVALDATA] varchar(50),
-            [INCIDENT_DATE] datetime2 NOT NULL,
-            [INVESTIGATOR] varchar(20),
-            [REPORT_TYPE] varchar(10),
-            [SEQ_GUID] varchar(12), /* Refers to the report number in this table */
-            [STATUS_CHANGE_DATE] datetime2 NOT NULL,
-            [STATUS_ID] int NOT NULL,
-            [STEP_NUMBER] int,
-            [TR_USERNAME] varchar(20),
-            [UNIT_CODE] varchar(20) NOT NULL
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_circumstances_table(cursor):
-    """Fixture providing a clean version of the acrs_circumstances table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_circumstances];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_circumstances] (
-            [CIRCUMSTANCECODE] varchar(10) NOT NULL,
-            [CIRCUMSTANCEID] int NOT NULL PRIMARY KEY,
-            [CIRCUMSTANCETYPE] varchar(20),
-            [PERSONID] uniqueidentifier, /* Refers to PERSONID in ACRSPERSON */
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL,  /* Refers to primary key in main ACRS table */
-            [VEHICLEID] uniqueidentifier
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_citation_codes_table(cursor):
-    """Fixture providing a clean version of the acrs_citation_codes table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_citation_codes];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_citation_codes] (
-            [CITATIONNUMBER] varchar(50) NOT NULL,
-            [PERSONID] uniqueidentifier NOT NULL, /* Refers to PERSONID in acrs_person */
-            [REPORTNUMBER] nvarchar(12) NOT NULL /* Report number, used as master primary key across all tables */
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_crash_diagrams_table(cursor):
-    """Fixture providing a clean version of the acrs_crash_diagrams table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_crash_diagrams];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_crash_diagrams] (
-            [CRASHDIAGRAM] VARCHAR(MAX),
-            [CRASHDIAGRAMNATIVE] VARCHAR(MAX),
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL  /* Refers to primary key in main ACRS table */
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_commercial_vehicle_table(cursor):
-    """Fixture providing a clean version of the acrs_commercial_vehicles table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_commercial_vehicles];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_commercial_vehicles] (
-            [BODYTYPE] varchar(10),
-            [BUSUSE] int,
-            [CARRIERCLASSIFICATION] int,
-            [CITY] varchar(50),
-            [CONFIGURATION] int,
-            [COUNTRY] varchar(50),
-            [DOTNUMBER] varchar(20),
-            [GVW] int,
-            [HAZMATCLASS] varchar(50),
-            [HAZMATNAME] varchar(50),
-            [HAZMATNUMBER] varchar(50),
-            [HAZMATSPILL] varchar(50),
-            [MCNUMBER] varchar(50),
-            [NAME] varchar(max),
-            [NUMBEROFAXLES] int,
-            [PLACARDVISIBLE] varchar(50),
-            [POSTALCODE] varchar(5),
-            [STATE] varchar(2),
-            [STREET] varchar(50),
-            [VEHICLEID] uniqueidentifier NOT NULL, /* Refers to vehicleid in acrsvehicle table */
-            [WEIGHT] varchar(50),
-            [WEIGHTUNIT] varchar(50)
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_damaged_areas_table(cursor):
-    """Fixture providing a clean version of the acrs_damaged_areas table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_damaged_areas];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_damaged_areas] (
-            [DAMAGEID] int NOT NULL PRIMARY KEY,
-            [IMPACTTYPE] int NOT NULL,
-            [VEHICLEID] uniqueidentifier NOT NULL /* Refers to vehicleid in acrsvehicle table */
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_ems_table(cursor):
-    """Fixture providing a clean verison of the acrs_ems table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_ems];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_ems] (
-            [EMSTRANSPORTATIONTYPE] varchar(5),
-            [EMSUNITNUMBER] varchar(5),
-            [INJUREDTAKENBY] VARCHAR(MAX),
-            [INJUREDTAKENTO] VARCHAR(MAX),
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL /* Refers to primary key in main ACRS table */
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_events_table(cursor):
-    """Fixture providing a clean version of the acrs_events table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_events];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_events] (
-            [EVENTID] int NOT NULL,
-            [EVENTSEQUENCE] int,
-            [EVENTTYPE] int,
-            [VEHICLEID] uniqueidentifier /* Refers to VEHICLEID in ACRSVEHICLE */
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_pdf_report_table(cursor):
-    """Fixture providing a clean verison of the acrs_pdf_report table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_pdf_report];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_pdf_report] (
-            [CHANGEDBY] varchar(50),
-            [DATESTATUSCHANGED] datetime2 NOT NULL,
-            [PDFREPORT1] VARCHAR(MAX),
-            [PDF_ID] int NOT NULL PRIMARY KEY,
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL,  /* Refers to primary key in main ACRS table */
-            [STATUS] varchar(20)
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_person_table(cursor):
-    """Fixture providing a clean version of the acrs_person table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_person];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_person] (
-            [ADDRESS] nvarchar(max),
-            [CITY] nvarchar(max),
-            [COMPANY] nvarchar(max),
-            [COUNTRY] nvarchar(max),
-            [COUNTY] nvarchar(max),
-            [DLCLASS] nvarchar(max),
-            [DLNUMBER] nvarchar(max),
-            [DLSTATE] nvarchar(2),
-            [DOB] date,
-            [FIRSTNAME] nvarchar(max),
-            [HOMEPHONE] nvarchar(max),
-            [LASTNAME] nvarchar(max),
-            [MIDDLENAME] nvarchar(max),
-            [OTHERPHONE] nvarchar(max),
-            [PERSONID] uniqueidentifier NOT NULL PRIMARY KEY,
-            [RACE] nvarchar(max),
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL,  /* Refers to primary key in main ACRS table */
-            [SEX] varchar(5),
-            [STATE] char(2),
-            [ZIP] varchar(max)
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_person_info_table(cursor):
-    """Fixture providing a clean version of the acrs_person_info table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_person_info];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_person_info](
-            [AIRBAGDEPLOYED] int,                         /* Only applicable to driver and passenger */
-            [ALCOHOLTESTINDICATOR] int,                   /* Only applicable to driver and nonmotorist */
-            [ALCOHOLTESTTYPE] varchar(max),               /* Only applicable to driver and nonmotorist */
-            [ATFAULT] bit,                                /* Only applicable to driver and nonmotorist */
-            [BAC] varchar(max),                           /* Only applicable to driver and nonmotorist */
-            [CONDITION] varchar(10),                      /* Only applicable to driver and nonmotorist */
-            [CONTINUEDIRECTION] varchar(5),               /* Only applicable for nonmotorist */
-            [DRIVERDISTRACTEDBY] int,                     /* Only applicable for driver */
-            [DRUGTESTINDICATOR] int,                      /* Only applicable to driver and nonmotorist */
-            [DRUGTESTRESULT] varchar(max),                /* Only applicable to driver and nonmotorist */
-            [EJECTION] int,                               /* Only applicable to driver and passenger */
-            [EMSRUNREPORTNUMBER] varchar(max),
-            [EMSUNITNUMBER] varchar(max),
-            [EQUIPMENTPROBLEM] int,                       /* Only applicable to driver and passenger */
-            [GOINGDIRECTION] varchar(max),                /* Only applicable to nonmotorist */
-            [HASCDL] bit,                                 /* Only applicable for driver */
-            [INJURYSEVERITY] int NOT NULL,
-            [PEDESTRIANACTIONS] int,                      /* Only applicable to nonmotorist */
-            [PEDESTRIANLOCATION] float,                   /* Only applicable to nonmotorist */
-            [PEDESTRIANMOVEMENT] varchar(10),             /* Only applicable to nonmotorist */
-            [PEDESTRIANOBEYTRAFFICSIGNAL] int,            /* Only applicable to nonmotorist */
-            [PEDESTRIANTYPE] int,                         /* Only applicable to nonmotorist */
-            [PEDESTRIANVISIBILITY] int,                   /* Only applicable to nonmotorist */
-            [PERSONID] uniqueidentifier NOT NULL,         /* Refers to PERSONID in ACRSPERSON */
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL,         /* Refers to primary key in main ACRS table */
-            [SAFETYEQUIPMENT] varchar(10) NOT NULL,
-            [SEAT] int,                                   /* 00 if driver, otherwise a number if passenger; null for nonmotorist */
-            [SEATINGLOCATION] int,                        /* 00 if driver, otherwise a number if passenger; null for nonmotorist */
-            [SEATINGROW] int,                             /* 00 if driver, otherwise a number if passenger; null for nonmotorist */
-            [SUBSTANCEUSE] int,                           /* Only applicable to driver and nonmotorist */
-            [UNITNUMBERFIRSTSTRIKE] int,                  /* Only applicable to nonmotorist */
-            [VEHICLEID] uniqueidentifier                  /* Refers to VEHICLEID in ACRSVEHICLE, only applies to driver and passenger */
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_report_docs_table(cursor):
-    """Fixture providinga clean version of the acrs_test_report_docs table. Currently a stub until we get example data
-    or schema for this data"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_report_docs];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_report_docs] (
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL         /* Refers to primary key in main ACRS table */
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_report_photos_table(cursor):
-    """Fixture providing a clean version of the acrs_report_photos table"""
-    # Currently a stub until we get example data or schema for this data
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_report_photos];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_report_photos] (
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL         /* Refers to primary key in main ACRS table */
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_roadway_table(cursor):
-    """Fixture providing a clean version of the acrs_roadway table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_roadway];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_roadway] (
-            [COUNTY] int,
-            [LOGMILE_DIR] varchar,
-            [MILEPOINT] float,
-            [MUNICIPAL] int,
-            [MUNICIPAL_AREA_CODE] int,
-            [REFERENCE_MUNI] int,
-            [REFERENCE_ROADNAME] varchar(50),
-            [REFERENCE_ROUTE_NUMBER] varchar(10),
-            [REFERENCE_ROUTE_SUFFIX] varchar(5),
-            [REFERENCE_ROUTE_TYPE] varchar(2),
-            [ROADID] varchar(50) NOT NULL PRIMARY KEY,
-            [ROAD_NAME] varchar(max),
-            [ROUTE_NUMBER] varchar(10),
-            [ROUTE_SUFFIX] varchar(10),
-            [ROUTE_TYPE] varchar(10),
-            [CENSUS_TRACT] varchar(20)
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_towed_unit_table(cursor):
-    """Fixture providing a clean version of the acrs_towed_unit table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_towed_unit];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_towed_unit] (
-            [INSURANCEPOLICYNUMBER] varchar(50),
-            [INSURER] varchar(50),
-            [LICENSEPLATENUMBER] varchar(15),
-            [LICENSEPLATESTATE] char(2),
-            [OWNERID] uniqueidentifier NOT NULL, /* Refers to primary key in acrs_person_info */
-            [TOWEDID] uniqueidentifier NOT NULL PRIMARY KEY,
-            [UNITNUMBER] varchar(50),
-            [VEHICLEID] uniqueidentifier NOT NULL, /* Refers to primary key in ACRSVEHICLE */
-            [VEHICLEMAKE] varchar(20),
-            [VEHICLEMODEL] varchar(30),
-            [VEHICLEYEAR] int,
-            [VIN] varchar(17)
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_vehicles_table(cursor):
-    """Fixture providing a clean version of the acrs_vehicles table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_vehicles];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_vehicles] (
-            [COMMERCIALVEHICLE] varchar(max),
-            [CONTINUEDIRECTION] varchar(1) NOT NULL,
-            [DAMAGEEXTENT] int,
-            [DRIVERLESSVEHICLE] bit,
-            [EMERGENCYMOTORVEHICLEUSE] bit,
-            [FIRE] bit,
-            [FIRSTIMPACT] int,
-            [GOINGDIRECTION] varchar(5),
-            [HITANDRUN] bit,
-            [INSURANCEPOLICYNUMBER] varchar(50),
-            [INSURER] nvarchar(50),
-            [LICENSEPLATENUMBER] varchar(20),
-            [LICENSEPLATESTATE] char(2),
-            [MAINIMPACT] int,
-            [MOSTHARMFULEVENT] varchar(10),
-            [OWNERID] uniqueidentifier, /* Refers to the ACRSPERSON table */
-            [PARKEDVEHICLE] bit,
-            [REGISTRATIONEXPIRATIONYEAR] int,
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL,  /* Refers to primary key in main ACRS table */
-            [SFVEHICLEINTRANSPORT] int,
-            [SPEEDLIMIT] int,
-            [TOWEDUNITTYPE] int,
-            [UNITNUMBER] varchar(max),
-            [VEHICLEBODYTYPE] varchar(max),
-            [VEHICLEID] uniqueidentifier NOT NULL PRIMARY KEY,
-            [VEHICLEMAKE] varchar(50),
-            [VEHICLEMODEL] varchar(50),
-            [VEHICLEMOVEMENT] float,
-            [VEHICLEREMOVEDBY] varchar(max),
-            [VEHICLEREMOVEDTO] varchar(max),
-            [VEHICLETOWEDAWAY] varchar(max),
-            [VEHICLEYEAR] int,
-            [VIN] varchar(17)
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_vehicle_use_table(cursor):
-    """Fixture providing a clean version of the acrs_vehicle_uses table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_vehicle_uses];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_vehicle_uses] (
-            [ID] bigint NOT NULL,
-            [VEHICLEID] uniqueidentifier NOT NULL, /* Refers to primary key in ACRSVEHICLE */
-            [VEHICLEUSECODE] int
-        );""")
-    cursor.commit()
-
-    return cursor
-
-
-@pytest.fixture
-def acrs_witnesses_table(cursor):
-    """Fixture providing a clean version of the acrs_witnesses table"""
-    try:
-        cursor.execute("DROP TABLE [dbo].[acrs_test_witnesses];")
-        cursor.commit()
-    except pyodbc.ProgrammingError:
-        pass  # The table doesn't exist
-
-    cursor.execute("""
-        CREATE TABLE [dbo].[acrs_test_witnesses](
-            [PERSONID] uniqueidentifier NOT NULL,
-            [REPORTNUMBER] NVARCHAR(12) NOT NULL /* Report number, used as master primary key across all tables */
-        );""")
-    cursor.commit()
-
-    return cursor
+    yield CrashDataReader(conn_str='sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatareaderfixture.db')))
+
+
+@pytest.fixture(name='conn_str')
+def crash_database(tmpdir):
+    """Fixture for the WorksheetMaker class"""
+    conn_str = 'sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatabase.db'))
+
+    # Make the database
+    engine = create_engine(conn_str, echo=True, future=True)
+
+    with engine.begin() as connection:
+        Base.metadata.create_all(connection)
+
+    with Session(bind=engine) as session:
+        session.add_all([
+
+            # circumstance_sanitized
+            CircumstanceSanitized(REPORT_NO='A0081947', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
+                                  CONTRIB_CODE4=00, PERSON_ID=None, VEHICLE_ID=8849671, CIRCUMSTANCE_ID=11458081,
+                                  ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='V'),
+            CircumstanceSanitized(REPORT_NO='A0081947', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
+                                  CONTRIB_CODE4=00, PERSON_ID=None, VEHICLE_ID=8849672, CIRCUMSTANCE_ID=11458083,
+                                  ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='V'),
+            CircumstanceSanitized(REPORT_NO='A0081947', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
+                                  CONTRIB_CODE4=00, PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458079,
+                                  ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='E'),
+            CircumstanceSanitized(REPORT_NO='A0081947', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
+                                  CONTRIB_CODE4=None, PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458080,
+                                  ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='R'),
+            CircumstanceSanitized(REPORT_NO='A0081947', CONTRIB_CODE1=00, CONTRIB_CODE2='A9.99',
+                                  CONTRIB_CODE3='A9.99',
+                                  CONTRIB_CODE4='A9.99', PERSON_ID=13373369, VEHICLE_ID=8849672,
+                                  CIRCUMSTANCE_ID=11458084,
+                                  ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='D'),
+            CircumstanceSanitized(REPORT_NO='A0081950', CONTRIB_CODE1=00, CONTRIB_CODE2='A9.99',
+                                  CONTRIB_CODE3='A9.99',
+                                  CONTRIB_CODE4='A9.99', PERSON_ID=13373373, VEHICLE_ID=8849676,
+                                  CIRCUMSTANCE_ID=11458098,
+                                  ACC_DATE=to_datetime('2015-03-10 00:00:00.000'), CONTRIB_FLAG='D'),
+            CircumstanceSanitized(REPORT_NO='A0081950', CONTRIB_CODE1=00, CONTRIB_CODE2='A9.99',
+                                  CONTRIB_CODE3='A9.99',
+                                  CONTRIB_CODE4='A9.99', PERSON_ID=13373375, VEHICLE_ID=8849677,
+                                  CIRCUMSTANCE_ID=11458100,
+                                  ACC_DATE=to_datetime('2015-03-10 00:00:00.000'), CONTRIB_FLAG='D'),
+            CircumstanceSanitized(REPORT_NO='A0081950', CONTRIB_CODE1=41, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
+                                  CONTRIB_CODE4=00, PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458095,
+                                  ACC_DATE=to_datetime('2015-03-10 00:00:00.000'), CONTRIB_FLAG='E'),
+            CircumstanceSanitized(REPORT_NO='A0081950', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
+                                  CONTRIB_CODE4=None, PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458096,
+                                  ACC_DATE=to_datetime('2015-03-10 00:00:00.000'), CONTRIB_FLAG='R'),
+
+            # citation codes
+            CitationCodeSanitized(CITATION='JE48479', PERSON_ID='13366132', REPORT_NO='A0000001',
+                                  ACC_DATE=to_datetime('2015-03-08 00:00:00.000'), CITATION_ID='1758204'),
+            CitationCodeSanitized(CITATION='JJ98369', PERSON_ID='13368454', REPORT_NO='A0000002',
+                                  ACC_DATE=to_datetime('2015-03-08 00:00:00.000'), CITATION_ID='1758529'),
+            CitationCodeSanitized(CITATION='GN73617', PERSON_ID='13368533', REPORT_NO='A0000003',
+                                  ACC_DATE=to_datetime('2015-03-14 00:00:00.000'), CITATION_ID='1758541'),
+            CitationCodeSanitized(CITATION='GN73616', PERSON_ID='13368533', REPORT_NO='A0000004',
+                                  ACC_DATE=to_datetime('2015-03-14 00:00:00.000'), CITATION_ID='1758542'),
+            CitationCodeSanitized(CITATION='JE52651-JE52661', PERSON_ID='13366729', REPORT_NO='A0000005',
+                                  ACC_DATE=to_datetime('2015-03-10 00:00:00.000'), CITATION_ID='1758295'),
+            CitationCodeSanitized(CITATION='JK42951,52,53', PERSON_ID='13367931', REPORT_NO='A0000006',
+                                  ACC_DATE=to_datetime('2015-03-05 00:00:00.000'), CITATION_ID='1758471'),
+            CitationCodeSanitized(CITATION='JC95178', PERSON_ID='13366767', REPORT_NO='A0000007',
+                                  ACC_DATE=to_datetime('2015-02-23 00:00:00.000'), CITATION_ID='1758304'),
+            CitationCodeSanitized(CITATION='JC95179', PERSON_ID='13366767', REPORT_NO='A0000008',
+                                  ACC_DATE=to_datetime('2015-02-23 00:00:00.000'), CITATION_ID='1758305'),
+            CitationCodeSanitized(CITATION='JC95180', PERSON_ID='13366767', REPORT_NO='A0000009',
+                                  ACC_DATE=to_datetime('2015-02-23 00:00:00.000'), CITATION_ID='1758306'),
+            CitationCodeSanitized(CITATION='21-309(b)', PERSON_ID='13366847', REPORT_NO='A0000010',
+                                  ACC_DATE=to_datetime('2015-03-11 00:00:00.000'), CITATION_ID='1758326'),
+
+            # acrs_crashes_sanitized
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='01', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='11.04', COLLISION_TYPE_CODE='01', SURF_COND_CODE='02', LANE_CODE='N1',
+                           RD_COND_CODE='01', FIX_OBJ_CODE='00', REPORT_NO='A0000001', WEATHER_CODE='06.01',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'), ACC_TIME='0900', LOC_CODE='622',
+                           RAMP_FLAG='N',
+                           SIGNAL_FLAG='N', C_M_ZONE_FLAG='N', INTER_NUM=None, AGENCY_CODE='AD', AREA_CODE='UNK',
+                           HARM_EVENT_CODE1='02', HARM_EVENT_CODE2='02', LOC_CASE_NO='153J11191',
+                           ACRS_REPORT_NO='ADI801000Z', REPORT_TYPE_CODE='03', LANE_NUMBER=1,
+                           LANE_DIRECTION_CODE='01', LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='02',
+                           TRAFFIC_CONTROL_CODE='01', TRAFFIC_CONTROL_FUNCTION_FLAG='X', NUM_LANES=1,
+                           INTER_AREA_CODE='01', SCHOOL_BUS_INVOLVED_CODE='01', C_M_LOCATION_CODE='A9.99',
+                           C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='VEHICLE 2 WAS PARKED AND UNOCCUPIED IN THE REAR OF 4300 E. MONUMENT ST.  ',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='01', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='99',
+                           COLLISION_TYPE_CODE='99', SURF_COND_CODE='A9.99', LANE_CODE='U9', RD_COND_CODE='A9.99',
+                           FIX_OBJ_CODE='00', REPORT_NO='A0000002', WEATHER_CODE='00',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'), ACC_TIME='1630', LOC_CODE='CAD1815',
+                           RAMP_FLAG='N',
+                           SIGNAL_FLAG='N', C_M_ZONE_FLAG='N', INTER_NUM=None, AGENCY_CODE='AD', AREA_CODE='UNK',
+                           HARM_EVENT_CODE1='02', HARM_EVENT_CODE2='00', LOC_CASE_NO='159J11405',
+                           ACRS_REPORT_NO='ADJ633000V', REPORT_TYPE_CODE='03', LANE_NUMBER=0,
+                           LANE_DIRECTION_CODE='99', LANE_TYPE_CODE='99', INTERSECTION_TYPE_CODE='99',
+                           TRAFFIC_CONTROL_CODE='01', TRAFFIC_CONTROL_FUNCTION_FLAG='X', NUM_LANES=0,
+                           INTER_AREA_CODE='99', SCHOOL_BUS_INVOLVED_CODE='01',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='ON 10/26/15 AT APPROXIMATELY1600 HOURS VEHICLE 2 WAS LEFT PARKED AND . ',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='03', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='01',
+                           COLLISION_TYPE_CODE='17', SURF_COND_CODE='02', LANE_CODE='S2', RD_COND_CODE='01',
+                           FIX_OBJ_CODE='08', REPORT_NO='A0000003', WEATHER_CODE='06.01',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'), ACC_TIME='2220',
+                           LOC_CODE='CAD2902', RAMP_FLAG='N', SIGNAL_FLAG='N', C_M_ZONE_FLAG='N', INTER_NUM=None,
+                           AGENCY_CODE='AD', AREA_CODE='UNK', HARM_EVENT_CODE1='09', HARM_EVENT_CODE2='10',
+                           LOC_CASE_NO='154J11543',
+                           ACRS_REPORT_NO='ADJ668002C', REPORT_TYPE_CODE='03', LANE_NUMBER=2,
+                           LANE_DIRECTION_CODE='02',
+                           LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='00', TRAFFIC_CONTROL_CODE='01',
+                           TRAFFIC_CONTROL_FUNCTION_FLAG='X', NUM_LANES=4, INTER_AREA_CODE='02',
+                           SCHOOL_BUS_INVOLVED_CODE='01',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='V1 WAS TRAVELING SOUTH BOUND ON 5800 BELAIR RD. DRIVER OF V1 FELL A SLEEP  ',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='03', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='01',
+                           COLLISION_TYPE_CODE='03', SURF_COND_CODE='02', LANE_CODE='S1', RD_COND_CODE='01',
+                           FIX_OBJ_CODE='00',
+                           REPORT_NO='A0000004', WEATHER_CODE='06.01',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'),
+                           ACC_TIME='2030',
+                           LOC_CODE='CAD#2638', RAMP_FLAG='N', SIGNAL_FLAG='Y', C_M_ZONE_FLAG='N', INTER_NUM=None,
+                           AGENCY_CODE='AD', AREA_CODE='UNK', HARM_EVENT_CODE1='01', HARM_EVENT_CODE2='01',
+                           LOC_CASE_NO='155J11494',
+                           ACRS_REPORT_NO='ADH5140018', REPORT_TYPE_CODE='03', LANE_NUMBER=1,
+                           LANE_DIRECTION_CODE='02',
+                           LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='00', TRAFFIC_CONTROL_CODE='03',
+                           TRAFFIC_CONTROL_FUNCTION_FLAG='Y', NUM_LANES=2, INTER_AREA_CODE='00',
+                           SCHOOL_BUS_INVOLVED_CODE='01',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='THE NORTHERN DISTRICT 5 CENTRAL COMPLAINT NUMBER IS 155J11494 (5-151011494),',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='01', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='00',
+                           COLLISION_TYPE_CODE='03', SURF_COND_CODE='02', LANE_CODE='W2', RD_COND_CODE='01',
+                           FIX_OBJ_CODE='00',
+                           REPORT_NO='A0000005', WEATHER_CODE='06.01',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'),
+                           ACC_TIME='0800',
+                           LOC_CODE='1446', RAMP_FLAG='N', SIGNAL_FLAG='N', C_M_ZONE_FLAG='N', INTER_NUM=None,
+                           AGENCY_CODE='AD', AREA_CODE='UNK', HARM_EVENT_CODE1='02', HARM_EVENT_CODE2='02',
+                           LOC_CASE_NO='153J11337',
+                           ACRS_REPORT_NO='ADI8010010', REPORT_TYPE_CODE='03', LANE_NUMBER=2,
+                           LANE_DIRECTION_CODE='04',
+                           LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='02', TRAFFIC_CONTROL_CODE='01',
+                           TRAFFIC_CONTROL_FUNCTION_FLAG='X', NUM_LANES=2, INTER_AREA_CODE='00',
+                           SCHOOL_BUS_INVOLVED_CODE='01',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='VEHICLE 2 WAS PARKED AND UNOCCUPIED IN THE 200 BLOCK OF E. LAFAYETTE AVE. ',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='03', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='01',
+                           COLLISION_TYPE_CODE='03', SURF_COND_CODE='02', LANE_CODE='S1', RD_COND_CODE='01',
+                           FIX_OBJ_CODE='00',
+                           REPORT_NO='A0000006', WEATHER_CODE='06.01',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'),
+                           ACC_TIME='1920',
+                           LOC_CODE='CAD#2388', RAMP_FLAG='N', SIGNAL_FLAG='Y', C_M_ZONE_FLAG='N', INTER_NUM=None,
+                           AGENCY_CODE='AD', AREA_CODE='UNK', HARM_EVENT_CODE1='01', HARM_EVENT_CODE2='00',
+                           LOC_CASE_NO='155J11449',
+                           ACRS_REPORT_NO='ADJ2280012', REPORT_TYPE_CODE='02', LANE_NUMBER=1,
+                           LANE_DIRECTION_CODE='02',
+                           LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='00', TRAFFIC_CONTROL_CODE='03',
+                           TRAFFIC_CONTROL_FUNCTION_FLAG='Y', NUM_LANES=2, INTER_AREA_CODE='00',
+                           SCHOOL_BUS_INVOLVED_CODE='01',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='CC# 151011449 ON 10/26/15 AT APPROX. 1920 HOURS, V-2 WAS COMING TO A STOP ',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='01', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='00',
+                           COLLISION_TYPE_CODE='88', SURF_COND_CODE='A9.99', LANE_CODE='PP', RD_COND_CODE='A9.99',
+                           FIX_OBJ_CODE='00',
+                           REPORT_NO='A0000007', WEATHER_CODE='00', ACC_DATE=to_datetime('2015-10-26 00:00:00.000'),
+                           ACC_TIME='1640',
+                           LOC_CODE='CAD#1933', RAMP_FLAG='N', SIGNAL_FLAG='N', C_M_ZONE_FLAG='N', INTER_NUM=None,
+                           AGENCY_CODE='AD', AREA_CODE='UNK', HARM_EVENT_CODE1='02', HARM_EVENT_CODE2='00',
+                           LOC_CASE_NO='155J11398',
+                           ACRS_REPORT_NO='ADG546001M', REPORT_TYPE_CODE='03', LANE_NUMBER=0,
+                           LANE_DIRECTION_CODE='00',
+                           LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='00', TRAFFIC_CONTROL_CODE='01',
+                           TRAFFIC_CONTROL_FUNCTION_FLAG='X', NUM_LANES=0, INTER_AREA_CODE='00',
+                           SCHOOL_BUS_INVOLVED_CODE='01',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='THE CITY COMPLAINT NUMBER IS 5151011398. ON 10-26-2015 AT 1640HRS MS. W',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='01', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='00',
+                           COLLISION_TYPE_CODE='03', SURF_COND_CODE='02', LANE_CODE='N3', RD_COND_CODE='01',
+                           FIX_OBJ_CODE='00',
+                           REPORT_NO='A0000008', WEATHER_CODE='06.01',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'),
+                           ACC_TIME='1704',
+                           LOC_CODE='CAD#1959', RAMP_FLAG='N', SIGNAL_FLAG='N', C_M_ZONE_FLAG='N', INTER_NUM=None,
+                           AGENCY_CODE='AD', AREA_CODE='UNK', HARM_EVENT_CODE1='01', HARM_EVENT_CODE2='01',
+                           LOC_CASE_NO='155J11389',
+                           ACRS_REPORT_NO='ADJ412001C', REPORT_TYPE_CODE='02', LANE_NUMBER=3,
+                           LANE_DIRECTION_CODE='01',
+                           LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='00', TRAFFIC_CONTROL_CODE='01',
+                           TRAFFIC_CONTROL_FUNCTION_FLAG='X', NUM_LANES=3, INTER_AREA_CODE='00',
+                           SCHOOL_BUS_INVOLVED_CODE='00',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='CC#5151011389 ON 10-26-15 AT 1704HRS V1, V2 AND V3 WERE TRAVELING NB ON  N ',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='01', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='02',
+                           COLLISION_TYPE_CODE='02', SURF_COND_CODE='02', LANE_CODE='N2', RD_COND_CODE='01',
+                           FIX_OBJ_CODE='00', REPORT_NO='A0000009', WEATHER_CODE='07.01',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'), ACC_TIME='1435',
+                           LOC_CODE='CAD#1475', RAMP_FLAG='N', SIGNAL_FLAG='N', C_M_ZONE_FLAG='N', INTER_NUM=None,
+                           AGENCY_CODE='AD', AREA_CODE='UNK', HARM_EVENT_CODE1='01', HARM_EVENT_CODE2='01',
+                           LOC_CASE_NO='159J11324', ACRS_REPORT_NO='ADI335000Z', REPORT_TYPE_CODE='02',
+                           LANE_NUMBER=2, LANE_DIRECTION_CODE='01',
+                           LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='01', TRAFFIC_CONTROL_CODE='00',
+                           TRAFFIC_CONTROL_FUNCTION_FLAG='X', NUM_LANES=4, INTER_AREA_CODE='02',
+                           SCHOOL_BUS_INVOLVED_CODE='00',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='CC # 9-151091135 IS ASSIGNED TO SD PATROL. ON 10/26/15 @ 1535 HRS VH 1 WAS ',
+                           GOV_PROPERTY_TXT=None),
+            CrashSanitized(RAMP_MOVEMENT_CODE='A9.99', LIGHT_CODE='03', COUNTY_NO=24, MUNI_CODE=000,
+                           JUNCTION_CODE='01',
+                           COLLISION_TYPE_CODE='03', SURF_COND_CODE='02', LANE_CODE='N3', RD_COND_CODE='01',
+                           FIX_OBJ_CODE='00', REPORT_NO='A0000010', WEATHER_CODE='06.01',
+                           ACC_DATE=to_datetime('2015-10-26 00:00:00.000'), ACC_TIME='0212', LOC_CODE='0341',
+                           RAMP_FLAG='N',
+                           SIGNAL_FLAG='N', C_M_ZONE_FLAG='N', INTER_NUM=None, AGENCY_CODE='AD', AREA_CODE='UNK',
+                           HARM_EVENT_CODE1='01', HARM_EVENT_CODE2='02', LOC_CASE_NO='151J10727',
+                           ACRS_REPORT_NO='ADG1300001', REPORT_TYPE_CODE='03', LANE_NUMBER=3,
+                           LANE_DIRECTION_CODE='01', LANE_TYPE_CODE='00', INTERSECTION_TYPE_CODE='00',
+                           TRAFFIC_CONTROL_CODE='01', TRAFFIC_CONTROL_FUNCTION_FLAG='X', NUM_LANES=4,
+                           INTER_AREA_CODE='00', SCHOOL_BUS_INVOLVED_CODE='00',
+                           C_M_LOCATION_CODE='A9.99', C_M_CLOSURE_CODE='A9.99', C_M_WORKERS_PRESENT_FLAG='X',
+                           NARRATIVE='UNIT 1 N/B IN LANE 3 OF 600-BLK N. PACA STREET AND STRIKES UNIT 2 FROM REAR.',
+                           GOV_PROPERTY_TXT=None),
+
+            # ems sanitized
+            EmsSanitized(EMS_ID=748307, REPORT_NO='A0058787', RUN_REP_NO='15000070', EMS_UNIT_TAKEN_BY='MEDIC 22',
+                         EMS_UNIT_LABEL='A', EMS_UNIT_TAKEN_TO='HARBOR HOSPITAL', EMS_SNO=1,
+                         ACC_DATE=to_datetime('2015-01-01 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748364, REPORT_NO='A0058983', RUN_REP_NO='15001000', EMS_UNIT_TAKEN_BY='MEDIC 1',
+                         EMS_UNIT_LABEL='A', EMS_UNIT_TAKEN_TO='UNIVERSITY', EMS_SNO=1,
+                         ACC_DATE=to_datetime('2015-01-03 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748365, REPORT_NO='A0058983', RUN_REP_NO='15001000', EMS_UNIT_TAKEN_BY='MEDIC 23',
+                         EMS_UNIT_LABEL='B', EMS_UNIT_TAKEN_TO='UNIVERSITY', EMS_SNO=2,
+                         ACC_DATE=to_datetime('2015-01-03 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748369, REPORT_NO='A0058996', RUN_REP_NO='15001375', EMS_UNIT_TAKEN_BY='MEDIC 3',
+                         EMS_UNIT_LABEL='A', EMS_UNIT_TAKEN_TO='SINAI', EMS_SNO=1,
+                         ACC_DATE=to_datetime('2015-01-04 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748375, REPORT_NO='A0059024', RUN_REP_NO='UNKNOWN', EMS_UNIT_TAKEN_BY='MEDIC 18',
+                         EMS_UNIT_LABEL='A', EMS_UNIT_TAKEN_TO='SINAI HOSPITAL', EMS_SNO=1,
+                         ACC_DATE=to_datetime('2015-01-04 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748464, REPORT_NO='A0059192', RUN_REP_NO='15001291', EMS_UNIT_TAKEN_BY='MEDIC 1',
+                         EMS_UNIT_LABEL='A', EMS_UNIT_TAKEN_TO='MERCY', EMS_SNO=1,
+                         ACC_DATE=to_datetime('2015-01-03 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748113, REPORT_NO='A0058251', RUN_REP_NO='4', EMS_UNIT_TAKEN_BY='MEDIC 4',
+                         EMS_UNIT_LABEL='A', EMS_UNIT_TAKEN_TO='SINAI', EMS_SNO=1,
+                         ACC_DATE=to_datetime('2015-01-01 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748376, REPORT_NO='A0059024', RUN_REP_NO='UNKNOWN',
+                         EMS_UNIT_TAKEN_BY='SINAI HOSPITAL',
+                         EMS_UNIT_LABEL='B', EMS_UNIT_TAKEN_TO='MEDIC 18', EMS_SNO=2,
+                         ACC_DATE=to_datetime('2015-01-04 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748377, REPORT_NO='A0059024', RUN_REP_NO='UNKNOWN',
+                         EMS_UNIT_TAKEN_BY='BALTIMORE CO. MEDIC 2',
+                         EMS_UNIT_LABEL='C', EMS_UNIT_TAKEN_TO='SINAI HOSPITAL', EMS_SNO=3,
+                         ACC_DATE=to_datetime('2015-01-04 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+            EmsSanitized(EMS_ID=748388, REPORT_NO='A0059050', RUN_REP_NO='15001385',
+                         EMS_UNIT_TAKEN_BY='BALTIMORE CITY MEDIC 5',
+                         EMS_UNIT_LABEL='A', EMS_UNIT_TAKEN_TO='UNIVERSITY OF MARYLAND HOSPITAL', EMS_SNO=1,
+                         ACC_DATE=to_datetime('2015-01-04 00:00:00.000'), EMS_TRANSPORT_TYPE_FLAG=None),
+
+            # person sanitized
+            PersonSanitized(SEX='02', CONDITION_CODE='01', DR_UNIT='01', INJ_SEVER_CODE='01', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099629', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=58, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='01', BAC=None, FAULT_FLAG='Y', EQUIP_PROB_CODE='01',
+                            SAF_EQUIP_CODE='99', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='01',
+                            DRIVER_DOB=to_datetime('1956-10-05 00:00:00.000'), PERSON_ID=13397294, STATE_CODE='MD',
+                            CLASS=None,
+                            CDL_FLAG='N', ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-05-13 00:00:00.000'),
+                            VEHICLE_ID=8868169, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='01', DISTRACTED_BY_CODE='99', ALCO_TEST_CODE='00',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='00', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='01', CONDITION_CODE='01', DR_UNIT='02', INJ_SEVER_CODE='01', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099629', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=54, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='01', BAC=None, FAULT_FLAG='N', EQUIP_PROB_CODE='01',
+                            SAF_EQUIP_CODE='13', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='01',
+                            DRIVER_DOB=to_datetime('1961-04-05 00:00:00.000'), PERSON_ID=13397295, STATE_CODE='MD',
+                            CLASS=None,
+                            CDL_FLAG='N', ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-05-13 00:00:00.000'),
+                            VEHICLE_ID=8868170, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='01', DISTRACTED_BY_CODE='00', ALCO_TEST_CODE='00',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='00', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='99', CONDITION_CODE='A9.99', DR_UNIT='03', INJ_SEVER_CODE='01', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099629', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=999, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='A9.99', BAC=None, FAULT_FLAG='X', EQUIP_PROB_CODE='A9.99',
+                            SAF_EQUIP_CODE='A9.99', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='A9.99',
+                            DRIVER_DOB=None, PERSON_ID=13397296, STATE_CODE=None, CLASS=None,
+                            CDL_FLAG='X', ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-05-13 00:00:00.000'),
+                            VEHICLE_ID=8868171, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='A9.99', DISTRACTED_BY_CODE='A9.99', ALCO_TEST_CODE='A9.99',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='A9.99', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='99', CONDITION_CODE='99', DR_UNIT='01', INJ_SEVER_CODE='01', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099019', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=999, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='99', BAC=None, FAULT_FLAG='Y', EQUIP_PROB_CODE='99',
+                            SAF_EQUIP_CODE='99', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='01',
+                            DRIVER_DOB=to_datetime('2015-04-10 00:00:00.000'), PERSON_ID=13395802, STATE_CODE='MD',
+                            CLASS=None,
+                            CDL_FLAG='N', ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-04-10 00:00:00.000'),
+                            VEHICLE_ID=8867029, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='01', DISTRACTED_BY_CODE='00', ALCO_TEST_CODE='99',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='99', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='01', CONDITION_CODE='02', DR_UNIT='00', INJ_SEVER_CODE='03', PED_UNIT='01',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099019', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE='03', PED_LOCATION_CODE='88', PED_OBEY_CODE='01', PED_TYPE_CODE='01',
+                            MOVEMENT_CODE='88', PERSON_TYPE='P', AGE=25, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='21', BAC=None, FAULT_FLAG='U', EQUIP_PROB_CODE=None,
+                            SAF_EQUIP_CODE='01', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE=None,
+                            DRIVER_DOB=to_datetime('1989-05-11 00:00:00.000'), PERSON_ID=13395803, STATE_CODE='DE',
+                            CLASS=None,
+                            CDL_FLAG=None, ALCO_DRUG_IMPAIRED_FLAG='A',
+                            ACC_DATE=to_datetime('2015-04-10 00:00:00.000'),
+                            VEHICLE_ID=None, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1='08',
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE=None, DISTRACTED_BY_CODE=None, ALCO_TEST_CODE='00',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='00', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='02', CONDITION_CODE='01', DR_UNIT='02', INJ_SEVER_CODE='03', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099108', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=29, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='00', BAC=None, FAULT_FLAG='Y', EQUIP_PROB_CODE='01',
+                            SAF_EQUIP_CODE='13', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='01',
+                            DRIVER_DOB=to_datetime('1985-08-14 00:00:00.000'), PERSON_ID=13396019, STATE_CODE='MD',
+                            CLASS=None,
+                            CDL_FLAG='N', ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-03-06 00:00:00.000'),
+                            VEHICLE_ID=8867199, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='00', DISTRACTED_BY_CODE='00', ALCO_TEST_CODE='00',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='00', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='01', CONDITION_CODE='01', DR_UNIT='01', INJ_SEVER_CODE='01', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099110', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=54, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='01', BAC=None, FAULT_FLAG='Y', EQUIP_PROB_CODE='01',
+                            SAF_EQUIP_CODE='13', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='01',
+                            DRIVER_DOB=to_datetime('1961-02-25 00:00:00.000'), PERSON_ID=13396026, STATE_CODE='MD',
+                            CLASS=None,
+                            CDL_FLAG='Y', ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-02-27 00:00:00.000'),
+                            VEHICLE_ID=8867203, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='01', DISTRACTED_BY_CODE='00', ALCO_TEST_CODE='00',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='00', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='99', CONDITION_CODE='00', DR_UNIT='01', INJ_SEVER_CODE='01', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099218', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=999, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='00', BAC=None, FAULT_FLAG='Y', EQUIP_PROB_CODE='00',
+                            SAF_EQUIP_CODE='01', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='00',
+                            DRIVER_DOB=None, PERSON_ID=13396282, STATE_CODE=None, CLASS=None,
+                            CDL_FLAG='N', ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-02-24 00:00:00.000'),
+                            VEHICLE_ID=8867400, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='01', DISTRACTED_BY_CODE='01', ALCO_TEST_CODE='00',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='00', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='99', CONDITION_CODE='A9.99', DR_UNIT='02', INJ_SEVER_CODE='01', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099218', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=999, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='A9.99', BAC=None, FAULT_FLAG='X', EQUIP_PROB_CODE='A9.99',
+                            SAF_EQUIP_CODE='A9.99', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='A9.99',
+                            DRIVER_DOB=None, PERSON_ID=13396283, STATE_CODE=None, CLASS=None,
+                            CDL_FLAG='X', ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-02-24 00:00:00.000'),
+                            VEHICLE_ID=8867401, EMS_UNIT_LABEL=None, EMS_ID=None, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='A9.99', DISTRACTED_BY_CODE='A9.99', ALCO_TEST_CODE='A9.99',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='A9.99', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+            PersonSanitized(SEX='02', CONDITION_CODE='01', DR_UNIT='01', INJ_SEVER_CODE='01', PED_UNIT='00',
+                            OCC_UNIT='00', OCC_NUM=None, REPORT_NO='A0099219', OCC_SEAT_POS_CODE=None,
+                            PED_VISIBLE_CODE=None, PED_LOCATION_CODE=None, PED_OBEY_CODE=None, PED_TYPE_CODE=None,
+                            MOVEMENT_CODE=None, PERSON_TYPE='D', AGE=39, SUBST_TEST_CODE='A8.98',
+                            SUBST_USE_CODE='01', BAC=None, FAULT_FLAG='N', EQUIP_PROB_CODE='00',
+                            SAF_EQUIP_CODE='13', WOULD_HAVE_LIVED_FLAG=None, EJECT_CODE='00',
+                            DRIVER_DOB=to_datetime('1976-05-05 00:00:00.000'), PERSON_ID=13396284, STATE_CODE='MD',
+                            CLASS='c',
+                            CDL_FLAG=None, ALCO_DRUG_IMPAIRED_FLAG='N',
+                            ACC_DATE=to_datetime('2015-05-23 00:00:00.000'),
+                            VEHICLE_ID=8867402, EMS_UNIT_LABEL='A', EMS_ID=759628, NONMOTOR_ACTION_TIME_CODE1=None,
+                            NONMOTOR_ACTION_TIME_CODE2='A7.97', NONMOTOR_PRIOR_CODE='A7.97', UNIT_FIRST_STRIKE=None,
+                            AIR_BAG_CODE='01', DISTRACTED_BY_CODE='00', ALCO_TEST_CODE='00',
+                            ALCO_TEST_TYPE_CODE='A9.99', DRUG_TEST_CODE='00', DRUG_TEST_RESULT_FLAG='X',
+                            OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
+
+            # roadway sanitized
+            RoadwaySanitized(REPORT_NO='A0000001', ROUTE_NUMBER=None, ROUTE_TYPE_CODE='UU', ROUTE_SUFFIX=None,
+                             LOG_MILE=None, RD_CHAR_CODE='A8.98', RD_DIV_CODE='02', LOGMILE_DIR_FLAG='X',
+                             ROAD_NAME='3000 Tivoly Ave', FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=None,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='N', FINAL_LOG_MILE=999.003,
+                             REFERENCE_NUMBER=None,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME='1700 E 30th St',
+                             ACC_DATE=to_datetime('2015-03-09 00:00:00.000'), X_COORDINATES=39.3254093476362,
+                             Y_COORDINATES=-76.5919697284698, RD_ALIGNMENT_CODE='01', RD_GRADE_CODE='03',
+                             OFF_ROAD_TXT=None, CENSUS_TRACT=90600,
+                             ROAD_NAME_CLEAN='TIVOLY AVE', REFERENCE_ROAD_NAME_CLEAN='30TH ST'),
+            RoadwaySanitized(REPORT_NO='A0000002', ROUTE_NUMBER=1358, ROUTE_TYPE_CODE='MU', ROUTE_SUFFIX=None,
+                             LOG_MILE=0.000, RD_CHAR_CODE='A8.98', RD_DIV_CODE='00', LOGMILE_DIR_FLAG='S',
+                             ROAD_NAME='HARFORD AVE', FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=0.000,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='S', FINAL_LOG_MILE=0.000,
+                             REFERENCE_NUMBER=1359,
+                             REFERENCE_TYPE_CODE='MU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME='HARFORD AVE',
+                             ACC_DATE=to_datetime('2015-03-22 00:00:00.000'), X_COORDINATES=39.350734499734,
+                             Y_COORDINATES=-76.5519082546234, RD_ALIGNMENT_CODE='01', RD_GRADE_CODE='01',
+                             OFF_ROAD_TXT=None, CENSUS_TRACT=270402,
+                             ROAD_NAME_CLEAN='HARFORD AVE', REFERENCE_ROAD_NAME_CLEAN='HARFORD AVE'),
+            RoadwaySanitized(REPORT_NO='A0000003', ROUTE_NUMBER=None, ROUTE_TYPE_CODE='UU', ROUTE_SUFFIX=None,
+                             LOG_MILE=None, RD_CHAR_CODE='A8.98', RD_DIV_CODE='A9.99', LOGMILE_DIR_FLAG='X',
+                             ROAD_NAME=None, FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=None,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='X', FINAL_LOG_MILE=999.003,
+                             REFERENCE_NUMBER=None,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME=None,
+                             ACC_DATE=to_datetime('2015-05-30 00:00:00.000'), X_COORDINATES=39.3127775725174,
+                             Y_COORDINATES=-76.6199800372124, RD_ALIGNMENT_CODE='A9.99', RD_GRADE_CODE='A9.99',
+                             OFF_ROAD_TXT='Parking Lot', CENSUS_TRACT=120700,
+                             ROAD_NAME_CLEAN='HARFORD AVE', REFERENCE_ROAD_NAME_CLEAN='HARFORD AVE'),
+            RoadwaySanitized(REPORT_NO='A0000004', ROUTE_NUMBER=None, ROUTE_TYPE_CODE='UU', ROUTE_SUFFIX=None,
+                             LOG_MILE=None, RD_CHAR_CODE='A8.98', RD_DIV_CODE='02', LOGMILE_DIR_FLAG='X',
+                             ROAD_NAME='Elm Ave', FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=None,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='S', FINAL_LOG_MILE=999.003,
+                             REFERENCE_NUMBER=None,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME='Mill Rd',
+                             ACC_DATE=to_datetime('2015-02-23 00:00:00.000'), X_COORDINATES=39.3246945589931,
+                             Y_COORDINATES=-76.6310857236385, RD_ALIGNMENT_CODE='01', RD_GRADE_CODE='01',
+                             OFF_ROAD_TXT=None, CENSUS_TRACT=130600,
+                             ROAD_NAME_CLEAN='ELM AVE', REFERENCE_ROAD_NAME_CLEAN='MILL RD'),
+            RoadwaySanitized(REPORT_NO='A0000005', ROUTE_NUMBER=None, ROUTE_TYPE_CODE='UU', ROUTE_SUFFIX=None,
+                             LOG_MILE=None, RD_CHAR_CODE='A8.98', RD_DIV_CODE='88', LOGMILE_DIR_FLAG='X',
+                             ROAD_NAME='Narcissus Ave', FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=None,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='S', FINAL_LOG_MILE=999.003,
+                             REFERENCE_NUMBER=None,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME='Manhattan Ave',
+                             ACC_DATE=to_datetime('2015-04-01 00:00:00.000'), X_COORDINATES=39.3520313162612,
+                             Y_COORDINATES=-76.6871076822281, RD_ALIGNMENT_CODE='01', RD_GRADE_CODE='01',
+                             OFF_ROAD_TXT=None, CENSUS_TRACT=271900,
+                             ROAD_NAME_CLEAN='NARCISSUS AVE', REFERENCE_ROAD_NAME_CLEAN='MANHATTAN AVE'),
+            RoadwaySanitized(REPORT_NO='A0000006', ROUTE_NUMBER=None, ROUTE_TYPE_CODE='UU', ROUTE_SUFFIX=None,
+                             LOG_MILE=None, RD_CHAR_CODE='A8.98', RD_DIV_CODE='A9.99', LOGMILE_DIR_FLAG='X',
+                             ROAD_NAME=None, FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=None,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='X', FINAL_LOG_MILE=999.003,
+                             REFERENCE_NUMBER=None,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME=None,
+                             ACC_DATE=to_datetime('2015-03-31 00:00:00.000'), X_COORDINATES=39.3571390148285,
+                             Y_COORDINATES=-76.5807902812958, RD_ALIGNMENT_CODE='A9.99', RD_GRADE_CODE='A9.99',
+                             OFF_ROAD_TXT='East Beleveder Ave Beechdale Ave', CENSUS_TRACT=270803,
+                             ROAD_NAME_CLEAN='NARCISSUS AVE', REFERENCE_ROAD_NAME_CLEAN='MANHATTAN AVE'),
+            RoadwaySanitized(REPORT_NO='A0000007', ROUTE_NUMBER=None, ROUTE_TYPE_CODE='UU', ROUTE_SUFFIX=None,
+                             LOG_MILE=None, RD_CHAR_CODE='A8.98', RD_DIV_CODE='03', LOGMILE_DIR_FLAG='X',
+                             ROAD_NAME='gwynn falls parkway', FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=None,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='W', FINAL_LOG_MILE=999.003,
+                             REFERENCE_NUMBER=None,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME='roslyn ave',
+                             ACC_DATE=to_datetime('2015-05-29 00:00:00.000'), X_COORDINATES=39.3139303489926,
+                             Y_COORDINATES=-76.6781437397003, RD_ALIGNMENT_CODE='01', RD_GRADE_CODE='01',
+                             OFF_ROAD_TXT=None, CENSUS_TRACT=150800,
+                             ROAD_NAME_CLEAN='GWYNN FALLS PKWY', REFERENCE_ROAD_NAME_CLEAN='ROSLYN AVE'),
+            RoadwaySanitized(REPORT_NO='A0000008', ROUTE_NUMBER=140, ROUTE_TYPE_CODE='MD', ROUTE_SUFFIX=None,
+                             LOG_MILE=5.143, RD_CHAR_CODE='A8.98', RD_DIV_CODE='01', LOGMILE_DIR_FLAG='S',
+                             ROAD_NAME='MONROE ST (SB COUPLET)', FUNCTIONAL_CLASS_NO=None, TC_CODE=None,
+                             DISTANCE=0.000,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='S', FINAL_LOG_MILE=5.143, REFERENCE_NUMBER=0,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME='WALBROOK AVE',
+                             ACC_DATE=to_datetime('2015-05-26 00:00:00.000'), X_COORDINATES=39.31088494421,
+                             Y_COORDINATES=-76.6484329104424, RD_ALIGNMENT_CODE='01', RD_GRADE_CODE='01',
+                             OFF_ROAD_TXT=None, CENSUS_TRACT=150400,
+                             ROAD_NAME_CLEAN='MONROE ST', REFERENCE_ROAD_NAME_CLEAN='WALBROOK AVE'),
+            RoadwaySanitized(REPORT_NO='A0000009', ROUTE_NUMBER=None, ROUTE_TYPE_CODE='UU', ROUTE_SUFFIX=None,
+                             LOG_MILE=None, RD_CHAR_CODE='A8.98', RD_DIV_CODE='01', LOGMILE_DIR_FLAG='X',
+                             ROAD_NAME='EXETER HALL AVE', FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=None,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='W', FINAL_LOG_MILE=999.003,
+                             REFERENCE_NUMBER=None,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME='LOCH RAVEN RD',
+                             ACC_DATE=to_datetime('2015-04-17 00:00:00.000'), X_COORDINATES=39.3220251893659,
+                             Y_COORDINATES=-76.6041710972786, RD_ALIGNMENT_CODE=88, RD_GRADE_CODE='04',
+                             OFF_ROAD_TXT=None, CENSUS_TRACT=90400,
+                             ROAD_NAME_CLEAN='EXETER HALL AVE', REFERENCE_ROAD_NAME_CLEAN='LOCH RAVEN RD'),
+            RoadwaySanitized(REPORT_NO='A0000010', ROUTE_NUMBER=43, ROUTE_TYPE_CODE='MU', ROUTE_SUFFIX=None,
+                             LOG_MILE=0.900, RD_CHAR_CODE='A8.98', RD_DIV_CODE='01', LOGMILE_DIR_FLAG='N',
+                             ROAD_NAME='S MONROE ST', FUNCTIONAL_CLASS_NO=None, TC_CODE=None, DISTANCE=0.000,
+                             FEET_MILES_FLAG='M', DISTANCE_DIR_FLAG='S', FINAL_LOG_MILE=0.900, REFERENCE_NUMBER=0,
+                             REFERENCE_TYPE_CODE='UU', REFERENCE_SUFFIX=None, REFERENCE_ROAD_NAME='MT. CLARE PARK',
+                             ACC_DATE=to_datetime('2015-05-12 00:00:00.000'), X_COORDINATES=39.2776807823985,
+                             Y_COORDINATES=-76.6451820731163, RD_ALIGNMENT_CODE='01', RD_GRADE_CODE='04',
+                             OFF_ROAD_TXT=None, CENSUS_TRACT=210200,
+                             ROAD_NAME_CLEAN='MONROE ST', REFERENCE_ROAD_NAME_CLEAN='MT CLARE PARK'),
+
+            # trailer sanitized
+            TrailerSanitized(TRAILER_RECORD_ID=8859, REPORT_NO='A0170314',
+                             ACC_DATE=to_datetime('2015-11-30 00:00:00.000'),
+                             VEHICLE_ID=9001795, REFERENCE_UNIT_NO='02', TOWED_VEHICLE_UNIT_NO='01',
+                             VEH_YEAR='2015',
+                             VEH_MAKE='UNKNOWN', VEH_MODEL='UNKNOWN', BODY_TYPE_CODE='07', PLATE_STATE='MD',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=8557, REPORT_NO='A0164021',
+                             ACC_DATE=to_datetime('2015-11-01 00:00:00.000'),
+                             VEHICLE_ID=8989956, REFERENCE_UNIT_NO='01', TOWED_VEHICLE_UNIT_NO='01',
+                             VEH_YEAR='2015',
+                             VEH_MAKE='NISSAN', VEH_MODEL='ALTI', BODY_TYPE_CODE='06', PLATE_STATE='MD',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=4363, REPORT_NO='A0065407',
+                             ACC_DATE=to_datetime('2015-01-15 00:00:00.000'),
+                             VEHICLE_ID=8817597, REFERENCE_UNIT_NO='01', TOWED_VEHICLE_UNIT_NO=None, VEH_YEAR='8',
+                             VEH_MAKE='NISSAN', VEH_MODEL='ALTIMA', BODY_TYPE_CODE=None, PLATE_STATE='MD',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=4364, REPORT_NO='A0065407',
+                             ACC_DATE=to_datetime('2015-01-15 00:00:00.000'),
+                             VEHICLE_ID=8817598, REFERENCE_UNIT_NO='02', TOWED_VEHICLE_UNIT_NO=None, VEH_YEAR='97',
+                             VEH_MAKE='NISSAN', VEH_MODEL='MAXIMA', BODY_TYPE_CODE=None, PLATE_STATE='MD',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=4372, REPORT_NO='A0065547',
+                             ACC_DATE=to_datetime('2015-01-26 00:00:00.000'),
+                             VEHICLE_ID=8818251, REFERENCE_UNIT_NO='01', TOWED_VEHICLE_UNIT_NO=None,
+                             VEH_YEAR='2012',
+                             VEH_MAKE='NISSAN', VEH_MODEL='VERSA', BODY_TYPE_CODE=None, PLATE_STATE='MD',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=8389, REPORT_NO='A0160051',
+                             ACC_DATE=to_datetime('2015-10-05 00:00:00.000'),
+                             VEHICLE_ID=8982530, REFERENCE_UNIT_NO='02', TOWED_VEHICLE_UNIT_NO='01',
+                             VEH_YEAR='2013',
+                             VEH_MAKE='TRAO', VEH_MODEL='FB', BODY_TYPE_CODE='03', PLATE_STATE='TX',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=9246, REPORT_NO='A0177241',
+                             ACC_DATE=to_datetime('2015-12-08 00:00:00.000'),
+                             VEHICLE_ID=9014777, REFERENCE_UNIT_NO='01', TOWED_VEHICLE_UNIT_NO='01', VEH_YEAR='0',
+                             VEH_MAKE='UNKNOWN', VEH_MODEL='UNKNOWN', BODY_TYPE_CODE='01', PLATE_STATE='SC',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=9431, REPORT_NO='A0181179',
+                             ACC_DATE=to_datetime('2015-12-21 00:00:00.000'),
+                             VEHICLE_ID=9022050, REFERENCE_UNIT_NO='01', TOWED_VEHICLE_UNIT_NO='01',
+                             VEH_YEAR='2012',
+                             VEH_MAKE='NISSAN', VEH_MODEL='SENTRA', BODY_TYPE_CODE='88', PLATE_STATE='MD',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=6306, REPORT_NO='A0098431',
+                             ACC_DATE=to_datetime('2015-03-31 00:00:00.000'),
+                             VEHICLE_ID=8865947, REFERENCE_UNIT_NO='01', TOWED_VEHICLE_UNIT_NO=None,
+                             VEH_YEAR='2007',
+                             VEH_MAKE='WABA', VEH_MODEL='SE', BODY_TYPE_CODE=None, PLATE_STATE='ME',
+                             PLATE_YEAR=None),
+            TrailerSanitized(TRAILER_RECORD_ID=6611, REPORT_NO='A0105462',
+                             ACC_DATE=to_datetime('2015-02-25 00:00:00.000'),
+                             VEHICLE_ID=8878854, REFERENCE_UNIT_NO='01', TOWED_VEHICLE_UNIT_NO=None,
+                             VEH_YEAR='2003',
+                             VEH_MAKE='TOP', VEH_MODEL='TL', BODY_TYPE_CODE=None, PLATE_STATE='MD',
+                             PLATE_YEAR=None),
+
+            # vehicles sanitized
+            VehicleSanitized(HARM_EVENT_CODE='09', PERSON_ID=None, CONTI_DIRECTION_CODE='03', DAMAGE_CODE='04',
+                             MOVEMENT_CODE='01', REPORT_NO='A0097821', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='2011',
+                             VEH_MAKE='HONDA', COMMERCIAL_FLAG=None, VEH_MODEL='ACCORD', TOWED_AWAY_FLAG='Y',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='02', BODY_TYPE_CODE='02',
+                             DRIVERLESS_FLAG='N', FIRE_FLAG='N', NUM_OCC=1, PARKED_FLAG='N', SPEED_LIMIT=50,
+                             HIT_AND_RUN_FLAG='N', HAZMAT_SPILL_FLAG='X', VIN_NO=8864632,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=2015, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='08', AREA_DAMAGED_CODE_MAIN='08',
+                             ACC_DATE=to_datetime('2015-05-18 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY='McDells # 14',
+                             REMOVED_TO='City Yard', VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='N',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MD'),
+            VehicleSanitized(HARM_EVENT_CODE='01', PERSON_ID=None, CONTI_DIRECTION_CODE='03', DAMAGE_CODE='02',
+                             MOVEMENT_CODE='01', REPORT_NO='A0096999', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='0',
+                             VEH_MAKE='UNKNOWN', COMMERCIAL_FLAG=None, VEH_MODEL='UNKNOWN', TOWED_AWAY_FLAG='X',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='03', BODY_TYPE_CODE='02',
+                             DRIVERLESS_FLAG='Y', FIRE_FLAG='N', NUM_OCC=1, PARKED_FLAG='N', SPEED_LIMIT=30,
+                             HIT_AND_RUN_FLAG='Y', HAZMAT_SPILL_FLAG='X', VIN_NO=8863700,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=None, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='02', AREA_DAMAGED_CODE_MAIN='02',
+                             ACC_DATE=to_datetime('2015-05-18 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY=None,
+                             REMOVED_TO=None, VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='N',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MD'),
+            VehicleSanitized(HARM_EVENT_CODE='01', PERSON_ID=None, CONTI_DIRECTION_CODE='03', DAMAGE_CODE='02',
+                             MOVEMENT_CODE='01', REPORT_NO='A0096999', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='2011',
+                             VEH_MAKE='SUBARU', COMMERCIAL_FLAG=None, VEH_MODEL='OUTBACK', TOWED_AWAY_FLAG='N',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='03', BODY_TYPE_CODE='02',
+                             DRIVERLESS_FLAG='Y', FIRE_FLAG='N', NUM_OCC=1, PARKED_FLAG='N', SPEED_LIMIT=30,
+                             HIT_AND_RUN_FLAG='N', HAZMAT_SPILL_FLAG='X', VIN_NO=8863701,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=2016, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='10', AREA_DAMAGED_CODE_MAIN='09',
+                             ACC_DATE=to_datetime('2015-05-18 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY=None,
+                             REMOVED_TO=None, VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='N',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MD'),
+            VehicleSanitized(HARM_EVENT_CODE='01', PERSON_ID=None, CONTI_DIRECTION_CODE='01', DAMAGE_CODE='99',
+                             MOVEMENT_CODE='01', REPORT_NO='A0097073', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='0',
+                             VEH_MAKE='BUICK', COMMERCIAL_FLAG=None, VEH_MODEL='UNK', TOWED_AWAY_FLAG='X',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='03', BODY_TYPE_CODE='02',
+                             DRIVERLESS_FLAG='N', FIRE_FLAG='X', NUM_OCC=1, PARKED_FLAG='N', SPEED_LIMIT=25,
+                             HIT_AND_RUN_FLAG='Y', HAZMAT_SPILL_FLAG='X', VIN_NO=8863813,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE=None,
+                             PLATE_YEAR=2015, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='99', AREA_DAMAGED_CODE_MAIN='99',
+                             ACC_DATE=to_datetime('2015-05-02 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY=None,
+                             REMOVED_TO=None, VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='N',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE=None),
+            VehicleSanitized(HARM_EVENT_CODE='00', PERSON_ID=None, CONTI_DIRECTION_CODE='04', DAMAGE_CODE='02',
+                             MOVEMENT_CODE='01', REPORT_NO='A0097073', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='1996',
+                             VEH_MAKE='HONDA', COMMERCIAL_FLAG=None, VEH_MODEL='CIVIC LX', TOWED_AWAY_FLAG='X',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='04', BODY_TYPE_CODE='02',
+                             DRIVERLESS_FLAG='N', FIRE_FLAG='X', NUM_OCC=2, PARKED_FLAG='N', SPEED_LIMIT=25,
+                             HIT_AND_RUN_FLAG='N', HAZMAT_SPILL_FLAG='X', VIN_NO=8863814,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=2015, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='11', AREA_DAMAGED_CODE_MAIN='11',
+                             ACC_DATE=to_datetime('2015-05-02 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY=None,
+                             REMOVED_TO=None, VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='N',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MD'),
+            VehicleSanitized(HARM_EVENT_CODE='01', PERSON_ID=None, CONTI_DIRECTION_CODE='01', DAMAGE_CODE='99',
+                             MOVEMENT_CODE='11', REPORT_NO='A0097314', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='2013',
+                             VEH_MAKE='CHEVY', COMMERCIAL_FLAG=None, VEH_MODEL='UNK', TOWED_AWAY_FLAG='X',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='02', BODY_TYPE_CODE='26.88',
+                             DRIVERLESS_FLAG='U', FIRE_FLAG='X', NUM_OCC=1, PARKED_FLAG='N', SPEED_LIMIT=0,
+                             HIT_AND_RUN_FLAG='Y', HAZMAT_SPILL_FLAG='X', VIN_NO=8864202,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=None, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='A9.99',
+                             AREA_DAMAGED_CODE_MAIN='A9.99',
+                             ACC_DATE=to_datetime('2015-05-18 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY=None,
+                             REMOVED_TO=None, VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='N',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MA'),
+            VehicleSanitized(HARM_EVENT_CODE='01', PERSON_ID=None, CONTI_DIRECTION_CODE='01', DAMAGE_CODE='03',
+                             MOVEMENT_CODE='03', REPORT_NO='A0097314', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='2011',
+                             VEH_MAKE='HONDA', COMMERCIAL_FLAG=None, VEH_MODEL='ACCORD', TOWED_AWAY_FLAG='X',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='01', BODY_TYPE_CODE='23',
+                             DRIVERLESS_FLAG='U', FIRE_FLAG='N', NUM_OCC=1, PARKED_FLAG='N', SPEED_LIMIT=0,
+                             HIT_AND_RUN_FLAG='N', HAZMAT_SPILL_FLAG='X', VIN_NO=8864203,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=None, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='12', AREA_DAMAGED_CODE_MAIN='A9.99',
+                             ACC_DATE=to_datetime('2015-05-18 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY=None,
+                             REMOVED_TO=None, VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='N',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MD'),
+            VehicleSanitized(HARM_EVENT_CODE='01', PERSON_ID=None, CONTI_DIRECTION_CODE='04', DAMAGE_CODE='04',
+                             MOVEMENT_CODE='01', REPORT_NO='A0097795', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='2007',
+                             VEH_MAKE='ACURA', COMMERCIAL_FLAG=None, VEH_MODEL='TL', TOWED_AWAY_FLAG='Y',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='04', BODY_TYPE_CODE='02',
+                             DRIVERLESS_FLAG='N', FIRE_FLAG='N', NUM_OCC=2, PARKED_FLAG='N', SPEED_LIMIT=25,
+                             HIT_AND_RUN_FLAG='N', HAZMAT_SPILL_FLAG='X', VIN_NO=8864580,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=2016, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='11', AREA_DAMAGED_CODE_MAIN='11',
+                             ACC_DATE=to_datetime('2015-05-08 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY='owners',
+                             REMOVED_TO='arrangements', VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='Y',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MD'),
+            VehicleSanitized(HARM_EVENT_CODE='01', PERSON_ID=None, CONTI_DIRECTION_CODE='01', DAMAGE_CODE='04',
+                             MOVEMENT_CODE='01', REPORT_NO='A0097795', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='2012',
+                             VEH_MAKE='HYUN', COMMERCIAL_FLAG=None, VEH_MODEL='4D', TOWED_AWAY_FLAG='Y',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='01', BODY_TYPE_CODE='02',
+                             DRIVERLESS_FLAG='N', FIRE_FLAG='N', NUM_OCC=1, PARKED_FLAG='N', SPEED_LIMIT=25,
+                             HIT_AND_RUN_FLAG='N', HAZMAT_SPILL_FLAG='X', VIN_NO=8864581,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=2016, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='12', AREA_DAMAGED_CODE_MAIN='12',
+                             ACC_DATE=to_datetime('2015-05-08 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY='owners',
+                             REMOVED_TO='arrangements', VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='Y',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MD'),
+            VehicleSanitized(HARM_EVENT_CODE='01', PERSON_ID=None, CONTI_DIRECTION_CODE='01', DAMAGE_CODE='04',
+                             MOVEMENT_CODE='12', REPORT_NO='A0097796', CV_BODY_TYPE_CODE='A9.99', VEH_YEAR='2014',
+                             VEH_MAKE='MAZDA', COMMERCIAL_FLAG=None, VEH_MODEL='3', TOWED_AWAY_FLAG='Y',
+                             NUM_AXLES=None, GVW_CODE=None, GOING_DIRECTION_CODE='03', BODY_TYPE_CODE='02',
+                             DRIVERLESS_FLAG='N', FIRE_FLAG='N', NUM_OCC=1, PARKED_FLAG='N', SPEED_LIMIT=35,
+                             HIT_AND_RUN_FLAG='N', HAZMAT_SPILL_FLAG='X', VIN_NO=8864582,
+                             TOWED_VEHICLE_CONFIG_CODE='00',
+                             TOWED_VEHICLE_CODE2='A8.98', TOWED_VEHICLE_CODE3='A8.98', PLATE_STATE='MD',
+                             PLATE_YEAR=None, AREA_DAMAGED_CODE1='00', AREA_DAMAGED_CODE2='00',
+                             AREA_DAMAGED_CODE3='00', AREA_DAMAGED_CODE_IMP1='11', AREA_DAMAGED_CODE_MAIN='11',
+                             ACC_DATE=to_datetime('2015-05-12 00:00:00.000'), SEQ_EVENT_CODE1='00',
+                             SEQ_EVENT_CODE2='00',
+                             SEQ_EVENT_CODE3='00', SEQ_EVENT_CODE4='00', REMOVED_BY='greenwood 124',
+                             REMOVED_TO='cityyard', VEH_SPECIAL_FUNCTION_CODE=None, EMERGENCY_USE_FLAG='N',
+                             CV_CONFIG_CODE='A9.99', BUS_USE_CODE='A9.99', HZM_NUM=None, PLACARD_VISIBLE_FLAG='X',
+                             VEHICLE_WEIGHT_CODE='A9.99', OWNER_STATE_CODE='MD')
+        ])
+        session.commit()
+    return conn_str
