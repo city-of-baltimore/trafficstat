@@ -8,18 +8,16 @@ CENSUS_TRACT (nvarchar(25)),
 ROAD_NAME_CLEAN (nvarchar(50)),
 REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
-import logging
 import re
 from typing import List, Optional, Tuple
 
 import pyodbc  # type: ignore
+from loguru import logger
 from tqdm import tqdm  # type: ignore
 
 from balt_geocoder.geocoder import Geocoder
 from balt_geocoder.geocodio_types import GeocodeResult
 from .creds import GAPI
-
-LOGGER = logging.getLogger(__name__)
 
 
 class Enrich:
@@ -43,17 +41,21 @@ class Enrich:
         geocoder: Geocoder = Geocoder(geocodio_api_key=GAPI)
         with geocoder:
             for row in tqdm(self.cursor.fetchall()):
-                if row[2] != '':
-                    geocode_result: Optional[GeocodeResult] = geocoder.geocode(
-                        "{} and {}, Baltimore, Maryland".format(row[1], row[2]))
-                else:
-                    geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
+                try:
+                    if row[2] != '':
+                        geocode_result: Optional[GeocodeResult] = geocoder.geocode(
+                            "{} and {}, Baltimore, Maryland".format(row[1], row[2]))
+                    else:
+                        geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
+                except RuntimeError as err:
+                    logger.error("Runtime error: {err}", err=err)
+                    continue
 
                 if geocode_result is not None and geocode_result.get('census_tract'):
                     data.append((geocode_result['census_tract'], str(row[0])))
                     continue
 
-                LOGGER.warning('No census tract for roadway: %s', row)
+                logger.warning('No census tract for roadway: {row}', row=row)
 
         if data:
             self.cursor.executemany("""
@@ -84,7 +86,7 @@ class Enrich:
                     data.append((geocode_result['census_tract'], row[0]))
                     continue
 
-                LOGGER.warning('No census tract for sanitized roadway: %s', row)
+                logger.warning('No census tract for sanitized roadway: {row}', row=row)
 
         if data:
             self.cursor.executemany("""
