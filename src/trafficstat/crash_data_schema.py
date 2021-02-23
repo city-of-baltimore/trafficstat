@@ -429,6 +429,9 @@ class Roadway(Base):
     ROUTE_SUFFIX = Column(String,
                           nullable=True)  # <xs:element name="ROUTE_SUFFIX" minOccurs="0" nillable="true"> (restricted to E, AL, B, A and '')
     ROUTE_TYPE = Column(String, nullable=True)  # <xs:element name="ROUTE_TYPE" minOccurs="0">
+    CENSUS_TRACT = Column(String(length=25), nullable=True)  # populated by the enrich_data.py script
+    ROAD_NAME_CLEAN = Column(String(length=50), nullable=True)  # populated by the enrich_data.py script
+    REFERENCE_ROAD_NAME_CLEAN = Column(String(length=50), nullable=True)  # populated by the enrich_data.py script
 
 
 #########################
