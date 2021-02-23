@@ -12,10 +12,11 @@ setup(
     python_requires='>=3.0',
     package_dir={'': 'src'},
     install_requires=[
-        'pandas',
-        'pyodbc',
-        'tqdm',
+        'loguru~=0.5.3',
+        'pandas~=1.2.2',
+        'pyodbc~=4.0.30',
+        'tqdm~=4.57.0',
         'balt-geocoder @ git+https://github.com/city-of-baltimore/Geocoder@main#egg=balt-geocoder',
-        'xlsxwriter',
+        'xlsxwriter~=1.3.7',
     ]
 )
