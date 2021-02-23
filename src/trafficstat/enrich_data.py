@@ -55,7 +55,7 @@ class Enrich:
                     data.append((geocode_result['census_tract'], str(row[0])))
                     continue
 
-                logger.warning('No census tract for roadway: %s', row)
+                logger.warning('No census tract for roadway: {row}', row=row)
 
         if data:
             self.cursor.executemany("""
