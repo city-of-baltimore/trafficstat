@@ -48,7 +48,7 @@ class Enrich:
                     else:
                         geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
                 except RuntimeError as err:
-                    logger.error("Runtime error: {err}", err)
+                    logger.error("Runtime error: {err}", err=err)
                     continue
 
                 if geocode_result is not None and geocode_result.get('census_tract'):
