@@ -43,11 +43,10 @@ This applies to the sanitized data that the State Highway Administration
 6. Test connection. If it succeeds, then click ok. 
 7. Select 'Copy data from one or more tables or views'
 8. There should be eight tables in the list to be copied. Click the check box for each of the eight tables.
-9. They will have different names in different years, but there should basicaly be a table each for crashes, citations, circumstances, EMS, persons, roadways, trailers, and vehicles. Enter the following table names in the second column that correlates with the source name in the left column. 
-   
+9. They will have different names in different years, but there should basicaly be a table each for crashes, citations, circumstances, EMS, persons, roadways, trailers, and vehicles. Enter the following table names in the second column that correlates with the source name in the left column.
     ```
     Table names:
-    * acrs_crash_sanitized 
+    * acrs_crash_sanitized
     * acrs_citation_code_sanitized
     * acrs_circumstance_sanitized
     * acrs_ems_sanitized
@@ -57,8 +56,7 @@ This applies to the sanitized data that the State Highway Administration
     * acrs_vehicle_sanitized
     ```
 
-10.  Click the crash table entry, and click Edit Mappings. Then click Edit SQL, and paste in the following. 
-
+10. Click the crash table entry, and click Edit Mappings. Then click Edit SQL, and paste in the following.
     ```
     CREATE TABLE [acrs_crash_sanitized] 
     (
@@ -116,9 +114,8 @@ This applies to the sanitized data that the State Highway Administration
         CONSTRAINT PK_acrs_crash_sanitized_REPORT_NO PRIMARY KEY NONCLUSTERED (REPORT_NO)
     )
     ```
-
-11. Repeat the steps for the Citation table.
     
+11. Repeat the steps for the Citation table.
     ```
     CREATE TABLE [acrs_citation_code_sanitized] 
     (
@@ -346,6 +343,8 @@ This applies to the sanitized data that the State Highway Administration
         CONSTRAINT PK_acrs_vehicle_sanitized_VEHICLE_ID PRIMARY KEY NONCLUSTERED (VEHICLE_ID)
     )
     ```
+
+18. Hit Finish and complete the injest. 
 
 Then run the data enricher. The enricher populates the 'sanitized' tables with census tract data. This only need to be run after a
 yearly dump of ACRS data is ingested into the _sanitized databases. The census tract information is used by the PowerBI
