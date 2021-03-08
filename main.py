@@ -15,8 +15,6 @@ config = {
     ],
     "extra": {"user": "someone"}
 }
-logger.configure(**config)
-logger.enable('trafficstat')
 
 parser = argparse.ArgumentParser(description='Traffic Data Parser')
 subparsers = parser.add_subparsers(dest='subparser_name', help='sub-command help')
@@ -36,9 +34,8 @@ parser_parse.add_argument('-f', '--file', help='Path to a single file to process
                                                '(if there are spaces), use double quotes.')
 
 # Generate
-parser_generate = subparsers.add_parser('ms2export', help='Generate CSV files that MS2 uses to import crash data. Pulls '
-                                                         'from the DOT_DATA database')
-
+parser_generate = subparsers.add_parser('ms2export', help='Generate CSV files that MS2 uses to import crash data. Pulls'
+                                                          ' from the DOT_DATA database')
 
 args = parser.parse_args()
 
