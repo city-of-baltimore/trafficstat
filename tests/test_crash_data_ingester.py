@@ -281,8 +281,12 @@ def test_read_crash_data_file_dne(crash_data_reader):  # pylint:disable=too-many
 
 
 @clean(Crash)
-def test_read_crash_data(crash_data_reader):
+def test_read_crash_data_single(crash_data_reader):
     """Testing the elements in the REPORTS tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Roadway(ROADID='9316ed0c-cddf-481c-94ee-4662e0b77384'))
+        session.commit()
     crash_data_reader._read_main_crash_data(crash_dict=constants_test_data.crash_test_input_data)
     verify_results(Crash, crash_data_reader.engine, constants_test_data.crash_test_output_data)
 
@@ -290,6 +294,10 @@ def test_read_crash_data(crash_data_reader):
 @clean(Approval)
 def test_read_approval_data(crash_data_reader):
     """Testing the elements in the APPROVALDATA tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Crash(REPORTNUMBER='ADD934004Q'))
+        session.commit()
     crash_data_reader._read_approval_data(approval_dict=constants_test_data.approval_input_data)
     verify_results(Approval, crash_data_reader.engine, constants_test_data.approval_output_data)
 
@@ -297,6 +305,16 @@ def test_read_approval_data(crash_data_reader):
 @clean(Circumstance)
 def test_read_circumstance_data(crash_data_reader):
     """Testing the elements in the CIRCUMSTANCES tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add_all([
+            Crash(REPORTNUMBER='ADD934004Q'),
+            Person(PERSONID='6239e4e7-65b8-452a-ba1e-6bc26b8c5cc4'),
+            Person(PERSONID='c3e96bdd-5049-426f-b27d-c3bf43b1eeca'),
+            Vehicle(VEHICLEID='65cd4028-82ab-401e-a7fa-d392dfb98e03'),
+            Vehicle(VEHICLEID='ddd4ed36-cca5-4634-8209-01e38cc13ced')
+        ])
+        session.commit()
     crash_data_reader._read_circumstance_data(circumstance_dict=constants_test_data.circum_input_data)
     verify_results(Circumstance, crash_data_reader.engine, constants_test_data.circum_output_data)
 
@@ -304,6 +322,12 @@ def test_read_circumstance_data(crash_data_reader):
 @clean(CitationCode)
 def test_read_citation_data(crash_data_reader):
     """Testing the elements in the CITATIONCODES tag"""
+    with Session(crash_data_reader.engine) as session:
+        session.add_all([
+            Crash(REPORTNUMBER='ADD9340058'),
+            Person(PERSONID='6fffe61c-6bec-476a-8a6e-47c52544fb3c')
+        ])
+        session.commit()
     crash_data_reader._read_citation_data(citation_dict=constants_test_data.citation_input_data)
     verify_results(CitationCode, crash_data_reader.engine, constants_test_data.citation_output_data)
 
@@ -311,6 +335,10 @@ def test_read_citation_data(crash_data_reader):
 @clean(CrashDiagram)
 def test_read_crash_diagrams_data(crash_data_reader):
     """Testing the elements in the DIAGRAM tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Crash(REPORTNUMBER='ADD9340058'))
+        session.commit()
     crash_data_reader._read_crash_diagrams_data(crash_diagram_dict=constants_test_data.crash_input_data)
     verify_results(CrashDiagram, crash_data_reader.engine, constants_test_data.crash_output_data)
 
@@ -318,6 +346,10 @@ def test_read_crash_diagrams_data(crash_data_reader):
 @clean(CommercialVehicle)
 def test_read_commercial_vehicle_data(crash_data_reader):
     """Testing the OrderedDict from the COMMERCIALVEHICLE tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Vehicle(VEHICLEID='edeaa7cd-06f1-4dde-b318-66a28ec604e0'))
+        session.commit()
     crash_data_reader._read_commercial_vehicle_data(commvehicle_dict=constants_test_data.commveh_input_data)
     verify_results(CommercialVehicle, crash_data_reader.engine, constants_test_data.commveh_output_data)
 
@@ -325,6 +357,10 @@ def test_read_commercial_vehicle_data(crash_data_reader):
 @clean(DamagedArea)
 def test_read_damaged_areas_data(crash_data_reader):
     """Testing the OrderedDict from the DAMAGEDAREAs tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Vehicle(VEHICLEID='5ce12003-c7aa-43e1-b5e8-4c0e79160a02'))
+        session.commit()
     crash_data_reader._read_damaged_areas_data(damaged_dict=constants_test_data.damaged_input_data)
     verify_results(DamagedArea, crash_data_reader.engine, constants_test_data.damaged_output_data)
 
@@ -332,6 +368,10 @@ def test_read_damaged_areas_data(crash_data_reader):
 @clean(Ems)
 def test_read_ems_data(crash_data_reader):
     """Testing the OrderedDict from the EMSes tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Crash(REPORTNUMBER='ADJ063005D'))
+        session.commit()
     crash_data_reader._read_ems_data(ems_dict=constants_test_data.ems_input_data)
     verify_results(Ems, crash_data_reader.engine, constants_test_data.ems_output_data)
 
@@ -339,6 +379,10 @@ def test_read_ems_data(crash_data_reader):
 @clean(Event)
 def test_read_event_data(crash_data_reader):
     """Testing the OrderedDict from the EVENTS tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Vehicle(VEHICLEID='5ce12003-c7aa-43e1-b5e8-4c0e79160a02'))
+        session.commit()
     crash_data_reader._read_event_data(event_dict=constants_test_data.event_input_data)
     verify_results(Event, crash_data_reader.engine, constants_test_data.event_output_data)
 
@@ -346,6 +390,10 @@ def test_read_event_data(crash_data_reader):
 @clean(PdfReport)
 def test_read_pdf_data(crash_data_reader):
     """Testing the OrderedDict from the PDFREPORTs tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Crash(REPORTNUMBER='ADD9340058'))
+        session.commit()
     crash_data_reader._read_pdf_data(pdfreport_dict=constants_test_data.pdf_input_data)
     verify_results(PdfReport, crash_data_reader.engine, constants_test_data.pdf_output_data)
 
@@ -353,6 +401,10 @@ def test_read_pdf_data(crash_data_reader):
 @clean(Person)
 def test_read_acrs_person_data(crash_data_reader):
     """Tests the OrderedDict from the PERSON/OWNER tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Crash(REPORTNUMBER='ADD9340058'))
+        session.commit()
     crash_data_reader._read_acrs_person_data(person_dict=constants_test_data.person_input_data)
     verify_results(Person, crash_data_reader.engine, constants_test_data.person_output_data)
 
@@ -360,6 +412,14 @@ def test_read_acrs_person_data(crash_data_reader):
 @clean(PersonInfo)
 def test_read_person_info_data_driver(crash_data_reader):
     """Tests the OrderedDict from the DRIVERs tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add_all([
+            Crash(REPORTNUMBER='ADD9340058'),
+            Person(PERSONID='fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
+            Vehicle(VEHICLEID='5f19b3c5-4e3b-4010-9959-506a84632cdb')
+        ])
+        session.commit()
     crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_driver_input_data)
     verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_driver_output_data)
 
@@ -367,6 +427,14 @@ def test_read_person_info_data_driver(crash_data_reader):
 @clean(PersonInfo)
 def test_read_person_info_data_passenger(crash_data_reader):
     """Tests the OrderedDict from the PASSENGERs tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add_all([
+            Crash(REPORTNUMBER='ADD9340058'),
+            Person(PERSONID='fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
+            Vehicle(VEHICLEID='5f19b3c5-4e3b-4010-9959-506a84632cdb')
+        ])
+        session.commit()
     crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_input_data)
     verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_pass_output_data)
 
@@ -374,6 +442,14 @@ def test_read_person_info_data_passenger(crash_data_reader):
 @clean(PersonInfo)
 def test_read_person_info_data_passenger_multiple(crash_data_reader):
     """Tests the OrderedDict that comes from the PASSENGERs tag. This tests the multiple """
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add_all([
+            Crash(REPORTNUMBER='ADD9340058'),
+            Person(PERSONID='fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
+            Vehicle(VEHICLEID='6dde66e1-433b-4839-9df8-ffb969d35d68')
+        ])
+        session.commit()
     crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_mult_input_data)
     verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_pass_mult_output_data)
 
@@ -381,6 +457,13 @@ def test_read_person_info_data_passenger_multiple(crash_data_reader):
 @clean(PersonInfo)
 def test_read_person_info_data_nonmotorist(crash_data_reader):
     """Tests the OrderedDict that comes from the NONMOTORSTs tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add_all([
+            Crash(REPORTNUMBER='ADD905004N'),
+            Person(PERSONID='d18f27b0-d7e3-40de-b778-89f7a88ccd4f')
+        ])
+        session.commit()
     crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_nonmotorist_input_data)
     verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_nonmotorist_output_data)
 
@@ -395,6 +478,13 @@ def test_read_roadway_data(crash_data_reader):
 @clean(TowedUnit)
 def test_read_towed_vehicle_data(crash_data_reader):
     """Tests the OrderedDict from TOWEDUNITs tag"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add_all([
+            Person(PERSONID='0eea2c7f-3f2c-4fd6-abc2-4927605d237a'),
+            Vehicle(VEHICLEID='642f511d-fd4b-4daf-a6b8-5418546be524')
+        ])
+        session.commit()
     crash_data_reader._read_towed_vehicle_data(towed_dict=constants_test_data.towed_input_data)
     verify_results(TowedUnit, crash_data_reader.engine, constants_test_data.towed_output_data)
 
@@ -402,6 +492,14 @@ def test_read_towed_vehicle_data(crash_data_reader):
 @clean(Vehicle)
 def test_read_acrs_vehicle_data(crash_data_reader):
     """Tests the OrderedDict from ACRSVEHICLE"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add_all([
+            Crash(REPORTNUMBER='ADJ063005D'),
+            Person(PERSONID='21732e90-2796-497f-a5c2-5d7877510d4c'),
+            Person(PERSONID='d978be20-08c7-4ff3-b2e9-a251047ac3a7')
+        ])
+        session.commit()
     crash_data_reader._read_acrs_vehicle_data(vehicle_dict=constants_test_data.vehicle_input_data)
     verify_results(Vehicle, crash_data_reader.engine, constants_test_data.vehicle_output_data)
 
@@ -409,6 +507,10 @@ def test_read_acrs_vehicle_data(crash_data_reader):
 @clean(VehicleUse)
 def test_read_acrs_vehicle_use_data(crash_data_reader):
     """Testing the OrderedDict contained in VEHICLEUSEs"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Vehicle(VEHICLEID='5f19b3c5-4e3b-4010-9959-506a84632cdb'))
+        session.commit()
     crash_data_reader._read_acrs_vehicle_use_data(vehicleuse_dict=constants_test_data.vehicle_use_input_data)
     verify_results(VehicleUse, crash_data_reader.engine, constants_test_data.vehicle_use_output_data)
 
@@ -416,6 +518,10 @@ def test_read_acrs_vehicle_use_data(crash_data_reader):
 @clean(Witness)
 def test_read_witness_data(crash_data_reader):
     """Testing the OrderedDict contained in WITNESSes"""
+    # Dealing with the foreign key requirement
+    with Session(crash_data_reader.engine) as session:
+        session.add(Crash(REPORTNUMBER='ADJ956004Z'))
+        session.commit()
     crash_data_reader._read_witness_data(witness_dict=constants_test_data.witness_input_data)
     verify_results(Witness, crash_data_reader.engine, constants_test_data.witness_output_data)
 

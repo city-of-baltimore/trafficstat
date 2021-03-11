@@ -4,9 +4,10 @@ import os
 import sys
 from loguru import logger
 
-from src.trafficstat.enrich_data import Enrich
-from src.trafficstat.crash_data_ingester import CrashDataReader
-from src.trafficstat.ms2generator import WorksheetMaker
+from trafficstat.enrich_data import Enrich
+from trafficstat.crash_data_ingester import CrashDataReader
+from trafficstat.ms2generator import WorksheetMaker
+from trafficstat.viewer import get_crash_diagram
 
 config = {
     "handlers": [
@@ -37,6 +38,15 @@ parser_parse.add_argument('-f', '--file', help='Path to a single file to process
 parser_generate = subparsers.add_parser('ms2export', help='Generate CSV files that MS2 uses to import crash data. Pulls'
                                                           ' from the DOT_DATA database')
 
+# Viewer
+parser_viewer = subparsers.add_parser('viewer', help='Parses crash diagram data from the database. Writes the image to '
+                                                     'disk')
+parser_viewer.add_argument('-r', '--report_no', required=True, help='Report number to parse')
+parser_viewer.add_argument('-d', '--output_dir', default=os.getcwd(), help='Directory to write the file to.')
+parser_parse.add_argument('-c', '--conn_str',
+                          default='mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server',
+                          help='Custom database connection string (default: sqlite:///crash.db)')
+
 args = parser.parse_args()
 
 if args.subparser_name == 'enrich':
@@ -65,3 +75,6 @@ if args.subparser_name == 'ms2export':
         ws_maker.add_ems_worksheet()
         ws_maker.add_vehicle_worksheet()
         ws_maker.add_road_circum()
+
+if args.subparser_name == 'viewer':
+    get_crash_diagram(args.report_no, args.conn_str, args.output_dir)

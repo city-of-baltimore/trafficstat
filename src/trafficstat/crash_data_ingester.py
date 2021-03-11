@@ -7,17 +7,17 @@ import shutil
 from collections import OrderedDict
 from datetime import time
 from typing import List, Mapping, Optional, Union
+from sqlite3 import Connection as SQLite3Connection
 
 import xmltodict  # type: ignore
 from loguru import logger
 from pandas import to_datetime  # type: ignore
-from sqlalchemy import create_engine, event, inspect as sqlalchemyinspect  # type: ignore
+from sqlalchemy import create_engine, event as sqlalchemyevent, inspect as sqlalchemyinspect  # type: ignore
 from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 from sqlalchemy.sql import text  # type: ignore
 from sqlalchemy.engine import Engine  # type: ignore
-from sqlite3 import Connection as SQLite3Connection
 
 from trafficstat.crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
     CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, \
@@ -30,8 +30,8 @@ from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, Circum
 logger.disable('trafficstat')
 
 
-@event.listens_for(Engine, "connect")
-def _set_sqlite_pragma(dbapi_connection, connection_record):
+@sqlalchemyevent.listens_for(Engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):  # pylint:disable=unused-argument
     if isinstance(dbapi_connection, SQLite3Connection):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON;")
