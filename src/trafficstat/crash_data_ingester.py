@@ -8,6 +8,7 @@ from collections import OrderedDict
 from datetime import time
 from typing import List, Mapping, Optional, Union
 from sqlite3 import Connection as SQLite3Connection
+from xml.parsers.expat import ExpatError
 
 import xmltodict  # type: ignore
 from loguru import logger
@@ -156,17 +157,22 @@ class CrashDataReader:
                 if copy:
                     self._file_move(file_name, os.path.join(os.path.dirname(file_name), '.processed'))
 
-    def _read_file(self, file_name: str) -> None:
+    def _read_file(self, file_name: str) -> None:  # pylint:disable=too-many-branches
         logger.info('Processing {}', file_name)
         with open(file_name, encoding='utf-8') as acrs_file:
             crash_file = acrs_file.read()
 
         # These files have non ascii at the beginning that causes parse errors
         offset = crash_file.find('<?xml')
-        root = xmltodict.parse(crash_file[offset:],
-                               force_list={'ACRSPERSON', 'ACRSVEHICLE', 'CIRCUMSTANCE', 'CITATIONCODE', 'DAMAGEDAREA',
-                                           'DRIVER', 'EMS', 'EVENT', 'NONMOTORIST', 'PASSENGER', 'PDFREPORT',
-                                           'REPORTDOCUMENT', 'REPORTPHOTO', 'TOWEDUNIT', 'VEHICLEUSE', 'WITNESS'})
+        try:
+            root = xmltodict.parse(crash_file[offset:],
+                                   force_list={'ACRSPERSON', 'ACRSVEHICLE', 'CIRCUMSTANCE', 'CITATIONCODE',
+                                               'DAMAGEDAREA', 'DRIVER', 'EMS', 'EVENT', 'NONMOTORIST', 'PASSENGER',
+                                               'PDFREPORT', 'REPORTDOCUMENT', 'REPORTPHOTO', 'TOWEDUNIT', 'VEHICLEUSE',
+                                               'WITNESS'})
+        except ExpatError as err:
+            logger.error('Unable to parse file {}. Parse error: {}', file_name, err)
+            return
 
         crash_dict = root['REPORT']
 
@@ -520,6 +526,9 @@ class CrashDataReader:
             if person.get('PERSON'):
                 self._read_acrs_person_data([person['PERSON']])
                 report_no = self.get_single_attr('REPORTNUMBER', person['PERSON']) or ''
+
+            if report_no == '':
+                raise AssertionError('No report number')
 
             self._insert_or_update(
                 PersonInfo(

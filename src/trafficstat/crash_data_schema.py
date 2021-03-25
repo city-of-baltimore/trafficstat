@@ -75,7 +75,8 @@ class Crash(Base):
         String)  # <xs:element name="CONMAINCLOSURE" nillable="true"> (restricted to values 00, 01, 02, 03, 04, 88, 99, and ''
     CONMAINLOCATION = Column(
         String)  # <xs:element name="CONMAINLOCATION" nillable="true"> (restricted to values 00, 01, 02, 03, 04, 05, 88, 99, and '')
-    CONMAINWORKERSPRESENT = Column(Boolean)  # <xs:element name="CONMAINWORKERSPRESENT" nillable="true"> (restricted to Y, N, U, '')
+    CONMAINWORKERSPRESENT = Column(
+        Boolean)  # <xs:element name="CONMAINWORKERSPRESENT" nillable="true"> (restricted to Y, N, U, '')
     CONMAINZONE = Column(Boolean)  # <xs:element name="CONMAINWORKERSPRESENT" nillable="true">
     CRASHDATE = Column(Date)  # <xs:element type="xs:dateTime" name="CRASHDATE"/>
     CRASHTIME = Column(Time)  # <xs:element type="xs:dateTime" name="CRASHTIME"/>
@@ -95,7 +96,8 @@ class Crash(Base):
     INSERTDATE = Column(DateTime)  # <xs:element type="xs:dateTime" name="INSERTDATE"/>
     INTERCHANGEAREA = Column(
         String)  # <xs:element name="INTERCHANGEAREA"> (restricted to 00, 01, 02, 03, 04, 05, 06, 88, 99, and '')
-    INTERCHANGEIDENTIFICATION = Column(String)  # <xs:element type="xs:string" name="INTERCHANGEIDENTIFICATION" nillable="true"/>
+    INTERCHANGEIDENTIFICATION = Column(
+        String)  # <xs:element type="xs:string" name="INTERCHANGEIDENTIFICATION" nillable="true"/>
     INTERSECTIONTYPE = Column(String)  # <xs:element name="INTERSECTIONTYPE">
     INVESTIGATINGOFFICERUSERNAME = Column(String)  # <xs:element type="xs:string" name="INVESTIGATINGOFFICERUSERNAME"/>
     INVESTIGATOR = Column(String)  # <xs:element type="xs:string" name="INVESTIGATOR" nillable="true"/>
@@ -142,16 +144,19 @@ class Crash(Base):
         String)  # <xs:element name="ROADGRADE"> (restricted to 00, 01, 02, 03, 04, 05, 06, 88, 99 and '')
     ROADID = Column(String(length=36), ForeignKey(
         'acrs_roadway.ROADID'))  # <xs:element type="xs:string" name="ROADID"/`> (this is a six digit number or a UUID).
-    ROADWAY = relationship('Roadway', back_populates='CRASHES')  # one:one <xs:element type="cras:ROADWAYType" name="ROADWAY" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    ROADWAY = relationship('Roadway',
+                           back_populates='CRASHES')  # one:one <xs:element type="cras:ROADWAYType" name="ROADWAY" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     SCHOOLBUSINVOLVEMENT = Column(
         Integer)  # <xs:element name="SCHOOLBUSINVOLVEMENT"> (restricted to 00, 01, 02, 03, and 99)
-    STATEGOVERNMENTPROPERTYNAME = Column(String)  # <xs:element type="xs:string" name="STATEGOVERNMENTPROPERTYNAME" nillable="true"/>
+    STATEGOVERNMENTPROPERTYNAME = Column(
+        String)  # <xs:element type="xs:string" name="STATEGOVERNMENTPROPERTYNAME" nillable="true"/>
     SUPERVISOR = Column(String)  # <xs:element type="xs:string" name="SUPERVISOR" nillable="true"/>
     SUPERVISORUSERNAME = Column(String)  # <xs:element type="xs:string" name="SUPERVISORUSERNAME"/>
     SUPERVISORYDATE = Column(DateTime)  # <xs:element type="xs:dateTime" name="SUPERVISORYDATE"/>
     SURFACECONDITION = Column(String)  # <xs:element type="xs:string" name="SURFACECONDITION"/>
     TRAFFICCONTROL = Column(Integer)  # <xs:element type="xs:byte" name="TRAFFICCONTROL"/>
-    TRAFFICCONTROLFUNCTIONING = Column(Boolean)  # <xs:element name="TRAFFICCONTROLFUNCTIONING"> (restricted to Y, N, U, and '')
+    TRAFFICCONTROLFUNCTIONING = Column(
+        Boolean)  # <xs:element name="TRAFFICCONTROLFUNCTIONING"> (restricted to Y, N, U, and '')
     UPDATEDATE = Column(DateTime)  # <xs:element type="xs:string" name="UPDATEDATE"/>
     UPLOADVERSION = Column(String)  # <xs:element type="xs:string" name="UPLOADVERSION"/>
     VEHICLEs = relationship(
@@ -254,7 +259,8 @@ class PersonInfo(Base):
         Integer)  # <xs:element name="AIRBAGDEPLOYED"> (restricted to values 00, 01, 02, 03, 04, 88 and 99)
     ALCOHOLTESTINDICATOR = Column(
         Integer)  # <xs:element name="ALCOHOLTESTINDICATOR"> (restricted to 00, 01, 02, 03, 88 and 99)
-    ALCOHOLTESTTYPE = Column(String)  # <xs:element name="ALCOHOLTESTTYPE" nillable="true"> (restricted to 00, 01, 02, 88, 99 and '')
+    ALCOHOLTESTTYPE = Column(
+        String)  # <xs:element name="ALCOHOLTESTTYPE" nillable="true"> (restricted to 00, 01, 02, 88, 99 and '')
     ATFAULT = Column(Boolean)  # <xs:element name="ATFAULT"> (restricted to values Y, N, and U)
     BAC = Column(String)  # <xs:element type="xs:string" name="BAC" nillable="true"/>
     CONDITION = Column(String)  # <xs:element type="xs:float" name="CONDITION"/> (Nonmotorist type is str)
@@ -262,10 +268,12 @@ class PersonInfo(Base):
     DRIVERDISTRACTEDBY = Column(Integer)  # <xs:element type="xs:byte" name="DRIVERDISTRACTEDBY"/>
     DRUGTESTINDICATOR = Column(
         Integer)  # <xs:element name="DRUGTESTINDICATOR"> (restricted to 00, 01, 02, 03, 88 and 99)
-    DRUGTESTRESULT = Column(String(length=1))  # <xs:element name="DRUGTESTRESULT" nillable="true"> (restricted to P, N, U, A, and '')
+    DRUGTESTRESULT = Column(
+        String(length=1))  # <xs:element name="DRUGTESTRESULT" nillable="true"> (restricted to P, N, U, A, and '')
     EJECTION = Column(Integer)  # <xs:element name="EJECTION"> (restricted to 00, 01, 02, 03, 04, 88, and 99)
     EMSRUNREPORTNUMBER = Column(String)  # <xs:element type="xs:string" name="EMSRUNREPORTNUMBER" nillable="true"/>
-    EMSUNITNUMBER = Column(String(length=1))  # <xs:element name="EMSUNITNUMBER" nillable="true"> (restricted to A, B, C, D, E, J, K, L and '')
+    EMSUNITNUMBER = Column(String(
+        length=1))  # <xs:element name="EMSUNITNUMBER" nillable="true"> (restricted to A, B, C, D, E, J, K, L and '')
     EQUIPMENTPROBLEM = Column(
         Integer)  # <xs:element name="EQUIPMENTPROBLEM"> (restricted to 00, 01, 11, 13, 31, 44, 45, 47, 88 and 99)
     GOINGDIRECTION = Column(String)  # <xs:element type="xs:string" name="GOINGDIRECTION" nillable="true"/>
@@ -397,17 +405,21 @@ class Roadway(Base):
     LOGMILE_DIR = Column(String)  # <xs:element name="LOGMILE_DIR" minOccurs="0"> (restricted to N, S, E, W, U, and '')
     MILEPOINT = Column(Float)  # <xs:element type="xs:float" name="MILEPOINT" minOccurs="0"/>
     MUNICIPAL = Column(Integer)  # <xs:element name="MUNICIPAL" minOccurs="0"> (restricted to 999 and 000)
-    MUNICIPAL_AREA_CODE = Column(Integer)  # <xs:element name="MUNICIPAL_AREA_CODE" minOccurs="0"> (restricted to 999 and 000)
+    MUNICIPAL_AREA_CODE = Column(
+        Integer)  # <xs:element name="MUNICIPAL_AREA_CODE" minOccurs="0"> (restricted to 999 and 000)
     REFERENCE_MUNI = Column(Integer)  # <xs:element name="REFERENCE_MUNI" minOccurs="0"> (restricted to 999 and 000)
     REFERENCE_ROADNAME = Column(String)  # <xs:element type="xs:string" name="REFERENCE_ROADNAME" minOccurs="0"/>
-    REFERENCE_ROUTE_NUMBER = Column(String)  # <xs:element type="xs:string" name="REFERENCE_ROUTE_NUMBER" minOccurs="0"/>
-    REFERENCE_ROUTE_SUFFIX = Column(String)  # <xs:element name="REFERENCE_ROUTE_SUFFIX" minOccurs="0" nillable="true"> (restricted to E, B, AL, AV, 6, IR, and '')
+    REFERENCE_ROUTE_NUMBER = Column(
+        String)  # <xs:element type="xs:string" name="REFERENCE_ROUTE_NUMBER" minOccurs="0"/>
+    REFERENCE_ROUTE_SUFFIX = Column(
+        String)  # <xs:element name="REFERENCE_ROUTE_SUFFIX" minOccurs="0" nillable="true"> (restricted to E, B, AL, AV, 6, IR, and '')
     REFERENCE_ROUTE_TYPE = Column(String)  # <xs:element type="xs:string" name="REFERENCE_ROUTE_TYPE" minOccurs="0"/>
     ROADID = Column(String(length=36),
                     primary_key=True)  # <xs:element type="xs:string" name="ROADID" minOccurs="0"/> This is a six digit number, or a UUID
     ROAD_NAME = Column(String)  # <xs:element type="xs:string" name="ROAD_NAME" minOccurs="0"/>
     ROUTE_NUMBER = Column(String)  # <xs:element type="xs:string" name="ROUTE_NUMBER" minOccurs="0"/>
-    ROUTE_SUFFIX = Column(String)  # <xs:element name="ROUTE_SUFFIX" minOccurs="0" nillable="true"> (restricted to E, AL, B, A and '')
+    ROUTE_SUFFIX = Column(
+        String)  # <xs:element name="ROUTE_SUFFIX" minOccurs="0" nillable="true"> (restricted to E, AL, B, A and '')
     ROUTE_TYPE = Column(String)  # <xs:element name="ROUTE_TYPE" minOccurs="0">
     CENSUS_TRACT = Column(String(length=25))  # populated by the enrich_data.py script
     ROAD_NAME_CLEAN = Column(String(length=50))  # populated by the enrich_data.py script
@@ -425,12 +437,14 @@ class Vehicle(Base):
     COMMERCIALVEHICLE = relationship('CommercialVehicle', uselist=False,
                                      back_populates='VEHICLE')  # one:many <xs:element name="COMMERCIALVEHICLE" nillable="true">
     CONTINUEDIRECTION = Column(String)  # <xs:element name="CONTINUEDIRECTION">
-    DAMAGEDAREAs = relationship('DamagedArea')  # one:many <xs:element type="cras:DAMAGEDAREAsType" name="DAMAGEDAREAs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
+    DAMAGEDAREAs = relationship(
+        'DamagedArea')  # one:many <xs:element type="cras:DAMAGEDAREAsType" name="DAMAGEDAREAs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     DAMAGEEXTENT = Column(Integer)  # <xs:element name="DAMAGEEXTENT"> (restricted to 00, 01, 02, 03, 04, 05, 88 and 99)
     DRIVERLESSVEHICLE = Column(Boolean)  # <xs:element name="DRIVERLESSVEHICLE"> (restricted to 'Y', 'N', and 'U')
     DRIVERs = relationship(
         'PersonInfo')  # one:many <xs:element type="cras:DRIVERsType" name="DRIVERs" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
-    EMERGENCYMOTORVEHICLEUSE = Column(Boolean)  # <xs:element name="EMERGENCYMOTORVEHICLEUSE"> (restricted to 'Y', 'N', and 'U')
+    EMERGENCYMOTORVEHICLEUSE = Column(
+        Boolean)  # <xs:element name="EMERGENCYMOTORVEHICLEUSE"> (restricted to 'Y', 'N', and 'U')
     EVENTS = relationship(
         'Event')  # one:many <xs:element type="cras:EVENTType" name="EVENT" maxOccurs="unbounded" minOccurs="0" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     FIRE = Column(Boolean)  # <xs:element name="FIRE"> (restricted to 'Y', 'N', and 'U')
@@ -450,7 +464,8 @@ class Vehicle(Base):
     PARKEDVEHICLE = Column(Boolean)  # <xs:element name="PARKEDVEHICLE">
     PASSENGERs = relationship(
         'PersonInfo')  # one:many <xs:element name="PASSENGERs">
-    REGISTRATIONEXPIRATIONYEAR = Column(String)  # <xs:element type="xs:string" name="REGISTRATIONEXPIRATIONYEAR" nillable="true"/>
+    REGISTRATIONEXPIRATIONYEAR = Column(
+        String)  # <xs:element type="xs:string" name="REGISTRATIONEXPIRATIONYEAR" nillable="true"/>
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
                           ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
     SFVEHICLEINTRANSPORT = Column(Integer)  # <xs:element type="xs:byte" name="SFVEHICLEINTRANSPORT"/>
@@ -494,8 +509,10 @@ class CommercialVehicle(Base):
     __tablename__ = "acrs_commercial_vehicle"
 
     BODYTYPE = Column(String)  # <xs:element type="xs:float" name="BODYTYPE" minOccurs="0"/>
-    BUSUSE = Column(String)  # <xs:element name="BUSUSE" minOccurs="0"> (restricted to 00, 01, 02, 03, 04, 05, 07, 88, 99 and '')
-    CARRIERCLASSIFICATION = Column(Integer)  # <xs:element name="CARRIERCLASSIFICATION" minOccurs="0"> (restricted to 00, 01, 02, 03, 04, 88 and 99)
+    BUSUSE = Column(
+        String)  # <xs:element name="BUSUSE" minOccurs="0"> (restricted to 00, 01, 02, 03, 04, 05, 07, 88, 99 and '')
+    CARRIERCLASSIFICATION = Column(
+        Integer)  # <xs:element name="CARRIERCLASSIFICATION" minOccurs="0"> (restricted to 00, 01, 02, 03, 04, 88 and 99)
     CITY = Column(String)  # <xs:element type="xs:string" name="CITY" minOccurs="0"/>
     CONFIGURATION = Column(Integer)  # <xs:element type="xs:byte" name="CONFIGURATION" minOccurs="0"/>
     COUNTRY = Column(String)  # <xs:element type="xs:string" name="COUNTRY" minOccurs="0" nillable="true"/>

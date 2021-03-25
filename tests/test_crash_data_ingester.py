@@ -213,46 +213,34 @@ def test_read_crash_data_files_by_file(crash_data_reader, tmpdir):  # pylint:dis
         PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
 def test_read_crash_data_dir(crash_data_reader):  # pylint:disable=too-many-statements
     """Rudamentary check that there are the right number of records after a few xml files are read in"""
+    xml_files = [
+        'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml',
+        'BALTIMORE_acrs_ADJ2200021-passenger.xml',
+        'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml',
+        'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml',
+        'BALTIMORE_acrs_ADK378000C-witnesses.xml',
+        'BALTIMORE_acrs_ADK378000C-witnesses.xml',
+        'BALTIMORE_emptyxml.xml'
+    ]
     with tempfile.TemporaryDirectory() as tmpdirname:
-        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'),
-                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'))
-        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'),
-                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADJ2200021-passenger.xml'))
-        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'),
-                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'))
-        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'),
-                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'))
-        shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'),
-                        os.path.join(tmpdirname, 'BALTIMORE_acrs_ADK378000C-witnesses.xml'))
+        for file in xml_files:
+            shutil.copyfile(os.path.join('tests', 'testfiles', file),
+                            os.path.join(tmpdirname, file))
 
         if os.path.exists('.processed'):
             shutil.rmtree('.processed')
 
         with Session(crash_data_reader.engine) as session:
             crash_data_reader.read_crash_data(dir_name=tmpdirname, copy=False)
-            assert not os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'))
-            assert not os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'))
-            assert not os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'))
-            assert not os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'))
-            assert not os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'))
+            for file in xml_files:
+                assert not os.path.exists(
+                    os.path.join(tmpdirname, '.processed', file))
 
             crash_data_reader.read_crash_data(dir_name=tmpdirname, copy=True)
 
-            assert os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'))
-            assert os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ2200021-passenger.xml'))
-            assert os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ47600BL-citationcodes.xml'))
-            assert os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADJ8750031-multiplevehicles.xml'))
-            assert os.path.exists(
-                os.path.join(tmpdirname, '.processed', 'BALTIMORE_acrs_ADK378000C-witnesses.xml'))
+            for file in xml_files:
+                assert os.path.exists(
+                    os.path.join(tmpdirname, '.processed', file))
 
             check_single_entries(session, 5)
             check_database_rows(session, Circumstance, 15)
@@ -425,16 +413,15 @@ def test_read_person_info_data_driver(crash_data_reader):
 
 
 @clean(PersonInfo)
-def test_read_person_info_data_passenger(crash_data_reader):
+def test_read_person_info_data_passenger_single(crash_data_reader):
     """Tests the OrderedDict from the PASSENGERs tag"""
     # Dealing with the foreign key requirement
     with Session(crash_data_reader.engine) as session:
-        session.add_all([
-            Crash(REPORTNUMBER='ADD9340058'),
-            Person(PERSONID='fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
-            Vehicle(VEHICLEID='5f19b3c5-4e3b-4010-9959-506a84632cdb')
-        ])
+        session.add_all([Crash(REPORTNUMBER='ADD9340058'),
+                         Person(PERSONID='fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
+                         Vehicle(VEHICLEID='6dde66e1-433b-4839-9df8-ffb969d35d68')])
         session.commit()
+
     crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_input_data)
     verify_results(PersonInfo, crash_data_reader.engine, constants_test_data.person_info_pass_output_data)
 
@@ -445,9 +432,10 @@ def test_read_person_info_data_passenger_multiple(crash_data_reader):
     # Dealing with the foreign key requirement
     with Session(crash_data_reader.engine) as session:
         session.add_all([
-            Crash(REPORTNUMBER='ADD9340058'),
-            Person(PERSONID='fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
-            Vehicle(VEHICLEID='6dde66e1-433b-4839-9df8-ffb969d35d68')
+            Crash(REPORTNUMBER='ADD90500BB'),
+            Person(PERSONID='3c348c05-c3c1-44fb-840c-dd5c23cd9811'),
+            Person(PERSONID='64f9cda0-1477-4cb9-8891-67087d4163bc'),
+            Vehicle(VEHICLEID='c783f85b-ac08-4ad4-8493-e211e5d8ec6e')
         ])
         session.commit()
     crash_data_reader._read_person_info_data(person_dict=constants_test_data.person_info_pass_mult_input_data)

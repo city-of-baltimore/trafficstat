@@ -18,5 +18,8 @@ setup(
         'tqdm~=4.57.0',
         'balt-geocoder @ git+https://github.com/city-of-baltimore/Geocoder@v1.0.2#egg=balt-geocoder',
         'xlsxwriter~=1.3.7',
+        'decorator~=4.4.2',
+        'xmltodict~=0.12.0',
+        'sqlalchemy~=1.4.2',
     ]
 )

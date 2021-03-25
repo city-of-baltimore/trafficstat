@@ -43,9 +43,9 @@ parser_viewer = subparsers.add_parser('viewer', help='Parses crash diagram data 
                                                      'disk')
 parser_viewer.add_argument('-r', '--report_no', required=True, help='Report number to parse')
 parser_viewer.add_argument('-d', '--output_dir', default=os.getcwd(), help='Directory to write the file to.')
-parser_parse.add_argument('-c', '--conn_str',
-                          default='mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server',
-                          help='Custom database connection string (default: sqlite:///crash.db)')
+parser_viewer.add_argument('-c', '--conn_str',
+                           default='mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server',
+                           help='Custom database connection string (default: sqlite:///crash.db)')
 
 args = parser.parse_args()
 

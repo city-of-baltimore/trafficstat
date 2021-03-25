@@ -173,7 +173,7 @@ class PersonSanitized(Base):
     CDL_FLAG = Column(String(length=1), nullable=True)
     ALCO_DRUG_IMPAIRED_FLAG = Column(String(length=1), nullable=True)
     ACC_DATE = Column(DateTime, nullable=True)
-    VEHICLE_ID = Column(Float, nullable=True)
+    VEHICLE_ID = Column(Float, ForeignKey('acrs_vehicle_sanitized.VEHICLE_ID'), nullable=True)
     DEATH_SUFFIX = Column(String(length=1), nullable=True)
     EMS_UNIT_LABEL = Column(String(length=3), nullable=True)
     EMS_ID = Column(Float, nullable=True)
