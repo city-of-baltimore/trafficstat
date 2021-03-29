@@ -24,23 +24,28 @@ def get_crash_diagram(report_no: str, conn_str: str, output_dir: str) -> None:
     """
     engine = create_engine(conn_str, echo=True, future=True)
     with Session(bind=engine, future=True) as session:
+        # Generate the crash diagram image
         crash_diagram = session.query(CrashDiagram.CRASHDIAGRAM).filter(CrashDiagram.REPORTNUMBER == report_no).first()
-        crash_pdf = session.query(PdfReport.PDFREPORT1).filter(PdfReport.REPORTNUMBER == report_no).first()
+        if crash_diagram:
+            output_jpg = os.path.join(output_dir, "{}.jpg".format(report_no))
+            logger.debug('Writing crash diagram image for report {} to {}', report_no, output_jpg)
 
-        output_jpg = os.path.join(output_dir, "{}.jpg".format(report_no))
-        logger.debug('Writing crash diagram image for report {} to {}', report_no, output_jpg)
-
-        with open(output_jpg, 'wb') as cd_file:
             try:
-                cd_file.write(base64.b64decode(crash_diagram[0]))
+                content = base64.b64decode(crash_diagram[0])
+                with open(output_jpg, 'wb') as cd_file:
+                    cd_file.write(content)
             except Error:
                 logger.critical("Unable to parse the crash diagram image for {}", report_no)
 
-        output_pdf = os.path.join(output_dir, "{}.pdf".format(report_no))
-        logger.debug('Writing crash diagram pdf for report {} to {}', report_no, output_pdf)
+        # Generate the PDF report
+        crash_pdf = session.query(PdfReport.PDFREPORT1).filter(PdfReport.REPORTNUMBER == report_no).first()
+        if crash_pdf:
+            output_pdf = os.path.join(output_dir, "{}.pdf".format(report_no))
+            logger.debug('Writing crash diagram pdf for report {} to {}', report_no, output_pdf)
 
-        with open(output_pdf, 'wb') as cd_file:
             try:
-                cd_file.write(base64.b64decode(crash_pdf[0]))
+                content = base64.b64decode(crash_pdf[0])
+                with open(output_pdf, 'wb') as cd_file:
+                    cd_file.write(content)
             except Error:
                 logger.critical("Unable to parse the crash diagram pdf for {}", report_no)

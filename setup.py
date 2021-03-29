@@ -20,6 +20,7 @@ setup(
         'xlsxwriter~=1.3.7',
         'decorator~=4.4.2',
         'xmltodict~=0.12.0',
-        'sqlalchemy~=1.4.2',
+        'sqlalchemy~=1.4.3',
+        'xlrd~=2.0.1',
     ]
 )
