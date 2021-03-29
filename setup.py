@@ -21,6 +21,6 @@ setup(
         'decorator~=4.4.2',
         'xmltodict~=0.12.0',
         'sqlalchemy~=1.4.3',
-        'xlrd~=2.0.1',
+        'openpyxl~=3.0.7',
     ]
 )
