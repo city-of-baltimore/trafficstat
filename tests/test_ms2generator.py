@@ -8,9 +8,9 @@ import pandas as pd  # type: ignore
 from trafficstat.ms2generator import WorksheetMaker
 
 
-def test_add_crash_worksheet(tmpdir, conn_str):
+def test_add_crash_worksheet(tmpdir, conn_str_sanitized):
     """test for the add_crash_worksheet method"""
-    worksheet_maker = WorksheetMaker(conn_str=conn_str, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
+    worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
         worksheet_maker.add_crash_worksheet()
 
@@ -26,9 +26,9 @@ def test_add_crash_worksheet(tmpdir, conn_str):
     assert len(dfs) == 10
 
 
-def test_add_person_worksheet(tmpdir, conn_str):
+def test_add_person_worksheet(tmpdir, conn_str_sanitized):
     """test for the add_person_worksheet method"""
-    worksheet_maker = WorksheetMaker(conn_str=conn_str, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
+    worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
         worksheet_maker.add_person_worksheet()
 
@@ -43,9 +43,9 @@ def test_add_person_worksheet(tmpdir, conn_str):
     assert len(dfs) == 10
 
 
-def test_add_ems_worksheet(tmpdir, conn_str):
+def test_add_ems_worksheet(tmpdir, conn_str_sanitized):
     """test for the add_ems_worksheet method"""
-    worksheet_maker = WorksheetMaker(conn_str=conn_str, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
+    worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
         worksheet_maker.add_ems_worksheet()
 
@@ -55,9 +55,9 @@ def test_add_ems_worksheet(tmpdir, conn_str):
     assert len(dfs) == 10
 
 
-def test_add_vehicle_worksheet(tmpdir, conn_str):
+def test_add_vehicle_worksheet(tmpdir, conn_str_sanitized):
     """test for the add_vehicle_worksheet method"""
-    worksheet_maker = WorksheetMaker(conn_str=conn_str, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
+    worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
         worksheet_maker.add_vehicle_worksheet()
 
@@ -73,9 +73,9 @@ def test_add_vehicle_worksheet(tmpdir, conn_str):
     assert len(dfs) == 10
 
 
-def test_add_vehicle_circum(tmpdir, conn_str):
+def test_add_vehicle_circum(tmpdir, conn_str_sanitized):
     """test for the add_vehicle_circum method"""
-    worksheet_maker = WorksheetMaker(conn_str=conn_str, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
+    worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
         worksheet_maker.add_vehicle_circum('REPORT1', 'ID1')
         worksheet_maker.add_vehicle_circum('REPORT1', 'ID1')
@@ -84,9 +84,9 @@ def test_add_vehicle_circum(tmpdir, conn_str):
     assert dfs.columns.to_list() == ['REPORT_NO', 'CONTRIB_TYPE', 'CONTRIB_CODE', 'PERSON_ID', 'VEHICLE_ID']
 
 
-def test_add_road_circum(tmpdir, conn_str):
+def test_add_road_circum(tmpdir, conn_str_sanitized):
     """test for the add_road_circummethod"""
-    worksheet_maker = WorksheetMaker(conn_str=conn_str, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
+    worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
         worksheet_maker.add_road_circum()
 

@@ -46,15 +46,17 @@ This applies to the sanitized data that the State Highway Administration
 9. They will have different names in different years, but there should basicaly be a table each for crashes, citations, circumstances, EMS, persons, roadways, trailers, and vehicles. Enter the following table names in the second column that correlates with the source name in the left column.
     ```
     Table names:
-    * acrs_crash_sanitized
-    * acrs_citation_code_sanitized
-    * acrs_circumstance_sanitized
-    * acrs_ems_sanitized
-    * acrs_person_sanitized
-    * acrs_roadway_sanitized
-    * acrs_trailer_sanitized
-    * acrs_vehicle_sanitized
+    * [dbo].[acrs_crash_sanitized]
+    * [dbo].[acrs_citation_code_sanitized]
+    * [dbo].[acrs_circumstance_sanitized]
+    * [dbo].[acrs_ems_sanitized]
+    * [dbo].[acrs_person_sanitized]
+    * [dbo].[acrs_roadway_sanitized]
+    * [dbo].[acrs_trailer_sanitized]
+    * [dbo].[acrs_vehicle_sanitized]
     ```
+
+    Note that if the tables have already been created in a previous data injest, then skip to step 18. 
 
 10. Click the crash table entry, and click Edit Mappings. Then click Edit SQL, and paste in the following.
     ```

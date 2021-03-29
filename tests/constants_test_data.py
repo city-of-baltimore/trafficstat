@@ -788,6 +788,9 @@ person_info_driver_input_data = [
         ('EQUIPMENTPROBLEM', '99'),
         ('HASCDL', 'N'),
         ('INJURYSEVERITY', '01'),
+        ('PERSON', OrderedDict([
+            ('PERSONID', 'fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
+            ('REPORTNUMBER', 'ADD9340058'), ])),
         ('PERSONID', 'fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
         ('SAFETYEQUIPMENT', '99'),
         ('SUBSTANCEUSE', '00'),
@@ -824,6 +827,9 @@ person_info_pass_input_data = [
         ('EMSUNITNUMBER', 'A'),
         ('EQUIPMENTPROBLEM', '01'),
         ('INJURYSEVERITY', '02'),
+        ('PERSON', OrderedDict([
+            ('PERSONID', 'fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
+            ('REPORTNUMBER', 'ADD9340058'), ])),
         ('PERSONID', 'fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
         ('SAFETYEQUIPMENT', '13'),
         ('SEAT', '03'),

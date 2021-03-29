@@ -5,13 +5,17 @@ import inspect
 import os
 import shutil
 from collections import OrderedDict
-from datetime import time
+from datetime import datetime, time
+from sqlite3 import Connection as SQLite3Connection
 from typing import List, Mapping, Optional, Union
+from xml.parsers.expat import ExpatError
 
 import xmltodict  # type: ignore
 from loguru import logger
 from pandas import to_datetime  # type: ignore
-from sqlalchemy import create_engine, inspect as sqlalchemyinspect  # type: ignore
+from pandas.errors import OutOfBoundsDatetime  # type: ignore
+from sqlalchemy import create_engine, event as sqlalchemyevent, inspect as sqlalchemyinspect  # type: ignore
+from sqlalchemy.engine import Engine  # type: ignore
 from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
@@ -26,6 +30,14 @@ from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, Circum
     VehicleType, VehicleUseType, WitnessType
 
 logger.disable('trafficstat')
+
+
+@sqlalchemyevent.listens_for(Engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):  # pylint:disable=unused-argument
+    if isinstance(dbapi_connection, SQLite3Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON;")
+        cursor.close()
 
 
 def check_and_log(check_dict: str):
@@ -146,17 +158,22 @@ class CrashDataReader:
                 if copy:
                     self._file_move(file_name, os.path.join(os.path.dirname(file_name), '.processed'))
 
-    def _read_file(self, file_name: str) -> None:
+    def _read_file(self, file_name: str) -> None:  # pylint:disable=too-many-branches
         logger.info('Processing {}', file_name)
         with open(file_name, encoding='utf-8') as acrs_file:
             crash_file = acrs_file.read()
 
         # These files have non ascii at the beginning that causes parse errors
         offset = crash_file.find('<?xml')
-        root = xmltodict.parse(crash_file[offset:],
-                               force_list={'ACRSPERSON', 'ACRSVEHICLE', 'CIRCUMSTANCE', 'CITATIONCODE', 'DAMAGEDAREA',
-                                           'DRIVER', 'EMS', 'EVENT', 'NONMOTORIST', 'PASSENGER', 'PDFREPORT',
-                                           'REPORTDOCUMENT', 'REPORTPHOTO', 'TOWEDUNIT', 'VEHICLEUSE', 'WITNESS'})
+        try:
+            root = xmltodict.parse(crash_file[offset:],
+                                   force_list={'ACRSPERSON', 'ACRSVEHICLE', 'CIRCUMSTANCE', 'CITATIONCODE',
+                                               'DAMAGEDAREA', 'DRIVER', 'EMS', 'EVENT', 'NONMOTORIST', 'PASSENGER',
+                                               'PDFREPORT', 'REPORTDOCUMENT', 'REPORTPHOTO', 'TOWEDUNIT', 'VEHICLEUSE',
+                                               'WITNESS'})
+        except ExpatError as err:
+            logger.error('Unable to parse file {}. Parse error: {}', file_name, err)
+            return
 
         crash_dict = root['REPORT']
 
@@ -242,7 +259,7 @@ class CrashDataReader:
 
         self._insert_or_update(
             Crash(
-                ACRSREPORTTIMESTAMP=to_datetime(self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict)),
+                ACRSREPORTTIMESTAMP=self.to_datetime_sql(self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict)),
                 AGENCYIDENTIFIER=self.get_single_attr('AGENCYIDENTIFIER', crash_dict),
                 AGENCYNAME=self.get_single_attr('AGENCYNAME', crash_dict),
                 AREA=self.get_single_attr('AREA', crash_dict),
@@ -251,7 +268,7 @@ class CrashDataReader:
                 CONMAINLOCATION=self.get_single_attr('CONMAINLOCATION', crash_dict),
                 CONMAINWORKERSPRESENT=self.convert_to_bool(self.get_single_attr('CONMAINWORKERSPRESENT', crash_dict)),
                 CONMAINZONE=self.convert_to_bool(self.get_single_attr('CONMAINZONE', crash_dict)),
-                CRASHDATE=to_datetime(self.get_single_attr('CRASHDATE', crash_dict)),
+                CRASHDATE=self.to_datetime_sql(self.get_single_attr('CRASHDATE', crash_dict)),
                 CRASHTIME=crash_time,
                 CURRENTASSIGNMENT=self.get_single_attr('CURRENTASSIGNMENT', crash_dict),
                 CURRENTGROUP=self.get_single_attr('CURRENTGROUP', crash_dict),
@@ -262,7 +279,7 @@ class CrashDataReader:
                 HARMFULEVENTONE=self.get_single_attr('HARMFULEVENTONE', crash_dict),
                 HARMFULEVENTTWO=self.get_single_attr('HARMFULEVENTTWO', crash_dict),
                 HITANDRUN=self.convert_to_bool(self.get_single_attr('HITANDRUN', crash_dict)),
-                INSERTDATE=to_datetime(self.get_single_attr('INSERTDATE', crash_dict)),
+                INSERTDATE=self.to_datetime_sql(self.get_single_attr('INSERTDATE', crash_dict)),
                 INTERCHANGEAREA=self.get_single_attr('INTERCHANGEAREA', crash_dict),
                 INTERCHANGEIDENTIFICATION=self.get_single_attr('INTERCHANGEIDENTIFICATION', crash_dict),
                 INTERSECTIONTYPE=self.get_single_attr('INTERSECTIONTYPE', crash_dict),
@@ -298,12 +315,12 @@ class CrashDataReader:
                 STATEGOVERNMENTPROPERTYNAME=self.get_single_attr('STATEGOVERNMENTPROPERTYNAME', crash_dict),
                 SUPERVISOR=self.get_single_attr('SUPERVISOR', crash_dict),
                 SUPERVISORUSERNAME=self.get_single_attr('SUPERVISORUSERNAME', crash_dict),
-                SUPERVISORYDATE=to_datetime(self.get_single_attr('SUPERVISORYDATE', crash_dict)),
+                SUPERVISORYDATE=self.to_datetime_sql(self.get_single_attr('SUPERVISORYDATE', crash_dict)),
                 SURFACECONDITION=self.get_single_attr('SURFACECONDITION', crash_dict),
                 TRAFFICCONTROL=self.get_single_attr('TRAFFICCONTROL', crash_dict),
                 TRAFFICCONTROLFUNCTIONING=self.convert_to_bool(
                     self.get_single_attr('TRAFFICCONTROLFUNCTIONING', crash_dict)),
-                UPDATEDATE=to_datetime(self.get_single_attr('UPDATEDATE', crash_dict)),
+                UPDATEDATE=self.to_datetime_sql(self.get_single_attr('UPDATEDATE', crash_dict)),
                 UPLOADVERSION=self.get_single_attr('UPLOADVERSION', crash_dict),
                 VERSIONNUMBER=self.get_single_attr('VERSIONNUMBER', crash_dict),
                 WEATHER=self.get_single_attr('WEATHER', crash_dict)
@@ -318,18 +335,18 @@ class CrashDataReader:
         self._insert_or_update(
             Approval(
                 AGENCY=self.get_single_attr('AGENCY', approval_dict),
-                APPROVALDATE=to_datetime(self.get_single_attr('APPROVALDATE', approval_dict)),
+                APPROVALDATE=self.to_datetime_sql(self.get_single_attr('APPROVALDATE', approval_dict)),
                 CADSENT=self.get_single_attr('CADSENT', approval_dict),
-                CADSENT_DATE=to_datetime(self.get_single_attr('CADSENT_DATE', approval_dict)),
+                CADSENT_DATE=self.to_datetime_sql(self.get_single_attr('CADSENT_DATE', approval_dict)),
                 CC_NUMBER=self.get_single_attr('CC_NUMBER', approval_dict),
-                DATE_INITIATED2=to_datetime(self.get_single_attr('DATE_INITIATED2', approval_dict)),
+                DATE_INITIATED2=self.to_datetime_sql(self.get_single_attr('DATE_INITIATED2', approval_dict)),
                 GROUP_NUMBER=self.get_single_attr('GROUP_NUMBER', approval_dict),
                 HISTORICALAPPROVALDATAs=self.get_single_attr('HISTORICALAPPROVALDATAs', approval_dict),
-                INCIDENT_DATE=to_datetime(self.get_single_attr('INCIDENT_DATE', approval_dict)),
+                INCIDENT_DATE=self.to_datetime_sql(self.get_single_attr('INCIDENT_DATE', approval_dict)),
                 INVESTIGATOR=self.get_single_attr('INVESTIGATOR', approval_dict),
                 REPORT_TYPE=self.get_single_attr('REPORT_TYPE', approval_dict),
                 SEQ_GUID=self.get_single_attr('SEQ_GUID', approval_dict),
-                STATUS_CHANGE_DATE=to_datetime(self.get_single_attr('STATUS_CHANGE_DATE', approval_dict)),
+                STATUS_CHANGE_DATE=self.to_datetime_sql(self.get_single_attr('STATUS_CHANGE_DATE', approval_dict)),
                 STATUS_ID=self.get_single_attr('STATUS_ID', approval_dict),
                 STEP_NUMBER=self.get_single_attr('STEP_NUMBER', approval_dict),
                 TR_USERNAME=self.get_single_attr('TR_USERNAME', approval_dict),
@@ -455,7 +472,7 @@ class CrashDataReader:
             self._insert_or_update(
                 PdfReport(
                     CHANGEDBY=self.get_single_attr('CHANGEDBY', report),
-                    DATESTATUSCHANGED=to_datetime(self.get_single_attr('DATESTATUSCHANGED', report)),
+                    DATESTATUSCHANGED=self.to_datetime_sql(self.get_single_attr('DATESTATUSCHANGED', report)),
                     PDFREPORT1=self.get_single_attr('PDFREPORT1', report),
                     PDF_ID=self.get_single_attr('PDF_ID', report),
                     REPORTNUMBER=self.get_single_attr('REPORTNUMBER', report),
@@ -479,7 +496,7 @@ class CrashDataReader:
                     DLCLASS=self.get_single_attr('DLCLASS', person),
                     DLNUMBER=self.get_single_attr('DLNUMBER', person),
                     DLSTATE=self.get_single_attr('DLSTATE', person),
-                    DOB=to_datetime(self.get_single_attr('DOB', person)),
+                    DOB=self.to_datetime_sql(self.get_single_attr('DOB', person)),
                     FIRSTNAME=self.get_single_attr('FIRSTNAME', person),
                     HOMEPHONE=self.get_single_attr('HOMEPHONE', person),
                     LASTNAME=self.get_single_attr('LASTNAME', person),
@@ -510,6 +527,9 @@ class CrashDataReader:
             if person.get('PERSON'):
                 self._read_acrs_person_data([person['PERSON']])
                 report_no = self.get_single_attr('REPORTNUMBER', person['PERSON']) or ''
+
+            if report_no == '':
+                raise AssertionError('No report number')
 
             self._insert_or_update(
                 PersonInfo(
@@ -779,3 +799,11 @@ class CrashDataReader:
         if not isinstance(crash_data.get(tag), str) and isinstance(crash_data.get(tag), collections.abc.Iterable):
             raise AssertionError('Expected {} to have only a single element'.format(tag))
         return crash_data.get(tag)
+
+    @staticmethod
+    def to_datetime_sql(dt_str: Optional[str]) -> Optional[datetime]:
+        """Converts a date string to the pandas starndard format, and returns None (instead of NaT) if invalid"""
+        try:
+            return to_datetime(dt_str)
+        except OutOfBoundsDatetime:
+            return None

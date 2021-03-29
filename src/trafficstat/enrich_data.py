@@ -15,7 +15,7 @@ import pyodbc  # type: ignore
 from loguru import logger
 from tqdm import tqdm  # type: ignore
 
-from balt_geocoder.geocoder import Geocoder
+from balt_geocoder.geocoder import APIFatalError, Geocoder
 from balt_geocoder.geocodio_types import GeocodeResult
 from .creds import GAPI
 
@@ -40,22 +40,25 @@ class Enrich:
         data: List[Tuple[str, str]] = []
         geocoder: Geocoder = Geocoder(geocodio_api_key=GAPI)
         with geocoder:
-            for row in tqdm(self.cursor.fetchall()):
-                try:
-                    if row[2] != '':
-                        geocode_result: Optional[GeocodeResult] = geocoder.geocode(
-                            "{} and {}, Baltimore, Maryland".format(row[1], row[2]))
-                    else:
-                        geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
-                except RuntimeError as err:
-                    logger.error("Runtime error: {err}", err=err)
-                    continue
+            try:
+                for row in tqdm(self.cursor.fetchall()):
+                    try:
+                        if row[2] != '':
+                            geocode_result: Optional[GeocodeResult] = geocoder.geocode(
+                                "{} and {}, Baltimore, Maryland".format(row[1], row[2]))
+                        else:
+                            geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
+                    except RuntimeError as err:
+                        logger.error("Runtime error: {err}", err=err)
+                        continue
 
-                if geocode_result is not None and geocode_result.get('census_tract'):
-                    data.append((geocode_result['census_tract'], str(row[0])))
-                    continue
+                    if geocode_result is not None and geocode_result.get('census_tract'):
+                        data.append((geocode_result['census_tract'], str(row[0])))
+                        continue
 
-                logger.warning('No census tract for roadway: {row}', row=row)
+                    logger.warning('No census tract for roadway: {row}', row=row)
+            except APIFatalError as apierr:
+                logger.error("API error: {apierr}", apierr=apierr)
 
         if data:
             self.cursor.executemany("""
@@ -79,14 +82,21 @@ class Enrich:
         data: List[Tuple[str, str]] = []
         geocoder: Geocoder = Geocoder(GAPI)
         with geocoder:
-            for row in tqdm(self.cursor.fetchall()):
-                geocode_result: Optional[GeocodeResult] = geocoder.reverse_geocode(row[1], row[2])
+            try:
+                for row in tqdm(self.cursor.fetchall()):
+                    try:
+                        geocode_result: Optional[GeocodeResult] = geocoder.reverse_geocode(row[1], row[2])
+                    except RuntimeError as err:
+                        logger.error("Runtime error: {err}", err=err)
+                        continue
 
-                if geocode_result is not None and geocode_result.get('census_tract'):
-                    data.append((geocode_result['census_tract'], row[0]))
-                    continue
+                    if geocode_result is not None and geocode_result.get('census_tract'):
+                        data.append((geocode_result['census_tract'], row[0]))
+                        continue
 
-                logger.warning('No census tract for sanitized roadway: {row}', row=row)
+                    logger.warning('No census tract for sanitized roadway: {row}', row=row)
+            except APIFatalError as apierr:
+                logger.error("API error: {apierr}", apierr=apierr)
 
         if data:
             self.cursor.executemany("""
