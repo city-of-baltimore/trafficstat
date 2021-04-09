@@ -3,14 +3,14 @@ import datetime
 import uuid
 from typing import Dict, Optional
 
-from loguru import logger
 import xlsxwriter  # type: ignore
+from loguru import logger
 from sqlalchemy import and_, create_engine, select  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
-from sqlalchemy.engine.result import ChunkedIteratorResult  # type: ignore
 
+from trafficstat.crash_data_schema import Crash, Roadway
 from trafficstat.ms2generator_schema import Base, CircumstanceSanitized, CrashSanitized, EmsSanitized, \
-     PersonSanitized, RoadwaySanitized, VehicleSanitized
+    PersonSanitized, RoadwaySanitized, VehicleSanitized
 
 SEX = {
     '01': 'Male',
@@ -269,44 +269,83 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
     def add_crash_worksheet(self) -> None:
         """Generates the worksheet for the acrs_crash_sanitized table"""
         with Session(self.engine) as session:
-            qry = session.query(CrashSanitized.LIGHT_CODE,
-                                CrashSanitized.COUNTY_NO,
-                                CrashSanitized.MUNI_CODE,
-                                CrashSanitized.JUNCTION_CODE,
-                                CrashSanitized.COLLISION_TYPE_CODE,
-                                CrashSanitized.SURF_COND_CODE,
-                                CrashSanitized.LANE_CODE,
-                                CrashSanitized.RD_COND_CODE,
-                                RoadwaySanitized.RD_DIV_CODE,
-                                CrashSanitized.FIX_OBJ_CODE,
-                                CrashSanitized.REPORT_NO,
-                                CrashSanitized.REPORT_TYPE_CODE,  # REPORT_TYPE_CODE as REPORT_TYPE,
-                                CrashSanitized.WEATHER_CODE,
-                                CrashSanitized.ACC_DATE,
-                                CrashSanitized.ACC_TIME,
-                                CrashSanitized.LOC_CODE,
-                                CrashSanitized.SIGNAL_FLAG,
-                                CrashSanitized.C_M_ZONE_FLAG,
-                                CrashSanitized.AGENCY_CODE,
-                                CrashSanitized.AREA_CODE,
-                                CrashSanitized.HARM_EVENT_CODE1,
-                                CrashSanitized.HARM_EVENT_CODE2,
-                                RoadwaySanitized.ROUTE_NUMBER,  # ROUTE_NUMBER as RTE_NO,
-                                RoadwaySanitized.ROUTE_TYPE_CODE,
-                                RoadwaySanitized.ROUTE_SUFFIX,  # ROUTE_SUFFIX as RTE_SUFFIX,
-                                RoadwaySanitized.LOG_MILE,
-                                RoadwaySanitized.LOGMILE_DIR_FLAG,
-                                RoadwaySanitized.ROAD_NAME,  # ROAD_NAME as MAINROAD_NAME,
-                                RoadwaySanitized.DISTANCE,
-                                RoadwaySanitized.FEET_MILES_FLAG,
-                                RoadwaySanitized.DISTANCE_DIR_FLAG,
-                                RoadwaySanitized.REFERENCE_NUMBER,  # REFERENCE_NUMBER as REFERENCE_NO,
-                                RoadwaySanitized.REFERENCE_TYPE_CODE,
-                                RoadwaySanitized.REFERENCE_SUFFIX,
-                                RoadwaySanitized.REFERENCE_ROAD_NAME,
-                                RoadwaySanitized.X_COORDINATES,  # X_COORDINATES as LATITUDE,
-                                RoadwaySanitized.Y_COORDINATES  # Y_COORDINATES as LONGITUDE
-                                ).join(CrashSanitized.ROADWAY)
+            qry_sanitized = session.query(CrashSanitized.LIGHT_CODE,
+                                          CrashSanitized.COUNTY_NO,
+                                          CrashSanitized.MUNI_CODE,
+                                          CrashSanitized.JUNCTION_CODE,
+                                          CrashSanitized.COLLISION_TYPE_CODE,
+                                          CrashSanitized.SURF_COND_CODE,
+                                          CrashSanitized.LANE_CODE,
+                                          CrashSanitized.RD_COND_CODE,
+                                          RoadwaySanitized.RD_DIV_CODE,
+                                          CrashSanitized.FIX_OBJ_CODE,
+                                          CrashSanitized.REPORT_NO,
+                                          CrashSanitized.REPORT_TYPE_CODE,  # REPORT_TYPE_CODE as REPORT_TYPE,
+                                          CrashSanitized.WEATHER_CODE,
+                                          CrashSanitized.ACC_DATE,
+                                          CrashSanitized.ACC_TIME,
+                                          CrashSanitized.LOC_CODE,
+                                          CrashSanitized.SIGNAL_FLAG,
+                                          CrashSanitized.C_M_ZONE_FLAG,
+                                          CrashSanitized.AGENCY_CODE,
+                                          CrashSanitized.AREA_CODE,
+                                          CrashSanitized.HARM_EVENT_CODE1,
+                                          CrashSanitized.HARM_EVENT_CODE2,
+                                          RoadwaySanitized.ROUTE_NUMBER,  # ROUTE_NUMBER as RTE_NO,
+                                          RoadwaySanitized.ROUTE_TYPE_CODE,
+                                          RoadwaySanitized.ROUTE_SUFFIX,  # ROUTE_SUFFIX as RTE_SUFFIX,
+                                          RoadwaySanitized.LOG_MILE,
+                                          RoadwaySanitized.LOGMILE_DIR_FLAG,
+                                          RoadwaySanitized.ROAD_NAME,  # ROAD_NAME as MAINROAD_NAME,
+                                          RoadwaySanitized.DISTANCE,
+                                          RoadwaySanitized.FEET_MILES_FLAG,
+                                          RoadwaySanitized.DISTANCE_DIR_FLAG,
+                                          RoadwaySanitized.REFERENCE_NUMBER,  # REFERENCE_NUMBER as REFERENCE_NO,
+                                          RoadwaySanitized.REFERENCE_TYPE_CODE,
+                                          RoadwaySanitized.REFERENCE_SUFFIX,
+                                          RoadwaySanitized.REFERENCE_ROAD_NAME,
+                                          RoadwaySanitized.X_COORDINATES,  # X_COORDINATES as LATITUDE,
+                                          RoadwaySanitized.Y_COORDINATES  # Y_COORDINATES as LONGITUDE
+                                          ).join(CrashSanitized.ROADWAY)
+
+            qry_unsanitized = session.query(Crash.LIGHT,
+                                            Crash.REPORTCOUNTYLOCATION,
+                                            Roadway.MUNICIPAL,
+                                            Crash.JUNCTION,
+                                            Crash.COLLISIONTYPE,
+                                            Crash.SURFACECONDITION,
+                                            Crash.LANENUMBER,
+                                            Crash.ROADCONDITION,
+                                            Crash.ROADDIVISION,
+                                            Crash.FIXEDOBJECTSTRUCK,
+                                            Crash.REPORTNUMBER,
+                                            Crash.REPORTTYPE,
+                                            Crash.WEATHER,
+                                            Crash.CRASHDATE,
+                                            Crash.CRASHTIME,
+                                            Crash.LOCALCODES,
+                                            Crash.TRAFFICCONTROL,
+                                            Crash.CONMAINZONE,
+                                            Crash.AGENCYNAME,
+                                            Crash.AREA,
+                                            Crash.HARMFULEVENTONE,
+                                            Crash.HARMFULEVENTTWO,
+                                            Roadway.ROUTE_NUMBER,
+                                            Roadway.ROUTE_TYPE,
+                                            Roadway.ROUTE_SUFFIX,
+                                            Roadway.MILEPOINT,  # RoadwaySanitized.LOG_MILE,
+                                            Roadway.LOGMILE_DIR,  # RoadwaySanitized.LOGMILE_DIR_FLAG,
+                                            Roadway.ROAD_NAME,
+                                            Crash.MILEPOINTDISTANCE,  # distance
+                                            Crash.MILEPOINTDISTANCEUNITS,
+                                            Crash.MILEPOINTDIRECTION,  # distance dir flag
+                                            Roadway.REFERENCE_ROUTE_NUMBER,
+                                            Roadway.REFERENCE_ROUTE_TYPE,
+                                            Roadway.REFERENCE_ROUTE_SUFFIX,
+                                            Roadway.REFERENCE_ROADNAME,
+                                            Crash.LATITUDE,
+                                            Crash.LONGITUDE
+                                            ).join(Crash.ROADWAY).where(Crash.CRASHDATE > '2020-01-01')
 
             worksheet = self.workbook.add_worksheet("CRASH")
             key_subs = {
@@ -320,7 +359,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
             }
 
             row_no = 0
-            for row in qry.all():
+            for row in qry_sanitized.all() + qry_unsanitized.all():
                 if row_no == 0:
                     # Build header row
                     header_list = list(row.keys())
@@ -328,21 +367,16 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                         header_list[header_list.index(orig)] = repl
                     worksheet.write_row(0, 0, header_list)
 
-                    # Find the indexes of the special cases we need to deal with
-                    accident_date_index = header_list.index('ACC_DATE')
-                    accident_time_index = header_list.index('ACC_TIME')
-                    report_id_index = header_list.index('REPORT_TYPE')
-
                     row_no += 1
 
                 for element_no, _ in enumerate(row):
 
                     # Deal with the special cases
-                    if element_no == accident_date_index:
+                    if element_no == header_list.index('ACC_DATE'):
                         worksheet.write(row_no, element_no, row[element_no].strftime('%m/%d/%Y'))
-                    elif element_no == accident_time_index:
+                    elif element_no == header_list.index('ACC_TIME'):
                         worksheet.write(row_no, element_no, str(row[element_no]).zfill(4))
-                    elif element_no == report_id_index:
+                    elif element_no == header_list.index('REPORT_TYPE'):
                         worksheet.write(row_no, element_no, REPORT_TYPE.get(row[element_no]))
 
                     # Other cases
@@ -409,20 +443,15 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
                     worksheet.write_row(0, 0, header_list)
 
-                    # Find the indexes of the special cases we need to deal with
-                    person_id_index = header_list.index('PERSON_ID')
-                    vehicle_id_index = header_list.index('VEHICLE_ID')
-                    sex_index = header_list.index('SEX')
-
                     row_no += 1
 
                 for element_no, _ in enumerate(row):
                     # Deal with the special cases
-                    if element_no == person_id_index:
+                    if element_no == header_list.index('PERSON_ID'):
                         worksheet.write(row_no, element_no, self._get_person_uuid(row[element_no]))
-                    elif element_no == vehicle_id_index:
+                    elif element_no == header_list.index('VEHICLE_ID'):
                         worksheet.write(row_no, element_no, self._get_vehicle_uuid(row[element_no]))
-                    elif element_no == sex_index:
+                    elif element_no == header_list.index('SEX'):
                         worksheet.write(row_no, element_no, self._lookup_sex(row[element_no]))
 
                     # Other cases
@@ -544,40 +573,55 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
     def add_vehicle_circum(self, report_no: str, vehicle_id: str) -> None:
         """ Creates the vehicle_circum sheet"""
         with Session(self.engine) as session:
-            qry = session.execute(select(CircumstanceSanitized.CONTRIB_CODE1, CircumstanceSanitized.CONTRIB_CODE2,
-                                         CircumstanceSanitized.CONTRIB_CODE3, CircumstanceSanitized.CONTRIB_CODE4).
+            qry = session.execute(select(CircumstanceSanitized.REPORT_NO, CircumstanceSanitized.CONTRIB_CODE1,
+                                         CircumstanceSanitized.CONTRIB_CODE2, CircumstanceSanitized.CONTRIB_CODE3,
+                                         CircumstanceSanitized.CONTRIB_CODE4).
                                   where(and_(CircumstanceSanitized.CONTRIB_FLAG == 'V',
                                              CircumstanceSanitized.REPORT_NO == report_no,
                                              CircumstanceSanitized.VEHICLE_ID == vehicle_id)))
 
-            self._add_circum(qry, 'Vehicle', vehicle_id=vehicle_id)
+            for row in qry.fetchall():
+                report_no = row[0]
+                for contrib_code in row[1:]:
+                    try:
+                        val = self._validate_vehicle_value(contrib_code)
+                    except ValueError as err:
+                        logger.error(err)
+                        continue
+
+                    if val is not None:
+                        self.vehicle_circum_ws.write_row(self.road_circum_ws_row, 0,
+                                                         (report_no,
+                                                          'Vehicle',
+                                                          contrib_code,
+                                                          None,
+                                                          self._get_vehicle_uuid(vehicle_id) if vehicle_id else None))
+                        self.road_circum_ws_row += 1
 
     def add_road_circum(self) -> None:
         """ Populates the road sheet"""
         with Session(self.engine) as session:
-            qry = session.execute(select(CircumstanceSanitized.CONTRIB_CODE1, CircumstanceSanitized.CONTRIB_CODE2,
-                                         CircumstanceSanitized.CONTRIB_CODE3, CircumstanceSanitized.CONTRIB_CODE4).
+            qry = session.execute(select(CircumstanceSanitized.REPORT_NO, CircumstanceSanitized.CONTRIB_CODE1,
+                                         CircumstanceSanitized.CONTRIB_CODE2, CircumstanceSanitized.CONTRIB_CODE3,
+                                         CircumstanceSanitized.CONTRIB_CODE4).
                                   where(CircumstanceSanitized.CONTRIB_FLAG == 'R'))
-            self._add_circum(qry, 'Road')
+            for row in qry.fetchall():
+                report_no = row[0]
+                for contrib_code in row[1:]:
+                    try:
+                        val = self._validate_road_value(contrib_code)
+                    except ValueError as err:
+                        logger.error(err)
+                        continue
 
-    def _add_circum(self, qry: ChunkedIteratorResult, worksheet_name: str, person_id: Optional[str] = None,
-                    vehicle_id: Optional[str] = None):
-        """
-        Add circumstance information to existing sheets
-        :param qry: result of session.execute
-        :param worksheet_name: name of the worksheet to add the data to
-        """
-        for row in qry.fetchall():
-            for contrib_code in row:
-                val = self._validate_road_value(contrib_code)
-                if val is not None:
-                    self.road_circum_ws.write_row(self.road_circum_ws_row, 0,
-                                                  (row[0],
-                                                   worksheet_name,
-                                                   contrib_code,
-                                                   self._get_person_uuid(person_id) if person_id else None,
-                                                   self._get_vehicle_uuid(vehicle_id) if vehicle_id else None))
-                    self.road_circum_ws_row += 1
+                    if val is not None:
+                        self.road_circum_ws.write_row(self.road_circum_ws_row, 0,
+                                                      (report_no,
+                                                       'Road',
+                                                       contrib_code,
+                                                       None,
+                                                       None))
+                        self.road_circum_ws_row += 1
 
     def _validate_vehicle_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for vehicles """
@@ -660,3 +704,14 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         if self.vehicle_id_dict.get(vehicle_id) is None:
             self.vehicle_id_dict[vehicle_id] = str(uuid.uuid4())
         return self.vehicle_id_dict[vehicle_id]
+
+
+if __name__ == '__main__':
+    ws_maker = WorksheetMaker(
+        conn_str="mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server")
+    with ws_maker:
+        ws_maker.add_crash_worksheet()
+        ws_maker.add_person_worksheet()
+        ws_maker.add_ems_worksheet()
+        ws_maker.add_vehicle_worksheet()
+        ws_maker.add_road_circum()
