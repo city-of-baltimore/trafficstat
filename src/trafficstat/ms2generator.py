@@ -266,7 +266,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.workbook.close()
 
-    def add_crash_worksheet(self) -> None:
+    def add_crash_worksheet(self) -> None:  # pylint:disable=too-many-branches
         """Generates the worksheet for the acrs_crash_sanitized table"""
         with Session(self.engine) as session:
             qry_sanitized = session.query(CrashSanitized.LIGHT_CODE,
@@ -314,7 +314,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                             Crash.JUNCTION,
                                             Crash.COLLISIONTYPE,
                                             Crash.SURFACECONDITION,
-                                            Crash.LANENUMBER,
+                                            Crash.LANEDIRECTION + Crash.LANENUMBER,
                                             Crash.ROADCONDITION,
                                             Crash.ROADDIVISION,
                                             Crash.FIXEDOBJECTSTRUCK,
@@ -367,6 +367,11 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                         header_list[header_list.index(orig)] = repl
                     worksheet.write_row(0, 0, header_list)
 
+                    # These columns need to be zero padded, to make them a two digit number
+                    padded_ints = [header_list.index('LIGHT_CODE'), header_list.index('COLLISION_TYPE_CODE'),
+                                   header_list.index('FIX_OBJ_CODE'), header_list.index('WEATHER_CODE'),
+                                   header_list.index('HARM_EVENT_CODE1'), header_list.index('HARM_EVENT_CODE2')]
+
                     row_no += 1
 
                 for element_no, _ in enumerate(row):
@@ -374,10 +379,22 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     # Deal with the special cases
                     if element_no == header_list.index('ACC_DATE'):
                         worksheet.write(row_no, element_no, row[element_no].strftime('%m/%d/%Y'))
-                    elif element_no == header_list.index('ACC_TIME'):
-                        worksheet.write(row_no, element_no, str(row[element_no]).zfill(4))
                     elif element_no == header_list.index('REPORT_TYPE'):
                         worksheet.write(row_no, element_no, REPORT_TYPE.get(row[element_no]))
+                    elif element_no == header_list.index('ACC_TIME'):
+                        if isinstance(row[element_no], datetime.time):
+                            worksheet.write(row_no, element_no, row[element_no].strftime('%H%M'))
+                        else:
+                            # needs to be a four digit number, left zero padded
+                            worksheet.write(row_no, element_no, str(row[element_no]).zfill(4))
+                    elif element_no == header_list.index('MUNI_CODE'):
+                        # needs to be a three digit number, left zero padded
+                        worksheet.write(row_no, element_no, str(row[element_no]).zfill(3))
+                    elif element_no in padded_ints:
+                        # needs to be a two digit number, left zero padded
+                        worksheet.write(row_no, element_no, str(row[element_no]).zfill(2))
+                    elif element_no == header_list.index('C_M_ZONE_FLAG') and isinstance(row[element_no], bool):
+                        worksheet.write(row_no, element_no, 'Y' if row[element_no] else 'N')
 
                     # Other cases
                     elif isinstance(row[element_no], datetime.datetime):
