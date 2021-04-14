@@ -391,8 +391,10 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                         # needs to be a three digit number, left zero padded
                         worksheet.write(row_no, element_no, str(row[element_no]).zfill(3))
                     elif element_no in padded_ints:
+                        val = int(row[element_no]) if isinstance(row[element_no], float) else row[element_no]
+
                         # needs to be a two digit number, left zero padded
-                        worksheet.write(row_no, element_no, str(row[element_no]).zfill(2))
+                        worksheet.write(row_no, element_no, str(val).zfill(2))
                     elif element_no == header_list.index('C_M_ZONE_FLAG') and isinstance(row[element_no], bool):
                         worksheet.write(row_no, element_no, 'Y' if row[element_no] else 'N')
 
