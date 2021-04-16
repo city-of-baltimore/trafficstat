@@ -569,7 +569,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     row_no += 1
 
                 self.add_vehicle_circum(row[report_no_index],
-                                        row[vehicle_id_index])
+                                        str(int(row[vehicle_id_index])))
 
                 for element_no, _ in enumerate(row):
 

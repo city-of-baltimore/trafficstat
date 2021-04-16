@@ -73,6 +73,10 @@ def test_add_vehicle_worksheet(tmpdir, conn_str_sanitized):
                                      'AREA_DAMAGED_CODE_MAIN']
     assert len(dfs) == 10
 
+    # verify that vehicle_circum was populated
+    dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='VEHICLE_CIRCUM')
+    assert len(dfs) == 4
+
 
 def test_add_vehicle_circum(tmpdir, conn_str_sanitized):
     """test for the add_vehicle_circum method"""
