@@ -21,7 +21,7 @@ def crash_data_reader_fixture(tmpdir):
 @pytest.fixture(name='conn_str_sanitized')
 def unsanitized_crash_database(tmpdir):
     """Fixture for the WorksheetMaker class"""
-    conn_str = 'sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatabase_sanitized.db'))
+    conn_str = 'sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatabase.db'))
 
     # Make the database
     engine = create_engine(conn_str, echo=True, future=True)
@@ -649,16 +649,17 @@ def unsanitized_crash_database(tmpdir):
                             OCC_SEAT_LOCATION=None, OCC_SEAT_ROW=None, OCC_POS_INROW_CODE=None),
 
             # circumstance_sanitized (requires crash, person, vehicle)
-            CircumstanceSanitized(REPORT_NO='A0000001', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
-                                  CONTRIB_CODE4=00, PERSON_ID=None, VEHICLE_ID=8849671, CIRCUMSTANCE_ID=11458081,
+            CircumstanceSanitized(REPORT_NO='A0000001', CONTRIB_CODE1='99', CONTRIB_CODE2='53', CONTRIB_CODE3=None,
+                                  CONTRIB_CODE4='76.88', PERSON_ID=None, VEHICLE_ID=8849671, CIRCUMSTANCE_ID=11458081,
                                   ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='V'),
-            CircumstanceSanitized(REPORT_NO='A0000002', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
-                                  CONTRIB_CODE4=00, PERSON_ID=None, VEHICLE_ID=8849672, CIRCUMSTANCE_ID=11458083,
+            # The following has invalid contrib codes
+            CircumstanceSanitized(REPORT_NO='A0000002', CONTRIB_CODE1='88', CONTRIB_CODE2='78', CONTRIB_CODE3='69.88',
+                                  CONTRIB_CODE4=None, PERSON_ID=None, VEHICLE_ID=8849672, CIRCUMSTANCE_ID=11458083,
                                   ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='V'),
             CircumstanceSanitized(REPORT_NO='A0000003', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
                                   CONTRIB_CODE4=00, PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458079,
                                   ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='E'),
-            CircumstanceSanitized(REPORT_NO='A0000004', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
+            CircumstanceSanitized(REPORT_NO='A0000004', CONTRIB_CODE1='88', CONTRIB_CODE2='78', CONTRIB_CODE3='69.88',
                                   CONTRIB_CODE4=None, PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458080,
                                   ACC_DATE=to_datetime('2015-03-21 00:00:00.000'), CONTRIB_FLAG='R'),
             CircumstanceSanitized(REPORT_NO='A0000005', CONTRIB_CODE1=00, CONTRIB_CODE2='A9.99',
@@ -679,8 +680,9 @@ def unsanitized_crash_database(tmpdir):
             CircumstanceSanitized(REPORT_NO='A0000008', CONTRIB_CODE1=41, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
                                   CONTRIB_CODE4=00, PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458095,
                                   ACC_DATE=to_datetime('2015-03-10 00:00:00.000'), CONTRIB_FLAG='E'),
-            CircumstanceSanitized(REPORT_NO='A0000009', CONTRIB_CODE1=00, CONTRIB_CODE2=00, CONTRIB_CODE3=00,
-                                  CONTRIB_CODE4=None, PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458096,
+            # The following has invalid contrib codes
+            CircumstanceSanitized(REPORT_NO='A0000009', CONTRIB_CODE1='99', CONTRIB_CODE2='53', CONTRIB_CODE3='83.88',
+                                  CONTRIB_CODE4='76.88', PERSON_ID=None, VEHICLE_ID=None, CIRCUMSTANCE_ID=11458096,
                                   ACC_DATE=to_datetime('2015-03-10 00:00:00.000'), CONTRIB_FLAG='R'),
 
             # citation codes (requires person and crash)
@@ -772,7 +774,7 @@ def unsanitized_crash_database(tmpdir):
 @pytest.fixture(name='conn_str_unsanitized')
 def sanitized_crash_database(tmpdir):
     """Fixture for the WorksheetMaker class"""
-    conn_str = 'sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatabase_unsanitized.db'))
+    conn_str = 'sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatabase.db'))
 
     # Make the database
     engine = create_engine(conn_str, echo=True, future=True)
