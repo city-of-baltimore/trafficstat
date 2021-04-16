@@ -1,14 +1,15 @@
 """Pytest suite for src/ms2generator"""
 # pylint:disable=protected-access
 import os
-import pytest
 
 import pandas as pd  # type: ignore
+import pytest
+from numpy import nan
 
 from trafficstat.ms2generator import WorksheetMaker
 
 
-def test_add_crash_worksheet(tmpdir, conn_str_sanitized):
+def test_add_crash_worksheet(tmpdir, conn_str_sanitized, conn_str_unsanitized):  # pylint:disable=unused-argument
     """test for the add_crash_worksheet method"""
     worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
@@ -72,16 +73,28 @@ def test_add_vehicle_worksheet(tmpdir, conn_str_sanitized):
                                      'AREA_DAMAGED_CODE_MAIN']
     assert len(dfs) == 10
 
+    # verify that vehicle_circum was populated
+    dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='VEHICLE_CIRCUM')
+    assert len(dfs) == 4
+
 
 def test_add_vehicle_circum(tmpdir, conn_str_sanitized):
     """test for the add_vehicle_circum method"""
     worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
-        worksheet_maker.add_vehicle_circum('REPORT1', 'ID1')
-        worksheet_maker.add_vehicle_circum('REPORT1', 'ID1')
+        worksheet_maker.add_vehicle_circum('A0000001', '8849671')
+        worksheet_maker.add_vehicle_circum('A0000002', '8849672')
 
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='VEHICLE_CIRCUM')
-    assert dfs.columns.to_list() == ['REPORT_NO', 'CONTRIB_TYPE', 'CONTRIB_CODE', 'PERSON_ID', 'VEHICLE_ID']
+    expected = pd.DataFrame(data={'REPORT_NO': ['A0000001', 'A0000001', 'A0000001', 'A0000002'],
+                                  'CONTRIB_TYPE': ['Vehicle', 'Vehicle', 'Vehicle', 'Vehicle'],
+                                  'CONTRIB_CODE': [99.00, 53.00, 76.88, 88.00], 'PERSON_ID': [nan, nan, nan, nan],
+                                  'VEHICLE_ID': [dfs['VEHICLE_ID'][0],
+                                                 dfs['VEHICLE_ID'][0],
+                                                 dfs['VEHICLE_ID'][0],
+                                                 dfs['VEHICLE_ID'][3]]})
+    assert len(dfs) == 4
+    assert dfs.equals(expected)
 
 
 def test_add_road_circum(tmpdir, conn_str_sanitized):
@@ -91,7 +104,13 @@ def test_add_road_circum(tmpdir, conn_str_sanitized):
         worksheet_maker.add_road_circum()
 
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='ROAD_CIRCUM')
-    assert dfs.columns.to_list() == ['REPORT_NO', 'CONTRIB_TYPE', 'CONTRIB_CODE', 'PERSON_ID', 'VEHICLE_ID']
+    expected = pd.DataFrame(data={'REPORT_NO': ['A0000004', 'A0000004', 'A0000004', 'A0000009', 'A0000009'],
+                                  'CONTRIB_TYPE': ['Road', 'Road', 'Road', 'Road', 'Road'],
+                                  'CONTRIB_CODE': [88.00, 78.00, 69.88, 99.00, 83.88],
+                                  'PERSON_ID': [nan, nan, nan, nan, nan],
+                                  'VEHICLE_ID': [nan, nan, nan, nan, nan]})
+    assert len(dfs) == 5
+    assert dfs.equals(expected)
 
 
 def test_validate_vehicle_value():

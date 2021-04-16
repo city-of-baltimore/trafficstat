@@ -12,15 +12,16 @@ setup(
     python_requires='>=3.0',
     package_dir={'': 'src'},
     install_requires=[
-        'loguru~=0.5.3',
         'pandas~=1.2.3',
+        'decorator~=5.0.6',
         'pyodbc~=4.0.30',
-        'tqdm~=4.59.0',
-        'balt-geocoder @ git+https://github.com/city-of-baltimore/Geocoder@v1.0.2#egg=balt-geocoder',
-        'xlsxwriter~=1.3.7',
-        'decorator~=4.4.2',
+        'tqdm~=4.60.0',
+        'xlsxwriter~=1.3.8',
         'xmltodict~=0.12.0',
-        'sqlalchemy~=1.4.3',
+        'loguru~=0.5.3',
+        'sqlalchemy~=1.4.7',
         'openpyxl~=3.0.7',
+        'numpy~=1.20.2',
+        'balt-geocoder @ git+https://github.com/city-of-baltimore/Geocoder@v1.0.2#egg=balt-geocoder',
     ]
 )

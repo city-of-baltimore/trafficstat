@@ -346,7 +346,19 @@ This applies to the sanitized data that the State Highway Administration
     )
     ```
 
-18. Hit Finish and complete the injest. 
+18. Hit Finish and complete the data ingest. 
+
+19. Import the lookup tables. Use the tanglookups.accdb file as the data source. Select all tables for import. Then, rename them:
+    ```
+    * [dbo].[MSCANLOOK_MSCAN_AGENCY] -> [dbo].[_acrs_agency]
+    * [dbo].[MSCANLOOK_MSCAN_AIR_BAG] -> [dbo].[_acrs_air_bag]
+    * [dbo].[MSCANLOOK_MSCAN_BODY_TYPE] -> [dbo].[_acrs_body_type]
+    etc...
+    ```
+    
+    To make sure that the mapping works between these lookups, and the other tables the ingestor will setup, we need to match the data types. Go through each table, click edit mapping, and change the *_CODE field to be n
+    Then, change the type of each code to numeric(2, 2)
+    On error, ignore
 
 Then run the data enricher. The enricher populates the 'sanitized' tables with census tract data. This only need to be run after a
 yearly dump of ACRS data is ingested into the _sanitized databases. The census tract information is used by the PowerBI
