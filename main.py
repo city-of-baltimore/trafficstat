@@ -51,7 +51,6 @@ args = parser.parse_args()
 
 if args.subparser_name == 'enrich':
     enricher = Enrich()
-    enricher.geocode_acrs()
     enricher.geocode_acrs_sanitized()
     enricher.clean_road_names()
 

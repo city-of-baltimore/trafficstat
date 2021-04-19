@@ -211,7 +211,7 @@ def test_read_crash_data_files_by_file(crash_data_reader, tmpdir):  # pylint:dis
 @clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram,
         DamagedArea, Ems, Event,
         PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
-def test_read_crash_data_dir(crash_data_reader):  # pylint:disable=too-many-statements
+def test_read_crash_data_dir(crash_data_reader, tmpdir):  # pylint:disable=too-many-statements
     """Rudamentary check that there are the right number of records after a few xml files are read in"""
     xml_files = [
         'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml',
@@ -222,39 +222,36 @@ def test_read_crash_data_dir(crash_data_reader):  # pylint:disable=too-many-stat
         'BALTIMORE_acrs_ADK378000C-witnesses.xml',
         'BALTIMORE_emptyxml.xml'
     ]
-    with tempfile.TemporaryDirectory() as tmpdirname:
+
+    for file in xml_files:
+        shutil.copyfile(os.path.join('tests', 'testfiles', file),
+                        os.path.join(tmpdir, file))
+
+    with Session(crash_data_reader.engine) as session:
+        crash_data_reader.read_crash_data(dir_name=tmpdir, copy=False)
         for file in xml_files:
-            shutil.copyfile(os.path.join('tests', 'testfiles', file),
-                            os.path.join(tmpdirname, file))
+            assert not os.path.exists(
+                os.path.join(tmpdir, '.processed', file))
 
-        if os.path.exists('.processed'):
-            shutil.rmtree('.processed')
+        crash_data_reader.read_crash_data(dir_name=tmpdir, copy=True)
 
-        with Session(crash_data_reader.engine) as session:
-            crash_data_reader.read_crash_data(dir_name=tmpdirname, copy=False)
-            for file in xml_files:
-                assert not os.path.exists(
-                    os.path.join(tmpdirname, '.processed', file))
+        for file in xml_files:
+            assert os.path.exists(
+                os.path.join(tmpdir, '.processed', file))
 
-            crash_data_reader.read_crash_data(dir_name=tmpdirname, copy=True)
-
-            for file in xml_files:
-                assert os.path.exists(
-                    os.path.join(tmpdirname, '.processed', file))
-
-            check_single_entries(session, 5)
-            check_database_rows(session, Circumstance, 15)
-            check_database_rows(session, CitationCode, 1)
-            check_database_rows(session, CommercialVehicle, 2)
-            check_database_rows(session, DamagedArea, 14)
-            check_database_rows(session, Ems, 2)
-            check_database_rows(session, Event, 4)
-            check_database_rows(session, Person, 27)
-            check_database_rows(session, PersonInfo, 16)
-            check_database_rows(session, TowedUnit, 2)
-            check_database_rows(session, Vehicle, 8)
-            check_database_rows(session, VehicleUse, 8)
-            check_database_rows(session, Witness, 3)
+        check_single_entries(session, 5)
+        check_database_rows(session, Circumstance, 15)
+        check_database_rows(session, CitationCode, 1)
+        check_database_rows(session, CommercialVehicle, 2)
+        check_database_rows(session, DamagedArea, 14)
+        check_database_rows(session, Ems, 2)
+        check_database_rows(session, Event, 4)
+        check_database_rows(session, Person, 27)
+        check_database_rows(session, PersonInfo, 16)
+        check_database_rows(session, TowedUnit, 2)
+        check_database_rows(session, Vehicle, 8)
+        check_database_rows(session, VehicleUse, 8)
+        check_database_rows(session, Witness, 3)
 
 
 @clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
@@ -547,23 +544,23 @@ def test_get_single_attr(crash_data_reader):
         crash_data_reader.get_single_attr('MULTIPLENODE', constants_test_data.single_attr_input_data)
 
 
-def test_file_move(crash_data_reader):
+def test_file_move(crash_data_reader, tmpdir):
     """Test _file_move"""
     file = tempfile.NamedTemporaryFile(delete=False)
     file.close()
     tmp_file_name = "{}X".format(file.name)  # temp filename so we can copy the original for each iteration
-    with tempfile.TemporaryDirectory() as temp_dir:
-        for _ in range(6):
-            shutil.copyfile(file.name, tmp_file_name)
-            assert crash_data_reader._file_move(tmp_file_name, temp_dir)
 
+    for _ in range(6):
         shutil.copyfile(file.name, tmp_file_name)
-        assert not crash_data_reader._file_move(tmp_file_name, temp_dir)
+        assert crash_data_reader._file_move(tmp_file_name, tmpdir)
 
-        assert os.path.exists(os.path.join(temp_dir, os.path.basename(tmp_file_name)))
-        assert os.path.exists(os.path.join(temp_dir, '{}_1'.format(os.path.basename(tmp_file_name))))
-        assert os.path.exists(os.path.join(temp_dir, '{}_2'.format(os.path.basename(tmp_file_name))))
-        assert os.path.exists(os.path.join(temp_dir, '{}_3'.format(os.path.basename(tmp_file_name))))
-        assert os.path.exists(os.path.join(temp_dir, '{}_4'.format(os.path.basename(tmp_file_name))))
-        assert os.path.exists(os.path.join(temp_dir, '{}_5'.format(os.path.basename(tmp_file_name))))
-        assert not os.path.exists(os.path.join(temp_dir, '{}_6'.format(os.path.basename(tmp_file_name))))
+    shutil.copyfile(file.name, tmp_file_name)
+    assert not crash_data_reader._file_move(tmp_file_name, tmpdir)
+
+    assert os.path.exists(os.path.join(tmpdir, os.path.basename(tmp_file_name)))
+    assert os.path.exists(os.path.join(tmpdir, '{}_1'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, '{}_2'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, '{}_3'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, '{}_4'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, '{}_5'.format(os.path.basename(tmp_file_name))))
+    assert not os.path.exists(os.path.join(tmpdir, '{}_6'.format(os.path.basename(tmp_file_name))))

@@ -68,6 +68,7 @@ class Crash(Base):
     APPROVAL = relationship('Approval', uselist=False,
                             back_populates='CRASHES')  # one:one <xs:element type="cras:APPROVALDATAType" name="APPROVALDATA" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     AREA = Column(String)  # <xs:element type="xs:string" name="AREA"/>
+    CENSUS_TRACT = Column(String(length=25))
     CIRCUMSTANCES = relationship(
         'Circumstance')  # one:many <xs:element type="cras:CIRCUMSTANCESType" name="CIRCUMSTANCES" xmlns:cras="http://schemas.datacontract.org/2004/07/CrashReport.DataLayer.v20170201"/>
     COLLISIONTYPE = Column(Integer)  # <xs:element type="xs:byte" name="COLLISIONTYPE"/>
@@ -421,7 +422,6 @@ class Roadway(Base):
     ROUTE_SUFFIX = Column(
         String)  # <xs:element name="ROUTE_SUFFIX" minOccurs="0" nillable="true"> (restricted to E, AL, B, A and '')
     ROUTE_TYPE = Column(String)  # <xs:element name="ROUTE_TYPE" minOccurs="0">
-    CENSUS_TRACT = Column(String(length=25))  # populated by the enrich_data.py script
     ROAD_NAME_CLEAN = Column(String(length=50))  # populated by the enrich_data.py script
     REFERENCE_ROAD_NAME_CLEAN = Column(String(length=50))  # populated by the enrich_data.py script
 

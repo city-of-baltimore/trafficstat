@@ -11,6 +11,7 @@ from typing import List, Mapping, Optional, Union
 from xml.parsers.expat import ExpatError
 
 import xmltodict  # type: ignore
+from balt_geocoder import Geocoder
 from loguru import logger
 from pandas import to_datetime  # type: ignore
 from pandas.errors import OutOfBoundsDatetime  # type: ignore
@@ -20,6 +21,7 @@ from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 from sqlalchemy.sql import text  # type: ignore
+from pyvin import DecodedVIN, VIN  # type: ignore
 
 from trafficstat.crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
     CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, \
@@ -28,6 +30,7 @@ from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, Circum
     CommercialVehicleType, CrashDiagramType, DamagedAreaType, DriverType, EmsType, EventType, NonMotoristType, \
     PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, TowedUnitType, \
     VehicleType, VehicleUseType, WitnessType
+from trafficstat.creds import GAPI
 
 logger.disable('trafficstat')
 
@@ -67,7 +70,8 @@ def check_and_log(check_dict: str):
 class CrashDataReader:
     """ Reads a directory of ACRS crash data files"""
 
-    def __init__(self, conn_str: str):
+    def __init__(self, conn_str: str, geocodio_api_key: Optional[str] = None, pickle_filename: str = 'geo.pickle',
+                 pickle_filename_rev: str = 'geo_rev.pickle'):
         """
         Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
         :param conn_str: sqlalchemy connection string (IE sqlite:///crash.db)
@@ -77,6 +81,12 @@ class CrashDataReader:
 
         with self.engine.begin() as connection:
             Base.metadata.create_all(connection)
+
+        if geocodio_api_key is None:
+            geocodio_api_keys: List[str] = GAPI
+        else:
+            geocodio_api_keys = [geocodio_api_key]
+        self.geocoder = Geocoder(geocodio_api_keys, pickle_filename, pickle_filename_rev) if geocodio_api_keys else None
 
     def _insert_or_update(self, insert_obj: DeclarativeMeta, identity_insert=False):
         """
@@ -181,7 +191,8 @@ class CrashDataReader:
             self._read_roadway_data(crash_dict['ROADWAY'])
 
         # The following requires acrs_roadway for its relationships
-        self._read_main_crash_data(crash_dict)
+        if not self._read_main_crash_data(crash_dict):
+            return
 
         # The following require acrs_crash for their relationships
         if crash_dict.get('APPROVALDATA'):
@@ -247,7 +258,7 @@ class CrashDataReader:
         return False
 
     @check_and_log('crash_dict')
-    def _read_main_crash_data(self, crash_dict: CrashDataType) -> None:
+    def _read_main_crash_data(self, crash_dict: CrashDataType) -> bool:
         """ Populates the acrs_crashes table """
         crash_time_str = self.get_single_attr('CRASHTIME', crash_dict)
         if isinstance(crash_time_str, str) and len(crash_time_str.split('T')) > 1:
@@ -257,12 +268,29 @@ class CrashDataReader:
         else:
             crash_time = time.fromisoformat(crash_time_str)
 
+        latitude = self.get_single_attr('LATITUDE', crash_dict)
+        longitude = self.get_single_attr('LONGITUDE', crash_dict)
+        census_tract = None
+
+        if not (latitude and longitude):
+            logger.error('Unable to get latitude and longitude')
+        else:
+            if not self.geocoder:
+                logger.error('Unable to geocode because the geocoder is invalid')
+            else:
+                geo = self.geocoder.reverse_geocode(float(latitude), float(longitude))
+                if not geo:
+                    logger.error('Unable to reverse geocode {}/{}'.format(latitude, longitude))
+                else:
+                    census_tract = geo.get('census_tract')
+
         self._insert_or_update(
             Crash(
                 ACRSREPORTTIMESTAMP=self.to_datetime_sql(self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict)),
                 AGENCYIDENTIFIER=self.get_single_attr('AGENCYIDENTIFIER', crash_dict),
                 AGENCYNAME=self.get_single_attr('AGENCYNAME', crash_dict),
                 AREA=self.get_single_attr('AREA', crash_dict),
+                CENSUS_TRACT=census_tract,
                 COLLISIONTYPE=self.get_single_attr('COLLISIONTYPE', crash_dict),
                 CONMAINCLOSURE=self.get_single_attr('CONMAINCLOSURE', crash_dict),
                 CONMAINLOCATION=self.get_single_attr('CONMAINLOCATION', crash_dict),
@@ -289,11 +317,11 @@ class CrashDataReader:
                 LANEDIRECTION=self.get_single_attr('LANEDIRECTION', crash_dict),
                 LANENUMBER=self.get_single_attr('LANENUMBER', crash_dict),
                 LANETYPE=self.get_single_attr('LANETYPE', crash_dict),
-                LATITUDE=self.get_single_attr('LATITUDE', crash_dict),
+                LATITUDE=latitude,
                 LIGHT=self.get_single_attr('LIGHT', crash_dict),
                 LOCALCASENUMBER=self.get_single_attr('LOCALCASENUMBER', crash_dict),
                 LOCALCODES=self.get_single_attr('LOCALCODES', crash_dict),
-                LONGITUDE=self.get_single_attr('LONGITUDE', crash_dict),
+                LONGITUDE=longitude,
                 MILEPOINTDIRECTION=self.get_single_attr('MILEPOINTDIRECTION', crash_dict),
                 MILEPOINTDISTANCE=self.get_single_attr('MILEPOINTDISTANCE', crash_dict),
                 MILEPOINTDISTANCEUNITS=self.get_single_attr('MILEPOINTDISTANCEUNITS', crash_dict),
@@ -325,6 +353,8 @@ class CrashDataReader:
                 VERSIONNUMBER=self.get_single_attr('VERSIONNUMBER', crash_dict),
                 WEATHER=self.get_single_attr('WEATHER', crash_dict)
             ))
+
+        return True
 
     @check_and_log('approval_dict')
     def _read_approval_data(self, approval_dict: ApprovalDataType) -> None:
@@ -633,6 +663,11 @@ class CrashDataReader:
         :param vehicle_dict: List of OrderedDicts from the ACRSVEHICLE tag
         """
         for vehicle in vehicle_dict:
+            vin = self.get_single_attr('VIN', vehicle)
+            vehicle_lookup = VIN(vin)
+            if not vehicle_lookup:
+                # just to make the rest of the logic work when there is no return
+                vehicle_lookup = DecodedVIN({'Make': None, 'Model': None, 'ModelYear': None})
 
             self._insert_or_update(
                 Vehicle(
@@ -661,14 +696,14 @@ class CrashDataReader:
                     UNITNUMBER=self.get_single_attr('UNITNUMBER', vehicle),
                     VEHICLEBODYTYPE=self.get_single_attr('VEHICLEBODYTYPE', vehicle),
                     VEHICLEID=self._validate_uniqueidentifier(self.get_single_attr('VEHICLEID', vehicle)),
-                    VEHICLEMAKE=self.get_single_attr('VEHICLEMAKE', vehicle),
-                    VEHICLEMODEL=self.get_single_attr('VEHICLEMODEL', vehicle),
+                    VEHICLEMAKE=getattr(vehicle_lookup, 'Make') or self.get_single_attr('VEHICLEMAKE', vehicle),
+                    VEHICLEMODEL=getattr(vehicle_lookup, 'Model') or self.get_single_attr('VEHICLEMODEL', vehicle),
                     VEHICLEMOVEMENT=self.get_single_attr('VEHICLEMOVEMENT', vehicle),
                     VEHICLEREMOVEDBY=self.get_single_attr('VEHICLEREMOVEDBY', vehicle),
                     VEHICLEREMOVEDTO=self.get_single_attr('VEHICLEREMOVEDTO', vehicle),
                     VEHICLETOWEDAWAY=self.get_single_attr('VEHICLETOWEDAWAY', vehicle),
-                    VEHICLEYEAR=self.get_single_attr('VEHICLEYEAR', vehicle),
-                    VIN=self.get_single_attr('VIN', vehicle)
+                    VEHICLEYEAR=getattr(vehicle_lookup, 'ModelYear') or self.get_single_attr('VEHICLEYEAR', vehicle),
+                    VIN=vin
                 ))
 
             if vehicle.get('DAMAGEDAREAs') and vehicle.get('DAMAGEDAREAs', {}).get('DAMAGEDAREA'):

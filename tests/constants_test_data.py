@@ -1134,15 +1134,15 @@ vehicle_input_data = [
         ('UNITNUMBER', '1'),
         ('VEHICLEBODYTYPE', '23.08'),
         ('VEHICLEID', '01a1ac19-5c24-4fbe-a001-173574c5cbed'),
-        ('VEHICLEMAKE', 'GMC'),
-        ('VEHICLEMODEL', 'ENVOY'),
+        ('VEHICLEMAKE', None),
+        ('VEHICLEMODEL', None),
         ('VEHICLEMOVEMENT', '13'),
         ('VEHICLEREMOVEDBY', 'FRANKFORD # 90'),
         ('VEHICLEREMOVEDTO', '6300 BELAIR ROAD'),
         ('VEHICLETOWEDAWAY', 'Y'),
         ('VEHICLEUSEs', None),  # tested in test_read_acrs_vehicle_use_data
-        ('VEHICLEYEAR', '2017'),
-        ('VIN', '1234567890123456')]),
+        ('VEHICLEYEAR', None),
+        ('VIN', '4T4BF1FK3ER362881')]),
     OrderedDict([
         ('COMMERCIALVEHICLE', OrderedDict([('@i:nil', 'true')])),
         ('CONTINUEDIRECTION', 'W'),
@@ -1175,15 +1175,15 @@ vehicle_input_data = [
         ('UNITNUMBER', '2'),
         ('VEHICLEBODYTYPE', '23.08'),
         ('VEHICLEID', '6dde66e1-433b-4839-9df8-ffb969d35d68'),
-        ('VEHICLEMAKE', 'BUICK'),
-        ('VEHICLEMODEL', 'ENCLAVE'),
+        ('VEHICLEMAKE', None),
+        ('VEHICLEMODEL', None),
         ('VEHICLEMOVEMENT', '06'),
         ('VEHICLEREMOVEDBY', OrderedDict([('@i:nil', 'true')])),
         ('VEHICLEREMOVEDTO', OrderedDict([('@i:nil', 'true')])),
         ('VEHICLETOWEDAWAY', 'N'),
         ('VEHICLEUSEs', None),  # tested in test_read_acrs_vehicle_use_data
-        ('VEHICLEYEAR', '2013'),
-        ('VIN', '1ASDFGHJKLZXCVBNM')])]
+        ('VEHICLEYEAR', None),
+        ('VIN', 'IFDK37G4VEB88796')])]
 
 vehicle_output_data = [
     {
@@ -1211,14 +1211,14 @@ vehicle_output_data = [
         'UNITNUMBER': 1,
         'VEHICLEBODYTYPE': '23.08',
         'VEHICLEID': uuid.UUID('01a1ac19-5c24-4fbe-a001-173574c5cbed'),
-        'VEHICLEMAKE': 'GMC',
-        'VEHICLEMODEL': 'ENVOY',
+        'VEHICLEMAKE': 'TOYOTA',
+        'VEHICLEMODEL': 'Camry',
         'VEHICLEMOVEMENT': 13.0,
         'VEHICLEREMOVEDBY': 'FRANKFORD # 90',
         'VEHICLEREMOVEDTO': '6300 BELAIR ROAD',
         'VEHICLETOWEDAWAY': 'Y',
-        'VEHICLEYEAR': '2017',
-        'VIN': '1234567890123456',
+        'VEHICLEYEAR': '2014',
+        'VIN': '4T4BF1FK3ER362881',
     },
     {
         'CONTINUEDIRECTION': 'W',
@@ -1245,14 +1245,14 @@ vehicle_output_data = [
         'UNITNUMBER': 2,
         'VEHICLEBODYTYPE': '23.08',
         'VEHICLEID': uuid.UUID('6dde66e1-433b-4839-9df8-ffb969d35d68'),
-        'VEHICLEMAKE': 'BUICK',
-        'VEHICLEMODEL': 'ENCLAVE',
+        'VEHICLEMAKE': None,
+        'VEHICLEMODEL': None,
         'VEHICLEMOVEMENT': 6,
         'VEHICLEREMOVEDBY': None,
         'VEHICLEREMOVEDTO': None,
         'VEHICLETOWEDAWAY': 'N',
-        'VEHICLEYEAR': '2013',
-        'VIN': '1ASDFGHJKLZXCVBNM',
+        'VEHICLEYEAR': None,
+        'VIN': 'IFDK37G4VEB88796',
     }]
 
 # VEHICLE USE
