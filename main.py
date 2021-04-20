@@ -11,7 +11,7 @@ from trafficstat.viewer import get_crash_diagram
 
 handlers = [
     {'sink': sys.stdout, 'format': '{time} - {message}', 'colorize': True, 'backtrace': True, 'diagnose': True},
-    {'sink': os.path.join('logs', 'file-{time}.log'), 'colorize': True, 'serialize': True, 'backtrace': True,
+    {'sink': os.path.join('logs', 'file-{time}.log'), 'serialize': True, 'backtrace': True,
      'diagnose': True, 'rotation': '1 week', 'retention': '3 months', 'compression': 'zip'},
 ]
 
