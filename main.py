@@ -9,13 +9,13 @@ from trafficstat.crash_data_ingester import CrashDataReader
 from trafficstat.ms2generator import WorksheetMaker
 from trafficstat.viewer import get_crash_diagram
 
-config = {
-    "handlers": [
-        {"sink": sys.stdout, "format": "{time} - {message}"},
-        {"sink": "file.log", "serialize": True},
-    ],
-    "extra": {"user": "someone"}
-}
+handlers = [
+    {'sink': sys.stdout, 'format': '{time} - {message}', 'colorize': True, 'backtrace': True, 'diagnose': True},
+    {'sink': os.path.join('logs', 'file-{time}.log'), 'colorize': True, 'serialize': True, 'backtrace': True,
+     'diagnose': True, 'rotation': '1 week', 'retention': '3 months', 'compression': 'zip'},
+]
+
+logger.configure(handlers=handlers)
 
 parser = argparse.ArgumentParser(description='Traffic Data Parser')
 subparsers = parser.add_subparsers(dest='subparser_name', help='sub-command help')
@@ -67,7 +67,7 @@ if args.subparser_name == 'parse':
 
 if args.subparser_name == 'ms2export':
     ws_maker = WorksheetMaker(
-        conn_str="mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server")
+        conn_str='mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server')
     with ws_maker:
         ws_maker.add_crash_worksheet()
         ws_maker.add_person_worksheet()
