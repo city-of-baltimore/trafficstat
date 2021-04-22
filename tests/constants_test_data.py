@@ -204,7 +204,7 @@ TEST_READ_CRASH_DATA_CONST = {
             'Witness': 0
         },
 
-    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADI444005P.xml'):
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADI444005P-v2.xml'):
         {
             'Circumstance': 2,
             'CitationCode': 0,

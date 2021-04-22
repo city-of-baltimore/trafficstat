@@ -558,7 +558,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                 if row_no == 0:
                     # Replace the last instane of VIN_NO with VEHICLE_ID, per the spec
                     header_list = list(row.keys())
-                    header_list[header_list.index('VEHICLE_ID_1')] = 'VEHICLE_ID'
+                    header_list[header_list.index('VIN_NO_1')] = 'VEHICLE_ID'
                     worksheet.write_row(0, 0, header_list)
 
                     # Find the indexes of the special cases we need to deal with

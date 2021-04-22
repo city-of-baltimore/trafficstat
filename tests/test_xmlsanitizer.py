@@ -29,7 +29,7 @@ def test_sanitize_xml(tmpdir):
     xmlsanitizer.sanitize_xml_path(testfiles, sanitized_files)
 
     files = glob.glob(os.path.join(sanitized_files, '*.xml'))
-    assert len(files) == 13
+    assert len(files) - 1 == 13  # remove one because of the duplicate version test
     for file in files:
         with open(file, 'r') as xml_file:
             xml_contents = xml_file.read()
