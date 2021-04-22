@@ -294,6 +294,7 @@ class PersonInfo(Base):
         Integer)  # <xs:element name="PEDESTRIANVISIBILITY"> (restricted to 00, 01, 02, 03, 04, 06, 07, 88 and 99)
     PERSONID = Column(GUID, ForeignKey('acrs_person.PERSONID'),
                       primary_key=True)  # <xs:element type="xs:string" name="PERSONID"/>
+    PERSONTYPE = Column(String(length=1), nullable=True)
     REPORTNUMBER = Column(String(length=REPORTNUMBER_LEN),
                           ForeignKey('acrs_crash.REPORTNUMBER'))  # <xs:element type="xs:string" name="REPORTNUMBER"/>
     SAFETYEQUIPMENT = Column(Float)  # <xs:element type="xs:float" name="SAFETYEQUIPMENT"/>

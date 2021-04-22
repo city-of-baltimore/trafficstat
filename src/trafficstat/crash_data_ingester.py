@@ -565,6 +565,17 @@ class CrashDataReader:
             if report_no == '':
                 raise AssertionError('No report number')
 
+            person_type = None
+            if self.get_single_attr('PEDESTRIANTYPE', person):
+                person_type = 'P'
+            elif self.get_single_attr('SEAT', person):
+                person_type = 'O'
+            elif not self.get_single_attr('PEDESTRIANTYPE', person) and not self.get_single_attr('SEAT', person):
+                person_type = 'D'
+
+            if person_type is None:
+                logger.warning('Unable to determine person_type')
+
             self._insert_or_update(
                 PersonInfo(
                     AIRBAGDEPLOYED=self.get_single_attr('AIRBAGDEPLOYED', person),
@@ -591,6 +602,7 @@ class CrashDataReader:
                     PEDESTRIANTYPE=self.get_single_attr('PEDESTRIANTYPE', person),
                     PEDESTRIANVISIBILITY=self.get_single_attr('PEDESTRIANVISIBILITY', person),
                     PERSONID=self._validate_uniqueidentifier(self.get_single_attr('PERSONID', person)),
+                    PERSONTYPE=person_type,
                     REPORTNUMBER=report_no,
                     SAFETYEQUIPMENT=self.get_single_attr('SAFETYEQUIPMENT', person),
                     SEAT=self.get_single_attr('SEAT', person),
