@@ -1,4 +1,5 @@
 """Processes unprocessed data in the network share that holds crash data"""
+import argparse
 import collections.abc
 import glob
 import inspect
@@ -23,16 +24,15 @@ from sqlalchemy.orm import Session  # type: ignore
 from sqlalchemy.sql import text  # type: ignore
 from pyvin import DecodedVIN, VIN  # type: ignore
 
-from trafficstat.crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
+from .crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
     CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, \
     Witness
-from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
+from .crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
     CommercialVehicleType, CrashDiagramType, DamagedAreaType, DriverType, EmsType, EventType, NonMotoristType, \
     PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, TowedUnitType, \
     VehicleType, VehicleUseType, WitnessType
-from trafficstat.creds import GAPI
-
-logger.disable('trafficstat')
+from .creds import GAPI
+from .xmlsanitizer import sanitize_xml_str
 
 
 @sqlalchemyevent.listens_for(Engine, "connect")
@@ -47,20 +47,20 @@ def check_and_log(check_dict: str):
     """Logs the function entry, and checks the check_dict argument for nullness"""
 
     def _check_and_log(func):
-        def wrapper(*args, **kwargs):
+        def wrapper(*_args, **_kwargs):
             logger.info('Entering {}', func.__name__)
 
             # handle positional or keyword args
             args_name = inspect.getfullargspec(func)[0]
-            args_dict = dict(zip(args_name, args))
-            args_dict.update(**kwargs)
+            args_dict = dict(zip(args_name, _args))
+            args_dict.update(**_kwargs)
             self = args_dict['self']
 
             if self.is_element_nil(args_dict[check_dict]):
                 logger.warning('No data')
                 return False
 
-            return func(*args, **kwargs)
+            return func(*_args, **_kwargs)
 
         return wrapper
 
@@ -143,35 +143,39 @@ class CrashDataReader:
                 session.execute(text('SET IDENTITY_INSERT {} OFF'.format(insert_obj.__tablename__)))
             session.close()
 
-    def read_crash_data(self, dir_name: Optional[str] = None, recursive: bool = False, file_name: Optional[str] = None,
-                        copy: bool = True
-                        ) -> None:  # pylint:disable=too-many-branches
+    def read_crash_data(self, dir_name: Optional[str] = None, recursive: bool = False, file_name: Optional[str] = None,  # pylint:disable=too-many-arguments
+                        copy: bool = True, sanitize: bool = False
+                        ) -> None:
         """
         Reads the ACRS crash data files
-        :param dir_name: Directory to process. All XML files in the directory will be processed
+        :param dir_name: Directory to process. All XML files in the directory will be processed.
         :param recursive: Recursive search, as passed to glob.glob. Only applicable to dir_name arg
         :param file_name: Full path to the file to process
-        :param copy: If True, then all processed xml files will be copied to .processed folder
+        :param copy: All processed ACRS xml files will be copied to .processed folder
+        :param sanitize: All processed ACRS xml files will be sanitized of PII.
         """
         if dir_name:
             for acrs_file in glob.glob(os.path.join(dir_name, '*.xml'), recursive=recursive):
-                self._read_file(os.path.join(dir_name, acrs_file))
-                if copy:
-                    try:
-                        self._file_move(acrs_file, os.path.join(dir_name, '.processed'))
-                    except PermissionError as err:
-                        logger.error('Unable to copy file: {}', err)
+                self.read_crash_data(recursive=recursive, file_name=acrs_file, copy=copy, sanitize=sanitize)
 
         if file_name:
             if os.path.exists(file_name):
-                self._read_file(file_name)
+                self._read_file(file_name, sanitize=sanitize)
                 if copy:
-                    self._file_move(file_name, os.path.join(os.path.dirname(file_name), '.processed'))
+                    try:
+                        self._file_move(file_name, os.path.join(os.path.dirname(file_name), '.processed'))
+                    except PermissionError as err:
+                        logger.error('Unable to copy file: {}', err)
 
-    def _read_file(self, file_name: str) -> None:  # pylint:disable=too-many-branches
+    def _read_file(self, file_name: str, sanitize: bool = False) -> None:  # pylint:disable=too-many-branches
         logger.info('Processing {}', file_name)
         with open(file_name, encoding='utf-8') as acrs_file:
-            crash_file = acrs_file.read()
+            crash_file: Optional[str] = acrs_file.read()
+            if sanitize:
+                crash_file = sanitize_xml_str(crash_file)
+
+        if crash_file is None:
+            return
 
         # These files have non ascii at the beginning that causes parse errors
         offset = crash_file.find('<?xml')
@@ -842,3 +846,29 @@ class CrashDataReader:
             return to_datetime(dt_str)
         except OutOfBoundsDatetime:
             return None
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Parse ACRS xml crash data files in the specified directory, and '
+                                                 'insert them into a database')
+    parser.add_argument('-c', '--conn_str', default='sqlite:///crash.db',
+                              help='Custom database connection string (default: sqlite:///crash.db)')
+    parser.add_argument('-d', '--directory', help='Directory containing ACRS XML files to parse. If quotes are '
+                                                  'required in the path (if there are spaces), use double quotes.')
+    parser.add_argument('-f', '--file',
+                              help='Path to a single file to process. If quotes are required in the path '
+                                   '(if there are spaces), use double quotes.')
+    parser.add_argument('-s', '--sanitize', action='store_true',
+                              help='Sanitize the data from PII while being imported')
+
+    args = parser.parse_args()
+
+    cls = CrashDataReader(args.conn_str)
+    if not (args.directory or args.file):
+        logger.error('Must specify either a directory or file to process')
+    if args.directory:
+        cls.read_crash_data(dir_name=args.directory, sanitize=args.sanitize)
+    if args.file:
+        if not os.path.exists(args.file):
+            logger.error('File does not exist: {}'.format(args.file))
+        cls.read_crash_data(file_name=args.file, sanitize=args.sanitize)

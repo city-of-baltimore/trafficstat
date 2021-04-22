@@ -117,3 +117,9 @@ class Enrich:
             address = address.replace(orig, repl)
 
         return address.strip()
+
+
+if __name__ == '__main__':
+    enricher = Enrich()
+    enricher.geocode_acrs_sanitized()
+    enricher.clean_road_names()

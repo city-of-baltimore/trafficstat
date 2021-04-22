@@ -22,11 +22,11 @@ def test_sanitize_xml(tmpdir):
     with open(empty_file, 'w'):
         pass
     with pytest.raises(RuntimeError):
-        xmlsanitizer.sanitize_xml(testfiles, empty_file)
+        xmlsanitizer.sanitize_xml_path(testfiles, empty_file)
 
     # now do it right
     sanitized_files = os.path.join(tmpdir, '.sanitized')
-    xmlsanitizer.sanitize_xml(testfiles, sanitized_files)
+    xmlsanitizer.sanitize_xml_path(testfiles, sanitized_files)
 
     files = glob.glob(os.path.join(sanitized_files, '*.xml'))
     assert len(files) == 13
@@ -45,7 +45,7 @@ def test_sanitize_xml_file(tmpdir):
     sanitized_files = os.path.join(tmpdir, '.sanitized')
     shutil.copyfile(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml'),
                     original_file)
-    xmlsanitizer.sanitize_xml(original_file, sanitized_files)
+    xmlsanitizer.sanitize_xml_path(original_file, sanitized_files)
 
     with open(os.path.join(sanitized_files, os.path.basename(original_file)), 'r') as xml_file:
         xml_contents = xml_file.read()

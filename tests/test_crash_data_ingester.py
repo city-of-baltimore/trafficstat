@@ -22,7 +22,7 @@ from . import constants_test_data
 
 def check_database_rows(session, model: DeclarativeMeta, expected_rows: int):
     """Does a simple check that the number of rows in the table is what we expect"""
-    qry = session.query(model).filter_by()
+    qry = session.query(model)
     assert qry.count() == expected_rows, "Expected database {} to have {} rows. Actual: {}".format(
         model.__tablename__, expected_rows, qry.count()
     )
@@ -208,8 +208,43 @@ def test_read_crash_data_files_by_file(crash_data_reader, tmpdir):  # pylint:dis
                 first = False
 
 
-@clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram,
-        DamagedArea, Ems, Event,
+@clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
+        PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
+def test_read_crash_data_dir_sanitized(crash_data_reader, tmpdir):
+    """Checks that the files are properly sanitized"""
+    test_files = os.path.join(tmpdir, 'testfiles')
+    shutil.copytree(os.path.join('tests', 'testfiles'), test_files)
+    crash_data_reader.read_crash_data(dir_name=test_files, sanitize=True)
+
+    with Session(crash_data_reader.engine) as session:
+        qry = session.query(Crash.NARRATIVE)
+        assert qry.count() == 13
+        assert not any(['LASTNAME' in i[0] for i in qry.all()])
+
+        qry = session.query(Person.FIRSTNAME, Person.LASTNAME)
+        assert all([i[0] is None for i in qry.all()])
+        assert all([i[1] is None for i in qry.all()])
+        assert qry.count() == 51
+
+
+def test_read_crash_data_file_sanitized(crash_data_reader, tmpdir):
+    """Checks that the files are properly sanitized"""
+    test_file = os.path.join(tmpdir, 'BALTIMORE_acrs_ADD934004P.xml')
+    shutil.copy(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADD934004P.xml'), test_file)
+    crash_data_reader.read_crash_data(file_name=test_file, sanitize=True)
+
+    with Session(crash_data_reader.engine) as session:
+        qry = session.query(Crash.NARRATIVE)
+        assert qry.count() == 1
+        assert not any(['LASTNAME' in i[0] for i in qry.all()])
+
+        qry = session.query(Person.FIRSTNAME, Person.LASTNAME)
+        assert all([i[0] is None for i in qry.all()])
+        assert all([i[1] is None for i in qry.all()])
+        assert qry.count() == 5
+
+
+@clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
         PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
 def test_read_crash_data_dir(crash_data_reader, tmpdir):  # pylint:disable=too-many-statements
     """Rudamentary check that there are the right number of records after a few xml files are read in"""
