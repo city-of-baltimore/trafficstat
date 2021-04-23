@@ -36,7 +36,9 @@ def test_sanitize_xml(tmpdir):
 
         assert set(re.findall('<FIRSTNAME>(.*?)</FIRSTNAME>', xml_contents)) == {''}
         assert set(re.findall('<LASTNAME>(.*?)</LASTNAME>', xml_contents)) == {''}
-        assert 'LASTNAME' not in re.findall('<NARRATIVE>(.*?)</NARRATIVE>', xml_contents)[0]
+        narrative = re.findall('<NARRATIVE>(.*?)</NARRATIVE>', xml_contents, re.DOTALL)[0]
+        assert 'LASTNAME' not in narrative
+        assert len(narrative) > 1
 
 
 def test_sanitize_xml_file(tmpdir):
@@ -52,4 +54,6 @@ def test_sanitize_xml_file(tmpdir):
 
     assert set(re.findall('<FIRSTNAME>(.*?)</FIRSTNAME>', xml_contents)) == {''}
     assert set(re.findall('<LASTNAME>(.*?)</LASTNAME>', xml_contents)) == {''}
-    assert 'LASTNAME' not in re.findall('<NARRATIVE>(.*?)</NARRATIVE>', xml_contents)[0]
+    narrative = re.findall('<NARRATIVE>(.*?)</NARRATIVE>', xml_contents, re.DOTALL)[0]
+    assert 'LASTNAME' not in narrative
+    assert len(narrative) > 1

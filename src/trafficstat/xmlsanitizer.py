@@ -51,15 +51,17 @@ def sanitize_xml_str(xml_str) -> Optional[str]:
     :param xml_str: string (containing XML) to sanitize
     :return: none
     """
-    narrative = re.findall('<NARRATIVE>(.*?)</NARRATIVE>', xml_str)
-    if not narrative:
+    narratives = re.findall('<NARRATIVE>(.*?)</NARRATIVE>', xml_str, re.DOTALL)
+    if not narratives:
         logger.error("Unable to find NARRATIVE")
         return None
+
+    narrative = narratives[0]
 
     for person_type in ['OWNER', 'DRIVER', 'PASSENGER', 'NONMOTORIST']:
         last_names = re.findall('<{pt}>.*<LASTNAME>(.*?)</LASTNAME>.*</{pt}>'.format(pt=person_type), xml_str)
         for last_name in last_names:
-            narrative = narrative[0].replace(' {} '.format(last_name), ' **{}** '.format(person_type))
+            narrative = narrative.replace(' {} '.format(last_name), ' **{}** '.format(person_type))
 
         xml_str = re.sub('<FIRSTNAME>.*?</FIRSTNAME>', '<FIRSTNAME></FIRSTNAME>', xml_str)
         xml_str = re.sub('<LASTNAME>.*?</LASTNAME>', '<LASTNAME></LASTNAME>', xml_str)

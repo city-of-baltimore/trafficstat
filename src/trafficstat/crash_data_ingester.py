@@ -688,9 +688,11 @@ class CrashDataReader:
         for vehicle in vehicle_dict:
             vin = self.get_single_attr('VIN', vehicle)
 
+            vehicle_lookup = None
             if vin is not None and len(vin) == 17:
                 vehicle_lookup = VIN(vin)
-            else:
+
+            if not vehicle_lookup:
                 # just to make the rest of the logic work when there is no return
                 vehicle_lookup = DecodedVIN({'Make': None, 'Model': None, 'ModelYear': None})
 
