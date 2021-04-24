@@ -23,7 +23,6 @@ setup(
         'openpyxl~=3.0.7',
         'numpy~=1.20.2',
         'pyvin~=0.0.2',
-        'astroid==2.5.3',
         'balt-geocoder@git+https://github.com/city-of-baltimore/Geocoder@v1.0.4#egg=balt-geocoder',
     ]
 )
