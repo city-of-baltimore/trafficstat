@@ -16,13 +16,13 @@ setup(
         'decorator~=5.0.7',
         'pyodbc~=4.0.30',
         'tqdm~=4.60.0',
-        'XlsxWriter~=1.3.9',
+        'XlsxWriter~=1.4.0',
         'xmltodict~=0.12.0',
         'loguru~=0.5.3',
         'sqlalchemy~=1.4.11',
         'openpyxl~=3.0.7',
         'numpy~=1.20.2',
         'pyvin~=0.0.2',
-        'balt-geocoder@git+https://github.com/city-of-baltimore/Geocoder@v1.0.3#egg=balt-geocoder',
+        'balt-geocoder@git+https://github.com/city-of-baltimore/Geocoder@v1.0.4#egg=balt-geocoder',
     ]
 )
