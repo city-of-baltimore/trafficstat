@@ -219,11 +219,11 @@ def test_read_crash_data_dir_sanitized(crash_data_reader, tmpdir):
     with Session(crash_data_reader.engine) as session:
         qry = session.query(Crash.NARRATIVE)
         assert qry.count() == 13
-        assert not any(['LASTNAME' in i[0] for i in qry.all()])
+        assert not any('LASTNAME' in i[0] for i in qry.all())
 
         qry = session.query(Person.FIRSTNAME, Person.LASTNAME)
-        assert all([i[0] is None for i in qry.all()])
-        assert all([i[1] is None for i in qry.all()])
+        assert all(i[0] is None for i in qry.all())
+        assert all(i[1] is None for i in qry.all())
         assert qry.count() == 51
 
 
@@ -236,11 +236,11 @@ def test_read_crash_data_file_sanitized(crash_data_reader, tmpdir):
     with Session(crash_data_reader.engine) as session:
         qry = session.query(Crash.NARRATIVE)
         assert qry.count() == 1
-        assert not any(['LASTNAME' in i[0] for i in qry.all()])
+        assert not any('LASTNAME' in i[0] for i in qry.all())
 
         qry = session.query(Person.FIRSTNAME, Person.LASTNAME)
-        assert all([i[0] is None for i in qry.all()])
-        assert all([i[1] is None for i in qry.all()])
+        assert all(i[0] is None for i in qry.all())
+        assert all(i[1] is None for i in qry.all())
         assert qry.count() == 5
 
 
