@@ -7,8 +7,7 @@ To setup your environment:
 1. Check out the code. Either download it from the Github repository, or clone it with Git
 2. Create a virtual environment. `python -m venv .venv`
 3. Activate the virtual environment. `.venv\Scripts\activate`
-4. Download all required python libraries. `python -m pip install -r requirements.txt`
-5. Install the trafficstat library. `python setup.py install`
+4. Install the trafficstat library. `python setup.py install`
 
 ## Parse XML Files
 To parse ACRS XML files, run 
@@ -369,5 +368,11 @@ dashboards to generate maps of hotspots.
 ## Export to MS2
 MS2 is a tool that the department uses to visualize crash data. To create a spreadsheet that MS2 can ingest, run `python -m trafficstat.ms2generation`. This will create a spreadsheet called `BaltimoreCrash.xlsx` in the same directory.
 
-# View Crash Diagrams
+## View Crash Diagrams
 To view the crash diagram for a specific crash, run `python -m trafficstat.viewer --report_no <reportnumber>`
+
+## XML Sanitizer
+The ACRS files ship with personally identifiable information that should not be shared by the BPD. To generate sanitized ACRS XML files, run the following:
+`python -m trafficstat.xmlsanitizer --input_dir <INPUTDIR> --output_dir <OUTPUTDIR>`
+
+To sanitize the data as its inserted into the database, pass the `-s` flag to the `python -m trafficstat.crash_data_ingester` command. For more information about the crash_data_ingester command, see [that section](#parse-xml-files) 
