@@ -155,7 +155,7 @@ class CrashDataReader:
         """
         if dir_name:
             for acrs_file in glob.glob(os.path.join(dir_name, '*.xml'), recursive=recursive):
-                self.read_crash_data(recursive=recursive, file_name=acrs_file, copy=copy, sanitize=sanitize)
+                self.read_crash_data(file_name=acrs_file, copy=copy, sanitize=sanitize)
 
         if file_name:
             if os.path.exists(file_name):

@@ -65,7 +65,7 @@ def sanitize_xml_str(xml_str) -> Optional[str]:
 
         xml_str = re.sub('<FIRSTNAME>.*?</FIRSTNAME>', '<FIRSTNAME></FIRSTNAME>', xml_str)
         xml_str = re.sub('<LASTNAME>.*?</LASTNAME>', '<LASTNAME></LASTNAME>', xml_str)
-        xml_str = re.sub('<MIDDLENAME>.*</MIDDLENAME>', '<MIDDLENAME>.*</MIDDLENAME>', xml_str)
+        xml_str = re.sub('<MIDDLENAME>.*?</MIDDLENAME>', '<MIDDLENAME></MIDDLENAME>', xml_str)
 
     narrative = re.sub(r"(\\)", r"\\\\", narrative)
     return re.sub('<NARRATIVE>.*?</NARRATIVE>', '<NARRATIVE>{nar}</NARRATIVE>'.format(nar=narrative), xml_str,
