@@ -237,6 +237,7 @@ def test_read_crash_data_file_sanitized(crash_data_reader, tmpdir):
         qry = session.query(Crash.NARRATIVE)
         assert qry.count() == 1
         assert not any('LASTNAME' in i[0] for i in qry.all())
+        assert qry.all()[0][0] == r'NARRATIVE VEHICK\LE \nNARRATIVE **OWNER** NARRATIVE\nNARRATIVE'
 
         qry = session.query(Person.FIRSTNAME, Person.LASTNAME)
         assert all(i[0] is None for i in qry.all())
