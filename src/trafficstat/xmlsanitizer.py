@@ -61,7 +61,8 @@ def sanitize_xml_str(xml_str) -> Optional[str]:
     for person_type in ['OWNER', 'DRIVER', 'PASSENGER', 'NONMOTORIST']:
         last_names = re.findall('<{pt}>.*<LASTNAME>(.*?)</LASTNAME>.*</{pt}>'.format(pt=person_type), xml_str)
         for last_name in last_names:
-            narrative = narrative.replace(' {} '.format(last_name), ' **{}** '.format(person_type))
+            if last_name:
+                narrative = narrative.replace(' {} '.format(last_name), ' **{}** '.format(person_type))
 
         xml_str = re.sub('<FIRSTNAME>.*?</FIRSTNAME>', '<FIRSTNAME></FIRSTNAME>', xml_str)
         xml_str = re.sub('<LASTNAME>.*?</LASTNAME>', '<LASTNAME></LASTNAME>', xml_str)

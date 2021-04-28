@@ -142,9 +142,9 @@ class CrashDataReader:
                 if identity_insert:
                     session.execute(text('SET IDENTITY_INSERT {} OFF'.format(insert_obj.__tablename__)))
 
-    def read_crash_data(self, dir_name: Optional[str] = None, recursive: bool = False, file_name: Optional[str] = None,  # pylint:disable=too-many-arguments
-                        copy: bool = True, sanitize: bool = False
-                        ) -> None:
+    def read_crash_data(self, dir_name: Optional[str] = None,  # pylint:disable=too-many-arguments
+                        recursive: bool = False, file_name: Optional[str] = None, copy: bool = True,
+                        sanitize: bool = False) -> None:
         """
         Reads the ACRS crash data files
         :param dir_name: Directory to process. All XML files in the directory will be processed.

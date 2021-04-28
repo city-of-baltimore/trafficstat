@@ -1,5 +1,5 @@
 [flake8]
-max-line-length = 160
+max-line-length = 120
 per-file-ignores =
     src/trafficstat/crash_data_types.py:E501
     src/trafficstat/crash_data_schema.py:E501

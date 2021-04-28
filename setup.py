@@ -22,7 +22,7 @@ setup(
         'sqlalchemy~=1.4.11',
         'openpyxl~=3.0.7',
         'numpy~=1.20.2',
-        'pyvin~=0.0.2',
+        'pyvin@git+https://github.com/cylussec/pyvin@added_testing#egg=pyvin',
         'balt-geocoder@git+https://github.com/city-of-baltimore/Geocoder@v1.0.4#egg=balt-geocoder',
     ]
 )
