@@ -12,16 +12,17 @@ setup(
     python_requires='>=3.0',
     package_dir={'': 'src'},
     install_requires=[
-        'pandas~=1.2.3',
-        'decorator~=5.0.6',
+        'pandas~=1.2.4',
+        'decorator~=5.0.7',
         'pyodbc~=4.0.30',
         'tqdm~=4.60.0',
-        'xlsxwriter~=1.3.8',
+        'XlsxWriter~=1.4.0',
         'xmltodict~=0.12.0',
         'loguru~=0.5.3',
-        'sqlalchemy~=1.4.7',
+        'sqlalchemy~=1.4.11',
         'openpyxl~=3.0.7',
         'numpy~=1.20.2',
-        'balt-geocoder @ git+https://github.com/city-of-baltimore/Geocoder@v1.0.2#egg=balt-geocoder',
+        'pyvin@git+https://github.com/cylussec/pyvin@added_testing#egg=pyvin',
+        'balt-geocoder@git+https://github.com/city-of-baltimore/Geocoder@v1.0.4#egg=balt-geocoder',
     ]
 )

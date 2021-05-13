@@ -204,7 +204,7 @@ TEST_READ_CRASH_DATA_CONST = {
             'Witness': 0
         },
 
-    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADI444005P.xml'):
+    os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADI444005P-v2.xml'):
         {
             'Circumstance': 2,
             'CitationCode': 0,
@@ -813,6 +813,7 @@ person_info_driver_output_data = [{
     'HASCDL': False,
     'INJURYSEVERITY': 1,
     'PERSONID': uuid.UUID('fcd8309c-250a-4fa4-9fdf-d6dafe2c6946'),
+    'PERSONTYPE': 'D',
     'SAFETYEQUIPMENT': 99.0,
     'SUBSTANCEUSE': 0,
     'VEHICLEID': uuid.UUID('5f19b3c5-4e3b-4010-9959-506a84632cdb')
@@ -845,6 +846,7 @@ person_info_pass_output_data = [{
     'EQUIPMENTPROBLEM': 1,
     'INJURYSEVERITY': 2,
     'PERSONID': uuid.UUID('fd3dffba-c1c6-41df-9fc5-a45ae4379db1'),
+    'PERSONTYPE': 'O',
     'SAFETYEQUIPMENT': 13.0,
     'SEAT': 3,
     'SEATINGLOCATION': 6,
@@ -935,6 +937,7 @@ person_info_pass_mult_output_data = [
         'EQUIPMENTPROBLEM': 1,
         'INJURYSEVERITY': 1,
         'PERSONID': uuid.UUID('3c348c05-c3c1-44fb-840c-dd5c23cd9811'),
+        'PERSONTYPE': 'O',
         'SAFETYEQUIPMENT': 13.0,
         'SEAT': 1,
         'SEATINGLOCATION': 4.0,
@@ -948,6 +951,7 @@ person_info_pass_mult_output_data = [
         'EQUIPMENTPROBLEM': 1,
         'INJURYSEVERITY': 1,
         'PERSONID': uuid.UUID('64f9cda0-1477-4cb9-8891-67087d4163bc'),
+        'PERSONTYPE': 'O',
         'SAFETYEQUIPMENT': 13.0,
         'SEAT': 3,
         'SEATINGLOCATION': 3.0,
@@ -1024,6 +1028,7 @@ person_info_nonmotorist_output_data = [{
     'PEDESTRIANTYPE': 6,
     'PEDESTRIANVISIBILITY': 0,
     'PERSONID': uuid.UUID('d18f27b0-d7e3-40de-b778-89f7a88ccd4f'),
+    'PERSONTYPE': 'P',
     'REPORTNUMBER': 'ADD905004N',
     'SAFETYEQUIPMENT': 1.0,
     'SUBSTANCEUSE': 1,
@@ -1134,15 +1139,15 @@ vehicle_input_data = [
         ('UNITNUMBER', '1'),
         ('VEHICLEBODYTYPE', '23.08'),
         ('VEHICLEID', '01a1ac19-5c24-4fbe-a001-173574c5cbed'),
-        ('VEHICLEMAKE', 'GMC'),
-        ('VEHICLEMODEL', 'ENVOY'),
+        ('VEHICLEMAKE', None),
+        ('VEHICLEMODEL', None),
         ('VEHICLEMOVEMENT', '13'),
         ('VEHICLEREMOVEDBY', 'FRANKFORD # 90'),
         ('VEHICLEREMOVEDTO', '6300 BELAIR ROAD'),
         ('VEHICLETOWEDAWAY', 'Y'),
         ('VEHICLEUSEs', None),  # tested in test_read_acrs_vehicle_use_data
-        ('VEHICLEYEAR', '2017'),
-        ('VIN', '1234567890123456')]),
+        ('VEHICLEYEAR', None),
+        ('VIN', '4T4BF1FK3ER362881')]),
     OrderedDict([
         ('COMMERCIALVEHICLE', OrderedDict([('@i:nil', 'true')])),
         ('CONTINUEDIRECTION', 'W'),
@@ -1175,15 +1180,15 @@ vehicle_input_data = [
         ('UNITNUMBER', '2'),
         ('VEHICLEBODYTYPE', '23.08'),
         ('VEHICLEID', '6dde66e1-433b-4839-9df8-ffb969d35d68'),
-        ('VEHICLEMAKE', 'BUICK'),
-        ('VEHICLEMODEL', 'ENCLAVE'),
+        ('VEHICLEMAKE', None),
+        ('VEHICLEMODEL', None),
         ('VEHICLEMOVEMENT', '06'),
         ('VEHICLEREMOVEDBY', OrderedDict([('@i:nil', 'true')])),
         ('VEHICLEREMOVEDTO', OrderedDict([('@i:nil', 'true')])),
         ('VEHICLETOWEDAWAY', 'N'),
         ('VEHICLEUSEs', None),  # tested in test_read_acrs_vehicle_use_data
-        ('VEHICLEYEAR', '2013'),
-        ('VIN', '1ASDFGHJKLZXCVBNM')])]
+        ('VEHICLEYEAR', None),
+        ('VIN', 'IFDK37G4VEB88796')])]
 
 vehicle_output_data = [
     {
@@ -1211,14 +1216,14 @@ vehicle_output_data = [
         'UNITNUMBER': 1,
         'VEHICLEBODYTYPE': '23.08',
         'VEHICLEID': uuid.UUID('01a1ac19-5c24-4fbe-a001-173574c5cbed'),
-        'VEHICLEMAKE': 'GMC',
-        'VEHICLEMODEL': 'ENVOY',
+        'VEHICLEMAKE': 'TOYOTA',
+        'VEHICLEMODEL': 'Camry',
         'VEHICLEMOVEMENT': 13.0,
         'VEHICLEREMOVEDBY': 'FRANKFORD # 90',
         'VEHICLEREMOVEDTO': '6300 BELAIR ROAD',
         'VEHICLETOWEDAWAY': 'Y',
-        'VEHICLEYEAR': '2017',
-        'VIN': '1234567890123456',
+        'VEHICLEYEAR': '2014',
+        'VIN': '4T4BF1FK3ER362881',
     },
     {
         'CONTINUEDIRECTION': 'W',
@@ -1245,14 +1250,14 @@ vehicle_output_data = [
         'UNITNUMBER': 2,
         'VEHICLEBODYTYPE': '23.08',
         'VEHICLEID': uuid.UUID('6dde66e1-433b-4839-9df8-ffb969d35d68'),
-        'VEHICLEMAKE': 'BUICK',
-        'VEHICLEMODEL': 'ENCLAVE',
+        'VEHICLEMAKE': None,
+        'VEHICLEMODEL': None,
         'VEHICLEMOVEMENT': 6,
         'VEHICLEREMOVEDBY': None,
         'VEHICLEREMOVEDTO': None,
         'VEHICLETOWEDAWAY': 'N',
-        'VEHICLEYEAR': '2013',
-        'VIN': '1ASDFGHJKLZXCVBNM',
+        'VEHICLEYEAR': None,
+        'VIN': 'IFDK37G4VEB88796',
     }]
 
 # VEHICLE USE

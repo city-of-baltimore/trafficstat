@@ -1,4 +1,5 @@
 """Processes unprocessed data in the network share that holds crash data"""
+import argparse
 import collections.abc
 import glob
 import inspect
@@ -11,6 +12,7 @@ from typing import List, Mapping, Optional, Union
 from xml.parsers.expat import ExpatError
 
 import xmltodict  # type: ignore
+from balt_geocoder import Geocoder
 from loguru import logger
 from pandas import to_datetime  # type: ignore
 from pandas.errors import OutOfBoundsDatetime  # type: ignore
@@ -20,16 +22,17 @@ from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 from sqlalchemy.sql import text  # type: ignore
+from pyvin import DecodedVIN, VIN  # type: ignore
 
-from trafficstat.crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
+from .crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
     CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, \
     Witness
-from trafficstat.crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
+from .crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType, CitationCodeType, \
     CommercialVehicleType, CrashDiagramType, DamagedAreaType, DriverType, EmsType, EventType, NonMotoristType, \
     PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, TowedUnitType, \
     VehicleType, VehicleUseType, WitnessType
-
-logger.disable('trafficstat')
+from .creds import GAPI
+from .xmlsanitizer import sanitize_xml_str
 
 
 @sqlalchemyevent.listens_for(Engine, "connect")
@@ -44,20 +47,20 @@ def check_and_log(check_dict: str):
     """Logs the function entry, and checks the check_dict argument for nullness"""
 
     def _check_and_log(func):
-        def wrapper(*args, **kwargs):
+        def wrapper(*_args, **_kwargs):
             logger.info('Entering {}', func.__name__)
 
             # handle positional or keyword args
             args_name = inspect.getfullargspec(func)[0]
-            args_dict = dict(zip(args_name, args))
-            args_dict.update(**kwargs)
+            args_dict = dict(zip(args_name, _args))
+            args_dict.update(**_kwargs)
             self = args_dict['self']
 
             if self.is_element_nil(args_dict[check_dict]):
                 logger.warning('No data')
                 return False
 
-            return func(*args, **kwargs)
+            return func(*_args, **_kwargs)
 
         return wrapper
 
@@ -67,7 +70,8 @@ def check_and_log(check_dict: str):
 class CrashDataReader:
     """ Reads a directory of ACRS crash data files"""
 
-    def __init__(self, conn_str: str):
+    def __init__(self, conn_str: str, geocodio_api_key: Optional[str] = None, pickle_filename: str = 'geo.pickle',
+                 pickle_filename_rev: str = 'geo_rev.pickle'):
         """
         Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
         :param conn_str: sqlalchemy connection string (IE sqlite:///crash.db)
@@ -78,6 +82,12 @@ class CrashDataReader:
         with self.engine.begin() as connection:
             Base.metadata.create_all(connection)
 
+        if geocodio_api_key is None:
+            geocodio_api_keys: List[str] = GAPI
+        else:
+            geocodio_api_keys = [geocodio_api_key]
+        self.geocoder = Geocoder(geocodio_api_keys, pickle_filename, pickle_filename_rev) if geocodio_api_keys else None
+
     def _insert_or_update(self, insert_obj: DeclarativeMeta, identity_insert=False):
         """
         A safe way for the sqlalchemy
@@ -85,83 +95,86 @@ class CrashDataReader:
         :param identity_insert:
         :return:
         """
-        session = Session(bind=self.engine, future=True)
-        if identity_insert:
-            session.execute(text('SET IDENTITY_INSERT {} ON'.format(insert_obj.__tablename__)))
-
-        session.add(insert_obj)
-        try:
-            session.commit()
-            logger.debug('Successfully inserted object: {}', insert_obj)
-        except IntegrityError as insert_err:
-            session.rollback()
-
-            if '(544)' in insert_err.args[0]:
-                # This is a workaround for an issue with sqlalchemy not properly setting IDENTITY_INSERT on for SQL
-                # Server before we insert values in the primary key. The error is:
-                # (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]
-                # Cannot insert explicit value for identity column in table <table name> when IDENTITY_INSERT is set to
-                # OFF. (544) (SQLExecDirectW)")
-                self._insert_or_update(insert_obj, True)
-
-            elif '(2627)' in insert_err.args[0] or 'UNIQUE constraint failed' in insert_err.args[0]:
-                # Error 2627 is the Sql Server error for inserting when the primary key already exists. 'UNIQUE
-                # constraint failed' is the same for Sqlite
-                cls_type = type(insert_obj)
-
-                qry = session.query(cls_type)
-
-                primary_keys = [i.key for i in sqlalchemyinspect(cls_type).primary_key]
-                for primary_key in primary_keys:
-                    qry = qry.filter(cls_type.__dict__[primary_key] == insert_obj.__dict__[primary_key])
-
-                update_vals = {k: v for k, v in insert_obj.__dict__.items()
-                               if not k.startswith('_') and k not in primary_keys}
-                if update_vals:
-                    qry.update(update_vals)
-                    try:
-                        session.commit()
-                        logger.debug('Successfully inserted object: {}', insert_obj)
-                    except IntegrityError as update_err:
-                        logger.error('Unable to insert object: {}\nError: {}', insert_obj, update_err)
-
-            else:
-                raise AssertionError('Expected error 2627 or "UNIQUE constraint failed". Got {}'.format(insert_err)) \
-                    from insert_err
-        finally:
+        with Session(bind=self.engine, future=True) as session:
             if identity_insert:
-                session.execute(text('SET IDENTITY_INSERT {} OFF'.format(insert_obj.__tablename__)))
-            session.close()
+                session.execute(text('SET IDENTITY_INSERT {} ON'.format(insert_obj.__tablename__)))
 
-    def read_crash_data(self, dir_name: Optional[str] = None, recursive: bool = False, file_name: Optional[str] = None,
-                        copy: bool = True
-                        ) -> None:  # pylint:disable=too-many-branches
+            session.add(insert_obj)
+            try:
+                session.commit()
+                logger.debug('Successfully inserted object: {}', insert_obj)
+            except IntegrityError as insert_err:
+                session.rollback()
+
+                if '(544)' in insert_err.args[0]:
+                    # This is a workaround for an issue with sqlalchemy not properly setting IDENTITY_INSERT on for SQL
+                    # Server before we insert values in the primary key. The error is:
+                    # (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]
+                    # Cannot insert explicit value for identity column in table <table name> when IDENTITY_INSERT is set
+                    # to OFF. (544) (SQLExecDirectW)")
+                    self._insert_or_update(insert_obj, True)
+
+                elif '(2627)' in insert_err.args[0] or 'UNIQUE constraint failed' in insert_err.args[0]:
+                    # Error 2627 is the Sql Server error for inserting when the primary key already exists. 'UNIQUE
+                    # constraint failed' is the same for Sqlite
+                    cls_type = type(insert_obj)
+
+                    qry = session.query(cls_type)
+
+                    primary_keys = [i.key for i in sqlalchemyinspect(cls_type).primary_key]
+                    for primary_key in primary_keys:
+                        qry = qry.filter(cls_type.__dict__[primary_key] == insert_obj.__dict__[primary_key])
+
+                    update_vals = {k: v for k, v in insert_obj.__dict__.items()
+                                   if not k.startswith('_') and k not in primary_keys}
+                    if update_vals:
+                        qry.update(update_vals)
+                        try:
+                            session.commit()
+                            logger.debug('Successfully inserted object: {}', insert_obj)
+                        except IntegrityError as update_err:
+                            logger.error('Unable to insert object: {}\nError: {}', insert_obj, update_err)
+
+                else:
+                    raise AssertionError('Expected error 2627 or "UNIQUE constraint failed". '
+                                         'Got {}'.format(insert_err)) from insert_err
+            finally:
+                if identity_insert:
+                    session.execute(text('SET IDENTITY_INSERT {} OFF'.format(insert_obj.__tablename__)))
+
+    def read_crash_data(self, dir_name: Optional[str] = None,  # pylint:disable=too-many-arguments
+                        recursive: bool = False, file_name: Optional[str] = None, copy: bool = True,
+                        sanitize: bool = False) -> None:
         """
         Reads the ACRS crash data files
-        :param dir_name: Directory to process. All XML files in the directory will be processed
+        :param dir_name: Directory to process. All XML files in the directory will be processed.
         :param recursive: Recursive search, as passed to glob.glob. Only applicable to dir_name arg
         :param file_name: Full path to the file to process
-        :param copy: If True, then all processed xml files will be copied to .processed folder
+        :param copy: All processed ACRS xml files will be copied to .processed folder
+        :param sanitize: All processed ACRS xml files will be sanitized of PII.
         """
         if dir_name:
             for acrs_file in glob.glob(os.path.join(dir_name, '*.xml'), recursive=recursive):
-                self._read_file(os.path.join(dir_name, acrs_file))
-                if copy:
-                    try:
-                        self._file_move(acrs_file, os.path.join(dir_name, '.processed'))
-                    except PermissionError as err:
-                        logger.error('Unable to copy file: {}', err)
+                self.read_crash_data(file_name=acrs_file, copy=copy, sanitize=sanitize)
 
         if file_name:
             if os.path.exists(file_name):
-                self._read_file(file_name)
+                self._read_file(file_name, sanitize=sanitize)
                 if copy:
-                    self._file_move(file_name, os.path.join(os.path.dirname(file_name), '.processed'))
+                    try:
+                        self._file_move(file_name, os.path.join(os.path.dirname(file_name), '.processed'))
+                    except PermissionError as err:
+                        logger.error('Unable to copy file: {}', err)
 
-    def _read_file(self, file_name: str) -> None:  # pylint:disable=too-many-branches
+    def _read_file(self, file_name: str, sanitize: bool = False) -> None:  # pylint:disable=too-many-branches
         logger.info('Processing {}', file_name)
         with open(file_name, encoding='utf-8') as acrs_file:
-            crash_file = acrs_file.read()
+            crash_file: Optional[str] = acrs_file.read()
+            if sanitize:
+                crash_file = sanitize_xml_str(crash_file)
+
+        if crash_file is None:
+            return
 
         # These files have non ascii at the beginning that causes parse errors
         offset = crash_file.find('<?xml')
@@ -177,11 +190,20 @@ class CrashDataReader:
 
         crash_dict = root['REPORT']
 
+        with Session(bind=self.engine, future=True) as session:
+            qry = session.query(Crash.VERSIONNUMBER).filter(Crash.REPORTNUMBER == crash_dict.get('REPORTNUMBER'))
+
+            if qry.count() > 0 and int(crash_dict.get('VERSIONNUMBER')) <= qry.all()[0][0]:
+                logger.warning("Not processing this file because of data version.\nFile data version: {}\n"
+                               "Database data version: {}", crash_dict.get('VERSIONNUMBER'), qry.all()[0][0])
+                return
+
         if crash_dict.get('ROADWAY'):
             self._read_roadway_data(crash_dict['ROADWAY'])
 
         # The following requires acrs_roadway for its relationships
-        self._read_main_crash_data(crash_dict)
+        if not self._read_main_crash_data(crash_dict):
+            return
 
         # The following require acrs_crash for their relationships
         if crash_dict.get('APPROVALDATA'):
@@ -247,7 +269,7 @@ class CrashDataReader:
         return False
 
     @check_and_log('crash_dict')
-    def _read_main_crash_data(self, crash_dict: CrashDataType) -> None:
+    def _read_main_crash_data(self, crash_dict: CrashDataType) -> bool:
         """ Populates the acrs_crashes table """
         crash_time_str = self.get_single_attr('CRASHTIME', crash_dict)
         if isinstance(crash_time_str, str) and len(crash_time_str.split('T')) > 1:
@@ -257,12 +279,29 @@ class CrashDataReader:
         else:
             crash_time = time.fromisoformat(crash_time_str)
 
+        latitude = self.get_single_attr('LATITUDE', crash_dict)
+        longitude = self.get_single_attr('LONGITUDE', crash_dict)
+        census_tract = None
+
+        if not (latitude and longitude):
+            logger.error('Unable to get latitude and longitude')
+        else:
+            if not self.geocoder:
+                logger.error('Unable to geocode because the geocoder is invalid')
+            else:
+                geo = self.geocoder.reverse_geocode(float(latitude), float(longitude))
+                if not geo:
+                    logger.error('Unable to reverse geocode {}/{}'.format(latitude, longitude))
+                else:
+                    census_tract = geo.get('census_tract')
+
         self._insert_or_update(
             Crash(
                 ACRSREPORTTIMESTAMP=self.to_datetime_sql(self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict)),
                 AGENCYIDENTIFIER=self.get_single_attr('AGENCYIDENTIFIER', crash_dict),
                 AGENCYNAME=self.get_single_attr('AGENCYNAME', crash_dict),
                 AREA=self.get_single_attr('AREA', crash_dict),
+                CENSUS_TRACT=census_tract,
                 COLLISIONTYPE=self.get_single_attr('COLLISIONTYPE', crash_dict),
                 CONMAINCLOSURE=self.get_single_attr('CONMAINCLOSURE', crash_dict),
                 CONMAINLOCATION=self.get_single_attr('CONMAINLOCATION', crash_dict),
@@ -289,11 +328,11 @@ class CrashDataReader:
                 LANEDIRECTION=self.get_single_attr('LANEDIRECTION', crash_dict),
                 LANENUMBER=self.get_single_attr('LANENUMBER', crash_dict),
                 LANETYPE=self.get_single_attr('LANETYPE', crash_dict),
-                LATITUDE=self.get_single_attr('LATITUDE', crash_dict),
+                LATITUDE=latitude,
                 LIGHT=self.get_single_attr('LIGHT', crash_dict),
                 LOCALCASENUMBER=self.get_single_attr('LOCALCASENUMBER', crash_dict),
                 LOCALCODES=self.get_single_attr('LOCALCODES', crash_dict),
-                LONGITUDE=self.get_single_attr('LONGITUDE', crash_dict),
+                LONGITUDE=longitude,
                 MILEPOINTDIRECTION=self.get_single_attr('MILEPOINTDIRECTION', crash_dict),
                 MILEPOINTDISTANCE=self.get_single_attr('MILEPOINTDISTANCE', crash_dict),
                 MILEPOINTDISTANCEUNITS=self.get_single_attr('MILEPOINTDISTANCEUNITS', crash_dict),
@@ -325,6 +364,8 @@ class CrashDataReader:
                 VERSIONNUMBER=self.get_single_attr('VERSIONNUMBER', crash_dict),
                 WEATHER=self.get_single_attr('WEATHER', crash_dict)
             ))
+
+        return True
 
     @check_and_log('approval_dict')
     def _read_approval_data(self, approval_dict: ApprovalDataType) -> None:
@@ -531,6 +572,17 @@ class CrashDataReader:
             if report_no == '':
                 raise AssertionError('No report number')
 
+            person_type = None
+            if self.get_single_attr('PEDESTRIANTYPE', person):
+                person_type = 'P'
+            elif self.get_single_attr('SEAT', person):
+                person_type = 'O'
+            elif not self.get_single_attr('PEDESTRIANTYPE', person) and not self.get_single_attr('SEAT', person):
+                person_type = 'D'
+
+            if person_type is None:
+                logger.warning('Unable to determine person_type')
+
             self._insert_or_update(
                 PersonInfo(
                     AIRBAGDEPLOYED=self.get_single_attr('AIRBAGDEPLOYED', person),
@@ -557,6 +609,7 @@ class CrashDataReader:
                     PEDESTRIANTYPE=self.get_single_attr('PEDESTRIANTYPE', person),
                     PEDESTRIANVISIBILITY=self.get_single_attr('PEDESTRIANVISIBILITY', person),
                     PERSONID=self._validate_uniqueidentifier(self.get_single_attr('PERSONID', person)),
+                    PERSONTYPE=person_type,
                     REPORTNUMBER=report_no,
                     SAFETYEQUIPMENT=self.get_single_attr('SAFETYEQUIPMENT', person),
                     SEAT=self.get_single_attr('SEAT', person),
@@ -633,6 +686,15 @@ class CrashDataReader:
         :param vehicle_dict: List of OrderedDicts from the ACRSVEHICLE tag
         """
         for vehicle in vehicle_dict:
+            vin = self.get_single_attr('VIN', vehicle)
+
+            vehicle_lookup = None
+            if vin is not None and len(vin) == 17:
+                vehicle_lookup = VIN(vin)
+
+            if not vehicle_lookup:
+                # just to make the rest of the logic work when there is no return
+                vehicle_lookup = DecodedVIN({'Make': None, 'Model': None, 'ModelYear': None})
 
             self._insert_or_update(
                 Vehicle(
@@ -661,14 +723,14 @@ class CrashDataReader:
                     UNITNUMBER=self.get_single_attr('UNITNUMBER', vehicle),
                     VEHICLEBODYTYPE=self.get_single_attr('VEHICLEBODYTYPE', vehicle),
                     VEHICLEID=self._validate_uniqueidentifier(self.get_single_attr('VEHICLEID', vehicle)),
-                    VEHICLEMAKE=self.get_single_attr('VEHICLEMAKE', vehicle),
-                    VEHICLEMODEL=self.get_single_attr('VEHICLEMODEL', vehicle),
+                    VEHICLEMAKE=getattr(vehicle_lookup, 'Make') or self.get_single_attr('VEHICLEMAKE', vehicle),
+                    VEHICLEMODEL=getattr(vehicle_lookup, 'Model') or self.get_single_attr('VEHICLEMODEL', vehicle),
                     VEHICLEMOVEMENT=self.get_single_attr('VEHICLEMOVEMENT', vehicle),
                     VEHICLEREMOVEDBY=self.get_single_attr('VEHICLEREMOVEDBY', vehicle),
                     VEHICLEREMOVEDTO=self.get_single_attr('VEHICLEREMOVEDTO', vehicle),
                     VEHICLETOWEDAWAY=self.get_single_attr('VEHICLETOWEDAWAY', vehicle),
-                    VEHICLEYEAR=self.get_single_attr('VEHICLEYEAR', vehicle),
-                    VIN=self.get_single_attr('VIN', vehicle)
+                    VEHICLEYEAR=getattr(vehicle_lookup, 'ModelYear') or self.get_single_attr('VEHICLEYEAR', vehicle),
+                    VIN=vin
                 ))
 
             if vehicle.get('DAMAGEDAREAs') and vehicle.get('DAMAGEDAREAs', {}).get('DAMAGEDAREA'):
@@ -807,3 +869,29 @@ class CrashDataReader:
             return to_datetime(dt_str)
         except OutOfBoundsDatetime:
             return None
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Parse ACRS xml crash data files in the specified directory, and '
+                                                 'insert them into a database')
+    parser.add_argument('-c', '--conn_str', default='sqlite:///crash.db',
+                              help='Custom database connection string (default: sqlite:///crash.db)')
+    parser.add_argument('-d', '--directory', help='Directory containing ACRS XML files to parse. If quotes are '
+                                                  'required in the path (if there are spaces), use double quotes.')
+    parser.add_argument('-f', '--file',
+                              help='Path to a single file to process. If quotes are required in the path '
+                                   '(if there are spaces), use double quotes.')
+    parser.add_argument('-s', '--sanitize', action='store_true',
+                              help='Sanitize the data from PII while being imported')
+
+    args = parser.parse_args()
+
+    cls = CrashDataReader(args.conn_str)
+    if not (args.directory or args.file):
+        logger.error('Must specify either a directory or file to process')
+    if args.directory:
+        cls.read_crash_data(dir_name=args.directory, sanitize=args.sanitize)
+    if args.file:
+        if not os.path.exists(args.file):
+            logger.error('File does not exist: {}'.format(args.file))
+        cls.read_crash_data(file_name=args.file, sanitize=args.sanitize)

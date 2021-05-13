@@ -1,4 +1,5 @@
 """Creates data files that MS2 can use to import data"""
+import argparse
 import datetime
 import uuid
 from typing import Dict, Optional
@@ -8,8 +9,8 @@ from loguru import logger
 from sqlalchemy import and_, create_engine, select  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
-from trafficstat.crash_data_schema import Crash, Roadway
-from trafficstat.ms2generator_schema import Base, CircumstanceSanitized, CrashSanitized, EmsSanitized, \
+from .crash_data_schema import Crash, Roadway
+from .ms2generator_schema import Base, CircumstanceSanitized, CrashSanitized, EmsSanitized, \
     PersonSanitized, RoadwaySanitized, VehicleSanitized
 
 SEX = {
@@ -557,7 +558,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                 if row_no == 0:
                     # Replace the last instane of VIN_NO with VEHICLE_ID, per the spec
                     header_list = list(row.keys())
-                    header_list[header_list.index('VEHICLE_ID_1')] = 'VEHICLE_ID'
+                    header_list[header_list.index('VIN_NO_1')] = 'VEHICLE_ID'
                     worksheet.write_row(0, 0, header_list)
 
                     # Find the indexes of the special cases we need to deal with
@@ -728,6 +729,22 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 if __name__ == '__main__':
     ws_maker = WorksheetMaker(
         conn_str="mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server")
+    with ws_maker:
+        ws_maker.add_crash_worksheet()
+        ws_maker.add_person_worksheet()
+        ws_maker.add_ems_worksheet()
+        ws_maker.add_vehicle_worksheet()
+        ws_maker.add_road_circum()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Generate CSV files that MS2 uses to import crash data. Pulls from '
+                                                 'the DOT_DATA database')
+    parser.add_argument('-c', '--conn_str', help='Custom database connection string',
+                        default='mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server')
+    args = parser.parse_args()
+
+    ws_maker = WorksheetMaker(conn_str=args.conn_str)
     with ws_maker:
         ws_maker.add_crash_worksheet()
         ws_maker.add_person_worksheet()

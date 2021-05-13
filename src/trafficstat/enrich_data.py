@@ -26,48 +26,6 @@ class Enrich:
         conn = pyodbc.connect(r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
         self.cursor = conn.cursor()
 
-    def geocode_acrs(self) -> None:
-        """
-        Fills in the CENSUS_TRACT column in acrs_roadway
-        :return: None
-        """
-        self.cursor.execute("""
-            SELECT [ROADID], [ROAD_NAME], [REFERENCE_ROADNAME]
-            FROM [acrs_roadway]
-            WHERE [CENSUS_TRACT] IS NULL AND ROAD_NAME != ''
-        """)
-
-        data: List[Tuple[str, str]] = []
-        geocoder: Geocoder = Geocoder(geocodio_api_key=GAPI)
-        with geocoder:
-            try:
-                for row in tqdm(self.cursor.fetchall()):
-                    try:
-                        if row[2] != '':
-                            geocode_result: Optional[GeocodeResult] = geocoder.geocode(
-                                "{} and {}, Baltimore, Maryland".format(row[1], row[2]))
-                        else:
-                            geocode_result = geocoder.geocode("{}, Baltimore, Maryland".format(row[1]))
-                    except RuntimeError as err:
-                        logger.error("Runtime error: {err}", err=err)
-                        continue
-
-                    if geocode_result is not None and geocode_result.get('census_tract'):
-                        data.append((geocode_result['census_tract'], str(row[0])))
-                        continue
-
-                    logger.warning('No census tract for roadway: {row}', row=row)
-            except APIFatalError as apierr:
-                logger.error("API error: {apierr}", apierr=apierr)
-
-        if data:
-            self.cursor.executemany("""
-                    UPDATE [acrs_roadway]
-                    SET CENSUS_TRACT = ?
-                    WHERE ROADID = ?
-            """, data)
-            self.cursor.commit()
-
     def geocode_acrs_sanitized(self) -> None:
         """
         Fills in the CENSUS_TRACT column in acrs_roadway_sanitized
@@ -159,3 +117,9 @@ class Enrich:
             address = address.replace(orig, repl)
 
         return address.strip()
+
+
+if __name__ == '__main__':
+    enricher = Enrich()
+    enricher.geocode_acrs_sanitized()
+    enricher.clean_road_names()

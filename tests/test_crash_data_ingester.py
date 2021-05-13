@@ -22,7 +22,7 @@ from . import constants_test_data
 
 def check_database_rows(session, model: DeclarativeMeta, expected_rows: int):
     """Does a simple check that the number of rows in the table is what we expect"""
-    qry = session.query(model).filter_by()
+    qry = session.query(model)
     assert qry.count() == expected_rows, "Expected database {} to have {} rows. Actual: {}".format(
         model.__tablename__, expected_rows, qry.count()
     )
@@ -208,10 +208,46 @@ def test_read_crash_data_files_by_file(crash_data_reader, tmpdir):  # pylint:dis
                 first = False
 
 
-@clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram,
-        DamagedArea, Ems, Event,
+@clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
         PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
-def test_read_crash_data_dir(crash_data_reader):  # pylint:disable=too-many-statements
+def test_read_crash_data_dir_sanitized(crash_data_reader, tmpdir):
+    """Checks that the files are properly sanitized"""
+    test_files = os.path.join(tmpdir, 'testfiles')
+    shutil.copytree(os.path.join('tests', 'testfiles'), test_files)
+    crash_data_reader.read_crash_data(dir_name=test_files, sanitize=True)
+
+    with Session(crash_data_reader.engine) as session:
+        qry = session.query(Crash.NARRATIVE)
+        assert qry.count() == 13
+        assert not any('LASTNAME' in i[0] for i in qry.all())
+
+        qry = session.query(Person.FIRSTNAME, Person.LASTNAME)
+        assert all(i[0] is None for i in qry.all())
+        assert all(i[1] is None for i in qry.all())
+        assert qry.count() == 51
+
+
+def test_read_crash_data_file_sanitized(crash_data_reader, tmpdir):
+    """Checks that the files are properly sanitized"""
+    test_file = os.path.join(tmpdir, 'BALTIMORE_acrs_ADD934004P.xml')
+    shutil.copy(os.path.join('tests', 'testfiles', 'BALTIMORE_acrs_ADD934004P.xml'), test_file)
+    crash_data_reader.read_crash_data(file_name=test_file, sanitize=True)
+
+    with Session(crash_data_reader.engine) as session:
+        qry = session.query(Crash.NARRATIVE)
+        assert qry.count() == 1
+        assert not any('LASTNAME' in i[0] for i in qry.all())
+        assert qry.all()[0][0] == r'NARRATIVE VEHICK\LE \nNARRATIVE **OWNER** NARRATIVE\nNARRATIVE'
+
+        qry = session.query(Person.FIRSTNAME, Person.LASTNAME)
+        assert all(i[0] is None for i in qry.all())
+        assert all(i[1] is None for i in qry.all())
+        assert qry.count() == 5
+
+
+@clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
+        PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, Witness))
+def test_read_crash_data_dir(crash_data_reader, tmpdir):  # pylint:disable=too-many-statements
     """Rudamentary check that there are the right number of records after a few xml files are read in"""
     xml_files = [
         'BALTIMORE_acrs_ADJ5220059-witness-nonmotorist.xml',
@@ -222,39 +258,36 @@ def test_read_crash_data_dir(crash_data_reader):  # pylint:disable=too-many-stat
         'BALTIMORE_acrs_ADK378000C-witnesses.xml',
         'BALTIMORE_emptyxml.xml'
     ]
-    with tempfile.TemporaryDirectory() as tmpdirname:
+
+    for file in xml_files:
+        shutil.copyfile(os.path.join('tests', 'testfiles', file),
+                        os.path.join(tmpdir, file))
+
+    with Session(crash_data_reader.engine) as session:
+        crash_data_reader.read_crash_data(dir_name=tmpdir, copy=False)
         for file in xml_files:
-            shutil.copyfile(os.path.join('tests', 'testfiles', file),
-                            os.path.join(tmpdirname, file))
+            assert not os.path.exists(
+                os.path.join(tmpdir, '.processed', file))
 
-        if os.path.exists('.processed'):
-            shutil.rmtree('.processed')
+        crash_data_reader.read_crash_data(dir_name=tmpdir, copy=True)
 
-        with Session(crash_data_reader.engine) as session:
-            crash_data_reader.read_crash_data(dir_name=tmpdirname, copy=False)
-            for file in xml_files:
-                assert not os.path.exists(
-                    os.path.join(tmpdirname, '.processed', file))
+        for file in xml_files:
+            assert os.path.exists(
+                os.path.join(tmpdir, '.processed', file))
 
-            crash_data_reader.read_crash_data(dir_name=tmpdirname, copy=True)
-
-            for file in xml_files:
-                assert os.path.exists(
-                    os.path.join(tmpdirname, '.processed', file))
-
-            check_single_entries(session, 5)
-            check_database_rows(session, Circumstance, 15)
-            check_database_rows(session, CitationCode, 1)
-            check_database_rows(session, CommercialVehicle, 2)
-            check_database_rows(session, DamagedArea, 14)
-            check_database_rows(session, Ems, 2)
-            check_database_rows(session, Event, 4)
-            check_database_rows(session, Person, 27)
-            check_database_rows(session, PersonInfo, 16)
-            check_database_rows(session, TowedUnit, 2)
-            check_database_rows(session, Vehicle, 8)
-            check_database_rows(session, VehicleUse, 8)
-            check_database_rows(session, Witness, 3)
+        check_single_entries(session, 5)
+        check_database_rows(session, Circumstance, 15)
+        check_database_rows(session, CitationCode, 1)
+        check_database_rows(session, CommercialVehicle, 2)
+        check_database_rows(session, DamagedArea, 14)
+        check_database_rows(session, Ems, 2)
+        check_database_rows(session, Event, 4)
+        check_database_rows(session, Person, 27)
+        check_database_rows(session, PersonInfo, 16)
+        check_database_rows(session, TowedUnit, 2)
+        check_database_rows(session, Vehicle, 8)
+        check_database_rows(session, VehicleUse, 8)
+        check_database_rows(session, Witness, 3)
 
 
 @clean((Approval, Crash, Circumstance, CitationCode, CommercialVehicle, CrashDiagram, DamagedArea, Ems, Event,
@@ -547,23 +580,23 @@ def test_get_single_attr(crash_data_reader):
         crash_data_reader.get_single_attr('MULTIPLENODE', constants_test_data.single_attr_input_data)
 
 
-def test_file_move(crash_data_reader):
+def test_file_move(crash_data_reader, tmpdir):
     """Test _file_move"""
     file = tempfile.NamedTemporaryFile(delete=False)
     file.close()
     tmp_file_name = "{}X".format(file.name)  # temp filename so we can copy the original for each iteration
-    with tempfile.TemporaryDirectory() as temp_dir:
-        for _ in range(6):
-            shutil.copyfile(file.name, tmp_file_name)
-            assert crash_data_reader._file_move(tmp_file_name, temp_dir)
 
+    for _ in range(6):
         shutil.copyfile(file.name, tmp_file_name)
-        assert not crash_data_reader._file_move(tmp_file_name, temp_dir)
+        assert crash_data_reader._file_move(tmp_file_name, tmpdir)
 
-        assert os.path.exists(os.path.join(temp_dir, os.path.basename(tmp_file_name)))
-        assert os.path.exists(os.path.join(temp_dir, '{}_1'.format(os.path.basename(tmp_file_name))))
-        assert os.path.exists(os.path.join(temp_dir, '{}_2'.format(os.path.basename(tmp_file_name))))
-        assert os.path.exists(os.path.join(temp_dir, '{}_3'.format(os.path.basename(tmp_file_name))))
-        assert os.path.exists(os.path.join(temp_dir, '{}_4'.format(os.path.basename(tmp_file_name))))
-        assert os.path.exists(os.path.join(temp_dir, '{}_5'.format(os.path.basename(tmp_file_name))))
-        assert not os.path.exists(os.path.join(temp_dir, '{}_6'.format(os.path.basename(tmp_file_name))))
+    shutil.copyfile(file.name, tmp_file_name)
+    assert not crash_data_reader._file_move(tmp_file_name, tmpdir)
+
+    assert os.path.exists(os.path.join(tmpdir, os.path.basename(tmp_file_name)))
+    assert os.path.exists(os.path.join(tmpdir, '{}_1'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, '{}_2'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, '{}_3'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, '{}_4'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, '{}_5'.format(os.path.basename(tmp_file_name))))
+    assert not os.path.exists(os.path.join(tmpdir, '{}_6'.format(os.path.basename(tmp_file_name))))

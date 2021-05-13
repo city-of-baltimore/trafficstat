@@ -12,10 +12,22 @@ from trafficstat.ms2generator_schema import Base as Ms2Base, CircumstanceSanitiz
     CrashSanitized, EmsSanitized, PersonSanitized, RoadwaySanitized, TrailerSanitized, VehicleSanitized
 
 
+def pytest_addoption(parser):
+    """Pytest custom arguments"""
+    parser.addoption('--geocodio-key', action='store')
+
+
+@pytest.fixture(name='geocodio_api')
+def fixture_geocodio_key(request):
+    """The API key for Geocodio"""
+    return request.config.getoption('--geocodio-key')
+
+
 @pytest.fixture(name='crash_data_reader')
-def crash_data_reader_fixture(tmpdir):
+def crash_data_reader_fixture(tmpdir, geocodio_api):
     """Fixture for the CrashDataReader class"""
-    yield CrashDataReader(conn_str='sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatareaderfixture.db')))
+    yield CrashDataReader(conn_str='sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatareaderfixture.db')),
+                          geocodio_api_key=geocodio_api)
 
 
 @pytest.fixture(name='conn_str_sanitized')
