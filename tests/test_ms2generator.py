@@ -34,7 +34,7 @@ def test_add_person_worksheet(tmpdir, conn_str_sanitized):
         worksheet_maker.add_person_worksheet()
 
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='PERSON')
-    assert dfs.columns.to_list() == ['SEX', 'CONDITION_CODE', 'INJ_SEVER_CODE', 'REPORT_NO', 'OCC_SEAT_POS_CODE',
+    assert dfs.columns.to_list() == ['SEX_CODE', 'CONDITION_CODE', 'INJ_SEVER_CODE', 'REPORT_NO', 'OCC_SEAT_POS_CODE',
                                      'PED_VISIBLE_CODE', 'PED_LOCATION_CODE', 'PED_OBEY_CODE', 'PED_TYPE_CODE',
                                      'MOVEMENT_CODE', 'PERSON_TYPE', 'ALCOHOL_TEST_CODE', 'ALCOHOL_TESTTYPE_CODE',
                                      'DRUG_TEST_CODE', 'DRUG_TESTRESULT_CODE', 'BAC_CODE', 'FAULT_FLAG',
@@ -117,7 +117,7 @@ def test_validate_vehicle_value():
     """test for the _validate_vehicle_value method"""
     worksheet_maker = WorksheetMaker(conn_str='sqlite://')
     assert worksheet_maker._validate_vehicle_value('48.88') == '48.88'
-    assert worksheet_maker._validate_vehicle_value('A9.99') == 'A9.99'
+    assert worksheet_maker._validate_vehicle_value('A9.99') is None
     assert worksheet_maker._validate_vehicle_value('00') == '00'
     assert worksheet_maker._validate_vehicle_value(None) is None
 
@@ -129,7 +129,7 @@ def test_validate_person_value():
     """test for the _validate_person_value method"""
     worksheet_maker = WorksheetMaker(conn_str='sqlite://')
     assert worksheet_maker._validate_person_value('39.88') == '39.88'
-    assert worksheet_maker._validate_person_value('A9.99') == 'A9.99'
+    assert worksheet_maker._validate_person_value('A9.99') is None
     assert worksheet_maker._validate_person_value('01') == '01'
     assert worksheet_maker._validate_person_value(None) is None
 
@@ -141,7 +141,7 @@ def test_validate_weather_value():
     """test for the _validate_weather_value method"""
     worksheet_maker = WorksheetMaker(conn_str='sqlite://')
     assert worksheet_maker._validate_weather_value('82.88') == '82.88'
-    assert worksheet_maker._validate_weather_value('A9.99') == 'A9.99'
+    assert worksheet_maker._validate_weather_value('A9.99') is None
     assert worksheet_maker._validate_weather_value('45') == '45'
     assert worksheet_maker._validate_weather_value(None) is None
 
@@ -153,7 +153,7 @@ def test_validate_road_value():
     """test for the _validate_road_value method"""
     worksheet_maker = WorksheetMaker(conn_str='sqlite://')
     assert worksheet_maker._validate_road_value('69.88') == '69.88'
-    assert worksheet_maker._validate_road_value('A9.99') == 'A9.99'
+    assert worksheet_maker._validate_road_value('A9.99') is None
     assert worksheet_maker._validate_road_value('61') == '61'
     assert worksheet_maker._validate_road_value(None) is None
 

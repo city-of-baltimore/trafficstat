@@ -442,6 +442,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
             # headers that need to be renamed
             key_subs = {
+                'SEX': 'SEX_CODE',
                 'ALCO_TEST_CODE': 'ALCOHOL_TEST_CODE',
                 'ALCO_TEST_TYPE_CODE': 'ALCOHOL_TESTTYPE_CODE',
                 'DRUG_TEST_RESULT_FLAG': 'DRUG_TESTRESULT_CODE',
@@ -471,7 +472,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                         worksheet.write(row_no, element_no, self._get_person_uuid(row[element_no]))
                     elif element_no == header_list.index('VEHICLE_ID'):
                         worksheet.write(row_no, element_no, self._get_vehicle_uuid(row[element_no]))
-                    elif element_no == header_list.index('SEX'):
+                    elif element_no == header_list.index('SEX_CODE'):
                         worksheet.write(row_no, element_no, self._lookup_sex(row[element_no]))
 
                     # Other cases
@@ -689,7 +690,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
     @staticmethod
     def _validate_value(val: str, master_dict: Dict) -> Optional[str]:
-        if val is None:
+        if val is None or val == 'A9.99':
             return None
 
         val = str(val)
