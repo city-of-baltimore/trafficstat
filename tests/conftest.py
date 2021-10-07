@@ -26,14 +26,14 @@ def fixture_geocodio_key(request):
 @pytest.fixture(name='crash_data_reader')
 def crash_data_reader_fixture(tmpdir, geocodio_api):
     """Fixture for the CrashDataReader class"""
-    yield CrashDataReader(conn_str='sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatareaderfixture.db')),
+    yield CrashDataReader(conn_str=f'sqlite:///{os.path.join(tmpdir, "crashdatareaderfixture.db")}',
                           geocodio_api_key=geocodio_api)
 
 
 @pytest.fixture(name='conn_str_sanitized')
 def unsanitized_crash_database(tmpdir):
     """Fixture for the WorksheetMaker class"""
-    conn_str = 'sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatabase.db'))
+    conn_str = f'sqlite:///{os.path.join(tmpdir, "crashdatabase.db")}'
 
     # Make the database
     engine = create_engine(conn_str, echo=True, future=True)
@@ -786,7 +786,7 @@ def unsanitized_crash_database(tmpdir):
 @pytest.fixture(name='conn_str_unsanitized')
 def sanitized_crash_database(tmpdir):
     """Fixture for the WorksheetMaker class"""
-    conn_str = 'sqlite:///{}'.format(os.path.join(tmpdir, 'crashdatabase.db'))
+    conn_str = f"sqlite:///{os.path.join(tmpdir, 'crashdatabase.db')}"
 
     # Make the database
     engine = create_engine(conn_str, echo=True, future=True)

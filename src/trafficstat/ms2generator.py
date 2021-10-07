@@ -654,7 +654,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_person_value(self, val: str) -> str:
+    def _validate_person_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for persons. Will raise ValueError if val is not a valid person code. """
         master_dict = {}
         master_dict.update(TANG_PERSON)
@@ -665,7 +665,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_weather_value(self, val: str) -> str:
+    def _validate_weather_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for weather. Will raise ValueError if val is not a valid weather code. """
         master_dict = {}
         master_dict.update(TANG_WEATHER)
@@ -676,7 +676,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_road_value(self, val: str) -> str:
+    def _validate_road_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for road. Will raise ValueError if val is not a valid road code. """
         master_dict = {}
         master_dict.update(TANG_ROAD)
@@ -688,13 +688,13 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         return ret
 
     @staticmethod
-    def _validate_value(val: str, master_dict: Dict) -> str:
+    def _validate_value(val: str, master_dict: Dict) -> Optional[str]:
         if val is None:
             return None
 
         val = str(val)
         if val not in master_dict.keys():
-            raise ValueError("Unable to validate {}. Expected values {}".format(val, master_dict.keys()))
+            raise ValueError(f'Unable to validate {val}. Expected values {master_dict.keys()}')
         return val
 
     @staticmethod

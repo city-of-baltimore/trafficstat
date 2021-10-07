@@ -19,7 +19,7 @@ def test_sanitize_xml(tmpdir):
 
     # create a file and pass it as the output folder... this should fail
     empty_file = os.path.join(tmpdir, 'filenotfolder')
-    with open(empty_file, 'w'):
+    with open(empty_file, 'w', encoding='utf8'):
         pass
     with pytest.raises(RuntimeError):
         xmlsanitizer.sanitize_xml_path(testfiles, empty_file)
@@ -31,7 +31,7 @@ def test_sanitize_xml(tmpdir):
     files = glob.glob(os.path.join(sanitized_files, '*.xml'))
     assert len(files) - 1 == 13  # remove one because of the duplicate version test
     for file in files:
-        with open(file, 'r') as xml_file:
+        with open(file, 'r', encoding='utf8') as xml_file:
             xml_contents = xml_file.read()
 
         assert set(re.findall('<FIRSTNAME>(.*?)</FIRSTNAME>', xml_contents)) == {''}
@@ -49,7 +49,7 @@ def test_sanitize_xml_file(tmpdir):
                     original_file)
     xmlsanitizer.sanitize_xml_path(original_file, sanitized_files)
 
-    with open(os.path.join(sanitized_files, os.path.basename(original_file)), 'r') as xml_file:
+    with open(os.path.join(sanitized_files, os.path.basename(original_file)), 'r', encoding='utf8') as xml_file:
         xml_contents = xml_file.read()
 
     assert set(re.findall('<FIRSTNAME>(.*?)</FIRSTNAME>', xml_contents)) == {''}
