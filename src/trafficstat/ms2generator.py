@@ -478,6 +478,8 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     # Other cases
                     elif isinstance(row[element_no], datetime.datetime):
                         worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
+                    elif row[element_no] == 'A9.99':
+                        worksheet.write(row_no, element_no, '')
                     else:
                         worksheet.write(row_no, element_no, row[element_no])
 
