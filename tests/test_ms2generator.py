@@ -78,12 +78,13 @@ def test_add_vehicle_worksheet(tmpdir, conn_str_sanitized):
     assert len(dfs) == 4
 
 
-def test_add_vehicle_circum(tmpdir, conn_str_sanitized):
-    """test for the add_vehicle_circum method"""
+def test_add_circum(tmpdir, conn_str_sanitized):
+    """test for the add_vehicle_circum and add_road_circum method"""
     worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
         worksheet_maker.add_vehicle_circum('A0000001', '8849671')
         worksheet_maker.add_vehicle_circum('A0000002', '8849672')
+        worksheet_maker.add_road_circum()
 
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='VEHICLE_CIRCUM')
     expected = pd.DataFrame(data={'REPORT_NO': ['A0000001', 'A0000001', 'A0000001', 'A0000002'],
@@ -95,13 +96,6 @@ def test_add_vehicle_circum(tmpdir, conn_str_sanitized):
                                                  dfs['VEHICLE_ID'][3]]})
     assert len(dfs) == 4
     assert dfs.equals(expected)
-
-
-def test_add_road_circum(tmpdir, conn_str_sanitized):
-    """test for the add_road_circummethod"""
-    worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
-    with worksheet_maker:
-        worksheet_maker.add_road_circum()
 
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='ROAD_CIRCUM')
     expected = pd.DataFrame(data={'REPORT_NO': ['A0000004', 'A0000004', 'A0000004', 'A0000009', 'A0000009'],

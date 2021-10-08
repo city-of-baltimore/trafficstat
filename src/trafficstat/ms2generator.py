@@ -611,13 +611,13 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                         continue
 
                     if val is not None:
-                        self.vehicle_circum_ws.write_row(self.road_circum_ws_row, 0,
+                        self.vehicle_circum_ws.write_row(self.vehicle_circum_ws_row, 0,
                                                          (report_no,
                                                           'Vehicle',
                                                           contrib_code,
                                                           None,
                                                           self._get_vehicle_uuid(vehicle_id) if vehicle_id else None))
-                        self.road_circum_ws_row += 1
+                        self.vehicle_circum_ws_row += 1
 
     def add_road_circum(self) -> None:
         """ Populates the road sheet"""
@@ -725,17 +725,6 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         if self.vehicle_id_dict.get(vehicle_id) is None:
             self.vehicle_id_dict[vehicle_id] = str(uuid.uuid4())
         return self.vehicle_id_dict[vehicle_id]
-
-
-if __name__ == '__main__':
-    ws_maker = WorksheetMaker(
-        conn_str="mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server")
-    with ws_maker:
-        ws_maker.add_crash_worksheet()
-        ws_maker.add_person_worksheet()
-        ws_maker.add_ems_worksheet()
-        ws_maker.add_vehicle_worksheet()
-        ws_maker.add_road_circum()
 
 
 if __name__ == '__main__':
