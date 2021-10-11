@@ -5,6 +5,7 @@ import os
 import pandas as pd  # type: ignore
 import pytest
 from numpy import nan
+from pandas.testing import assert_series_equal  # type: ignore
 
 from trafficstat.ms2generator import WorksheetMaker
 
@@ -25,7 +26,8 @@ def test_add_crash_worksheet(tmpdir, conn_str_sanitized, conn_str_unsanitized): 
                                      'DISTANCE_DIR_FLAG', 'REFERENCE_NO', 'REFERENCE_TYPE_CODE', 'REFERENCE_SUFFIX',
                                      'REFERENCE_ROAD_NAME', 'LATITUDE', 'LONGITUDE']
     assert len(dfs) == 10
-    assert dfs['SURF_COND_CODE'].to_list() == [2, float('nan'), 2, 2, 2, 2, float('nan'), 2, 2, 2]
+    assert_series_equal(dfs['SURF_COND_CODE'], pd.Series([2, nan, 2, 2, 2, 2, nan, 2, 2, 2]),
+                        check_names=False)
 
 
 def test_add_person_worksheet(tmpdir, conn_str_sanitized):
@@ -43,7 +45,8 @@ def test_add_person_worksheet(tmpdir, conn_str_sanitized):
                                      'DATE_OF_BIRTH', 'PERSON_ID', 'LICENSE_STATE_CODE', 'CLASS', 'CDL_FLAG',
                                      'VEHICLE_ID', 'EMS_UNIT_LABEL']
     assert len(dfs) == 10
-    assert dfs['ALCOHOL_TEST_CODE'].to_list() == [0, 0, float('nan'), 99, 0, 0, 0, 0, float('nan'), 0]
+    assert_series_equal(dfs['ALCOHOL_TEST_CODE'], pd.Series([0, 0, nan, 99, 0, 0, 0, 0, nan, 0]),
+                        check_names=False)
 
 
 def test_add_ems_worksheet(tmpdir, conn_str_sanitized):
@@ -74,7 +77,8 @@ def test_add_vehicle_worksheet(tmpdir, conn_str_sanitized):
                                      'AREA_DAMAGED_CODE1', 'AREA_DAMAGED_CODE2', 'AREA_DAMAGED_CODE3',
                                      'AREA_DAMAGED_CODE_MAIN']
     assert len(dfs) == 10
-    assert dfs['CV_BODY_TYPE_CODE'].to_list() == ['', '', '', '', '', '', '', '', '', '']
+    assert_series_equal(dfs['CV_BODY_TYPE_CODE'], pd.Series([nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]),
+                        check_names=False)
 
     # verify that vehicle_circum was populated
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='VEHICLE_CIRCUM')

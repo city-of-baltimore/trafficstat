@@ -403,7 +403,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     elif isinstance(row[element_no], datetime.datetime):
                         worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
                     else:
-                        worksheet.write(row_no, element_no, row[element_no])
+                        worksheet.write(row_no, element_no, self._standardize_value(row[element_no]))
                 row_no += 1
 
     def add_person_worksheet(self) -> None:
@@ -478,10 +478,8 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     # Other cases
                     elif isinstance(row[element_no], datetime.datetime):
                         worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
-                    elif row[element_no] == 'A9.99':
-                        worksheet.write(row_no, element_no, '')
                     else:
-                        worksheet.write(row_no, element_no, row[element_no])
+                        worksheet.write(row_no, element_no, self._standardize_value(row[element_no]))
 
                 row_no += 1
 
@@ -495,7 +493,6 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                          EmsSanitized.EMS_TRANSPORT_TYPE_FLAG))
 
             worksheet = self.workbook.add_worksheet("EMS")
-            date_fmt = self.workbook.add_format({'num_format': 'mm/dd/yy'})
             key_subs = {'EMS_TRANSPORT_TYPE_FLAG': 'EMS_TRANSPORT_TYPE'}
 
             row_no = 0
@@ -511,11 +508,9 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
                 for element_no, _ in enumerate(row):
                     if isinstance(row[element_no], datetime.datetime):
-                        worksheet.write(row_no, element_no, row[element_no], date_fmt)
-                    elif isinstance(row[element_no], str) and row[element_no].isdigit():
-                        worksheet.write(row_no, element_no, int(row[element_no]))
+                        worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
                     else:
-                        worksheet.write(row_no, element_no, row[element_no])
+                        worksheet.write(row_no, element_no, self._standardize_value(row[element_no]))
                 row_no += 1
 
     def add_vehicle_worksheet(self) -> None:
@@ -589,7 +584,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     elif isinstance(row[element_no], datetime.datetime):
                         worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
                     else:
-                        worksheet.write(row_no, element_no, row[element_no])
+                        worksheet.write(row_no, element_no, self._standardize_value(row[element_no]))
 
                 row_no += 1
 
@@ -645,6 +640,15 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                                        None,
                                                        None))
                         self.road_circum_ws_row += 1
+
+    @staticmethod
+    def _standardize_value(val: str):
+        """Working with a few data cleanup things that happens for each insertion"""
+        if isinstance(val, str) and val.isdigit():
+            return int(val)
+        if val == 'A9.99':
+            return ''
+        return val
 
     def _validate_vehicle_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for vehicles """
