@@ -9,7 +9,6 @@ from loguru import logger
 from sqlalchemy import and_, create_engine, select  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
-from .crash_data_schema import Crash, Roadway
 from .ms2generator_schema import Base, CircumstanceSanitized, CrashSanitized, EmsSanitized, \
     PersonSanitized, RoadwaySanitized, VehicleSanitized
 
@@ -309,45 +308,6 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                           RoadwaySanitized.Y_COORDINATES  # Y_COORDINATES as LONGITUDE
                                           ).join(CrashSanitized.ROADWAY)
 
-            qry_unsanitized = session.query(Crash.LIGHT,
-                                            Crash.REPORTCOUNTYLOCATION,
-                                            Roadway.MUNICIPAL,
-                                            Crash.JUNCTION,
-                                            Crash.COLLISIONTYPE,
-                                            Crash.SURFACECONDITION,
-                                            Crash.LANEDIRECTION + Crash.LANENUMBER,
-                                            Crash.ROADCONDITION,
-                                            Crash.ROADDIVISION,
-                                            Crash.FIXEDOBJECTSTRUCK,
-                                            Crash.REPORTNUMBER,
-                                            Crash.REPORTTYPE,
-                                            Crash.WEATHER,
-                                            Crash.CRASHDATE,
-                                            Crash.CRASHTIME,
-                                            Crash.LOCALCODES,
-                                            Crash.TRAFFICCONTROL,
-                                            Crash.CONMAINZONE,
-                                            Crash.AGENCYNAME,
-                                            Crash.AREA,
-                                            Crash.HARMFULEVENTONE,
-                                            Crash.HARMFULEVENTTWO,
-                                            Roadway.ROUTE_NUMBER,
-                                            Roadway.ROUTE_TYPE,
-                                            Roadway.ROUTE_SUFFIX,
-                                            Roadway.MILEPOINT,  # RoadwaySanitized.LOG_MILE,
-                                            Roadway.LOGMILE_DIR,  # RoadwaySanitized.LOGMILE_DIR_FLAG,
-                                            Roadway.ROAD_NAME,
-                                            Crash.MILEPOINTDISTANCE,  # distance
-                                            Crash.MILEPOINTDISTANCEUNITS,
-                                            Crash.MILEPOINTDIRECTION,  # distance dir flag
-                                            Roadway.REFERENCE_ROUTE_NUMBER,
-                                            Roadway.REFERENCE_ROUTE_TYPE,
-                                            Roadway.REFERENCE_ROUTE_SUFFIX,
-                                            Roadway.REFERENCE_ROADNAME,
-                                            Crash.LATITUDE,
-                                            Crash.LONGITUDE
-                                            ).join(Crash.ROADWAY).where(Crash.CRASHDATE > '2020-01-01')
-
             worksheet = self.workbook.add_worksheet("CRASH")
             key_subs = {
                 'REPORT_TYPE_CODE': 'REPORT_TYPE',
@@ -360,7 +320,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
             }
 
             row_no = 0
-            for row in qry_sanitized.all() + qry_unsanitized.all():
+            for row in qry_sanitized.all():
                 if row_no == 0:
                     # Build header row
                     header_list = list(row.keys())
