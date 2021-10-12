@@ -97,7 +97,7 @@ class CrashDataReader:
         """
         with Session(bind=self.engine, future=True) as session:
             if identity_insert:
-                session.execute(text('SET IDENTITY_INSERT {} ON'.format(insert_obj.__tablename__)))
+                session.execute(text(f'SET IDENTITY_INSERT {insert_obj.__tablename__} ON'))
 
             session.add(insert_obj)
             try:
@@ -136,11 +136,11 @@ class CrashDataReader:
                             logger.error('Unable to insert object: {}\nError: {}', insert_obj, update_err)
 
                 else:
-                    raise AssertionError('Expected error 2627 or "UNIQUE constraint failed". '
-                                         'Got {}'.format(insert_err)) from insert_err
+                    raise AssertionError(f'Expected error 2627 or "UNIQUE constraint failed". '
+                                         f'Got {insert_err}') from insert_err
             finally:
                 if identity_insert:
-                    session.execute(text('SET IDENTITY_INSERT {} OFF'.format(insert_obj.__tablename__)))
+                    session.execute(text(f'SET IDENTITY_INSERT {insert_obj.__tablename__} OFF'))
 
     def read_crash_data(self, dir_name: Optional[str] = None,  # pylint:disable=too-many-arguments
                         recursive: bool = False, file_name: Optional[str] = None, copy: bool = True,
@@ -259,7 +259,7 @@ class CrashDataReader:
         i = 1
         while i < 6:
             # retry copy operation up to 5 times
-            dst_filename = '{}_{}'.format(os.path.join(processed_dir, os.path.basename(file_name)), i)
+            dst_filename = f'{os.path.join(processed_dir, os.path.basename(file_name))}_{i}'
             if not os.path.exists(os.path.join(processed_dir, dst_filename)):
                 shutil.move(file_name, dst_filename)
                 return True
@@ -291,7 +291,7 @@ class CrashDataReader:
             else:
                 geo = self.geocoder.reverse_geocode(float(latitude), float(longitude))
                 if not geo:
-                    logger.error('Unable to reverse geocode {}/{}'.format(latitude, longitude))
+                    logger.error(f'Unable to reverse geocode {latitude}/{longitude}')
                 else:
                     census_tract = geo.get('census_tract')
 
@@ -833,7 +833,7 @@ class CrashDataReader:
 
         val = val.lower()
         if val not in ['y', 'n', 'u']:
-            raise AssertionError('Expected y or n and got {}'.format(val))
+            raise AssertionError(f'Expected y or n and got {val}')
         if val == 'u':
             return None
         return int(bool(val == 'y'))
@@ -859,7 +859,7 @@ class CrashDataReader:
             return None
 
         if not isinstance(crash_data.get(tag), str) and isinstance(crash_data.get(tag), collections.abc.Iterable):
-            raise AssertionError('Expected {} to have only a single element'.format(tag))
+            raise AssertionError(f'Expected {tag} to have only a single element.')
         return crash_data.get(tag)
 
     @staticmethod
@@ -893,5 +893,5 @@ if __name__ == '__main__':
         cls.read_crash_data(dir_name=args.directory, sanitize=args.sanitize)
     if args.file:
         if not os.path.exists(args.file):
-            logger.error('File does not exist: {}'.format(args.file))
+            logger.error(f'File does not exist: {args.file}')
         cls.read_crash_data(file_name=args.file, sanitize=args.sanitize)

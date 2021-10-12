@@ -29,7 +29,7 @@ def _sanitize_xml_file(filename: str, output_dir: str = '.sanitized') -> None:
     :param output_dir: directory to write the sanitized file
     :return: None
     """
-    with open(filename, 'r') as xml_file:
+    with open(filename, 'r', encoding='utf8') as xml_file:
         xml_contents = sanitize_xml_str(xml_file.read())
 
     if xml_contents is None:
@@ -41,7 +41,7 @@ def _sanitize_xml_file(filename: str, output_dir: str = '.sanitized') -> None:
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
 
-    with open(os.path.join(output_dir, os.path.basename(filename)), 'w') as output_file:
+    with open(os.path.join(output_dir, os.path.basename(filename)), 'w', encoding='utf8') as output_file:
         output_file.write(xml_contents)
 
 
@@ -62,14 +62,14 @@ def sanitize_xml_str(xml_str) -> Optional[str]:
         last_names = re.findall('<{pt}>.*<LASTNAME>(.*?)</LASTNAME>.*</{pt}>'.format(pt=person_type), xml_str)
         for last_name in last_names:
             if last_name:
-                narrative = narrative.replace(' {} '.format(last_name), ' **{}** '.format(person_type))
+                narrative = narrative.replace(f' {last_name} ', f' **{person_type}** ')
 
     xml_str = re.sub('<FIRSTNAME>.*?</FIRSTNAME>', '<FIRSTNAME></FIRSTNAME>', xml_str)
     xml_str = re.sub('<LASTNAME>.*?</LASTNAME>', '<LASTNAME></LASTNAME>', xml_str)
     xml_str = re.sub('<MIDDLENAME>.*?</MIDDLENAME>', '<MIDDLENAME></MIDDLENAME>', xml_str)
 
     narrative = re.sub(r"(\\)", r"\\\\", narrative)
-    return re.sub('<NARRATIVE>.*?</NARRATIVE>', '<NARRATIVE>{nar}</NARRATIVE>'.format(nar=narrative), xml_str,
+    return re.sub('<NARRATIVE>.*?</NARRATIVE>', f'<NARRATIVE>{narrative}</NARRATIVE>', xml_str,
                   flags=re.DOTALL)
 
 

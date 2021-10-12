@@ -5,6 +5,7 @@ import os
 import pandas as pd  # type: ignore
 import pytest
 from numpy import nan
+from pandas.testing import assert_series_equal  # type: ignore
 
 from trafficstat.ms2generator import WorksheetMaker
 
@@ -25,6 +26,8 @@ def test_add_crash_worksheet(tmpdir, conn_str_sanitized, conn_str_unsanitized): 
                                      'DISTANCE_DIR_FLAG', 'REFERENCE_NO', 'REFERENCE_TYPE_CODE', 'REFERENCE_SUFFIX',
                                      'REFERENCE_ROAD_NAME', 'LATITUDE', 'LONGITUDE']
     assert len(dfs) == 10
+    assert_series_equal(dfs['SURF_COND_CODE'], pd.Series([2, nan, 2, 2, 2, 2, nan, 2, 2, 2]),
+                        check_names=False)
 
 
 def test_add_person_worksheet(tmpdir, conn_str_sanitized):
@@ -34,7 +37,7 @@ def test_add_person_worksheet(tmpdir, conn_str_sanitized):
         worksheet_maker.add_person_worksheet()
 
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='PERSON')
-    assert dfs.columns.to_list() == ['SEX', 'CONDITION_CODE', 'INJ_SEVER_CODE', 'REPORT_NO', 'OCC_SEAT_POS_CODE',
+    assert dfs.columns.to_list() == ['SEX_CODE', 'CONDITION_CODE', 'INJ_SEVER_CODE', 'REPORT_NO', 'OCC_SEAT_POS_CODE',
                                      'PED_VISIBLE_CODE', 'PED_LOCATION_CODE', 'PED_OBEY_CODE', 'PED_TYPE_CODE',
                                      'MOVEMENT_CODE', 'PERSON_TYPE', 'ALCOHOL_TEST_CODE', 'ALCOHOL_TESTTYPE_CODE',
                                      'DRUG_TEST_CODE', 'DRUG_TESTRESULT_CODE', 'BAC_CODE', 'FAULT_FLAG',
@@ -42,6 +45,8 @@ def test_add_person_worksheet(tmpdir, conn_str_sanitized):
                                      'DATE_OF_BIRTH', 'PERSON_ID', 'LICENSE_STATE_CODE', 'CLASS', 'CDL_FLAG',
                                      'VEHICLE_ID', 'EMS_UNIT_LABEL']
     assert len(dfs) == 10
+    assert_series_equal(dfs['ALCOHOL_TEST_CODE'], pd.Series([0, 0, nan, 99, 0, 0, 0, 0, nan, 0]),
+                        check_names=False)
 
 
 def test_add_ems_worksheet(tmpdir, conn_str_sanitized):
@@ -72,18 +77,21 @@ def test_add_vehicle_worksheet(tmpdir, conn_str_sanitized):
                                      'AREA_DAMAGED_CODE1', 'AREA_DAMAGED_CODE2', 'AREA_DAMAGED_CODE3',
                                      'AREA_DAMAGED_CODE_MAIN']
     assert len(dfs) == 10
+    assert_series_equal(dfs['CV_BODY_TYPE_CODE'], pd.Series([nan, nan, nan, nan, nan, nan, nan, nan, nan, nan]),
+                        check_names=False)
 
     # verify that vehicle_circum was populated
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='VEHICLE_CIRCUM')
     assert len(dfs) == 4
 
 
-def test_add_vehicle_circum(tmpdir, conn_str_sanitized):
-    """test for the add_vehicle_circum method"""
+def test_add_circum(tmpdir, conn_str_sanitized):
+    """test for the add_vehicle_circum and add_road_circum method"""
     worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
     with worksheet_maker:
         worksheet_maker.add_vehicle_circum('A0000001', '8849671')
         worksheet_maker.add_vehicle_circum('A0000002', '8849672')
+        worksheet_maker.add_road_circum()
 
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='VEHICLE_CIRCUM')
     expected = pd.DataFrame(data={'REPORT_NO': ['A0000001', 'A0000001', 'A0000001', 'A0000002'],
@@ -95,13 +103,6 @@ def test_add_vehicle_circum(tmpdir, conn_str_sanitized):
                                                  dfs['VEHICLE_ID'][3]]})
     assert len(dfs) == 4
     assert dfs.equals(expected)
-
-
-def test_add_road_circum(tmpdir, conn_str_sanitized):
-    """test for the add_road_circummethod"""
-    worksheet_maker = WorksheetMaker(conn_str=conn_str_sanitized, workbook_name=os.path.join(tmpdir, 'sheet.xlsx'))
-    with worksheet_maker:
-        worksheet_maker.add_road_circum()
 
     dfs = pd.read_excel(worksheet_maker.workbook_name, sheet_name='ROAD_CIRCUM')
     expected = pd.DataFrame(data={'REPORT_NO': ['A0000004', 'A0000004', 'A0000004', 'A0000009', 'A0000009'],
@@ -117,7 +118,7 @@ def test_validate_vehicle_value():
     """test for the _validate_vehicle_value method"""
     worksheet_maker = WorksheetMaker(conn_str='sqlite://')
     assert worksheet_maker._validate_vehicle_value('48.88') == '48.88'
-    assert worksheet_maker._validate_vehicle_value('A9.99') == 'A9.99'
+    assert worksheet_maker._validate_vehicle_value('A9.99') is None
     assert worksheet_maker._validate_vehicle_value('00') == '00'
     assert worksheet_maker._validate_vehicle_value(None) is None
 
@@ -129,7 +130,7 @@ def test_validate_person_value():
     """test for the _validate_person_value method"""
     worksheet_maker = WorksheetMaker(conn_str='sqlite://')
     assert worksheet_maker._validate_person_value('39.88') == '39.88'
-    assert worksheet_maker._validate_person_value('A9.99') == 'A9.99'
+    assert worksheet_maker._validate_person_value('A9.99') is None
     assert worksheet_maker._validate_person_value('01') == '01'
     assert worksheet_maker._validate_person_value(None) is None
 
@@ -141,7 +142,7 @@ def test_validate_weather_value():
     """test for the _validate_weather_value method"""
     worksheet_maker = WorksheetMaker(conn_str='sqlite://')
     assert worksheet_maker._validate_weather_value('82.88') == '82.88'
-    assert worksheet_maker._validate_weather_value('A9.99') == 'A9.99'
+    assert worksheet_maker._validate_weather_value('A9.99') is None
     assert worksheet_maker._validate_weather_value('45') == '45'
     assert worksheet_maker._validate_weather_value(None) is None
 
@@ -153,7 +154,7 @@ def test_validate_road_value():
     """test for the _validate_road_value method"""
     worksheet_maker = WorksheetMaker(conn_str='sqlite://')
     assert worksheet_maker._validate_road_value('69.88') == '69.88'
-    assert worksheet_maker._validate_road_value('A9.99') == 'A9.99'
+    assert worksheet_maker._validate_road_value('A9.99') is None
     assert worksheet_maker._validate_road_value('61') == '61'
     assert worksheet_maker._validate_road_value(None) is None
 

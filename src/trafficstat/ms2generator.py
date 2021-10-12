@@ -9,7 +9,6 @@ from loguru import logger
 from sqlalchemy import and_, create_engine, select  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
-from .crash_data_schema import Crash, Roadway
 from .ms2generator_schema import Base, CircumstanceSanitized, CrashSanitized, EmsSanitized, \
     PersonSanitized, RoadwaySanitized, VehicleSanitized
 
@@ -309,45 +308,6 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                           RoadwaySanitized.Y_COORDINATES  # Y_COORDINATES as LONGITUDE
                                           ).join(CrashSanitized.ROADWAY)
 
-            qry_unsanitized = session.query(Crash.LIGHT,
-                                            Crash.REPORTCOUNTYLOCATION,
-                                            Roadway.MUNICIPAL,
-                                            Crash.JUNCTION,
-                                            Crash.COLLISIONTYPE,
-                                            Crash.SURFACECONDITION,
-                                            Crash.LANEDIRECTION + Crash.LANENUMBER,
-                                            Crash.ROADCONDITION,
-                                            Crash.ROADDIVISION,
-                                            Crash.FIXEDOBJECTSTRUCK,
-                                            Crash.REPORTNUMBER,
-                                            Crash.REPORTTYPE,
-                                            Crash.WEATHER,
-                                            Crash.CRASHDATE,
-                                            Crash.CRASHTIME,
-                                            Crash.LOCALCODES,
-                                            Crash.TRAFFICCONTROL,
-                                            Crash.CONMAINZONE,
-                                            Crash.AGENCYNAME,
-                                            Crash.AREA,
-                                            Crash.HARMFULEVENTONE,
-                                            Crash.HARMFULEVENTTWO,
-                                            Roadway.ROUTE_NUMBER,
-                                            Roadway.ROUTE_TYPE,
-                                            Roadway.ROUTE_SUFFIX,
-                                            Roadway.MILEPOINT,  # RoadwaySanitized.LOG_MILE,
-                                            Roadway.LOGMILE_DIR,  # RoadwaySanitized.LOGMILE_DIR_FLAG,
-                                            Roadway.ROAD_NAME,
-                                            Crash.MILEPOINTDISTANCE,  # distance
-                                            Crash.MILEPOINTDISTANCEUNITS,
-                                            Crash.MILEPOINTDIRECTION,  # distance dir flag
-                                            Roadway.REFERENCE_ROUTE_NUMBER,
-                                            Roadway.REFERENCE_ROUTE_TYPE,
-                                            Roadway.REFERENCE_ROUTE_SUFFIX,
-                                            Roadway.REFERENCE_ROADNAME,
-                                            Crash.LATITUDE,
-                                            Crash.LONGITUDE
-                                            ).join(Crash.ROADWAY).where(Crash.CRASHDATE > '2020-01-01')
-
             worksheet = self.workbook.add_worksheet("CRASH")
             key_subs = {
                 'REPORT_TYPE_CODE': 'REPORT_TYPE',
@@ -360,7 +320,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
             }
 
             row_no = 0
-            for row in qry_sanitized.all() + qry_unsanitized.all():
+            for row in qry_sanitized.all():
                 if row_no == 0:
                     # Build header row
                     header_list = list(row.keys())
@@ -403,7 +363,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     elif isinstance(row[element_no], datetime.datetime):
                         worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
                     else:
-                        worksheet.write(row_no, element_no, row[element_no])
+                        worksheet.write(row_no, element_no, self._standardize_value(row[element_no]))
                 row_no += 1
 
     def add_person_worksheet(self) -> None:
@@ -442,6 +402,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
             # headers that need to be renamed
             key_subs = {
+                'SEX': 'SEX_CODE',
                 'ALCO_TEST_CODE': 'ALCOHOL_TEST_CODE',
                 'ALCO_TEST_TYPE_CODE': 'ALCOHOL_TESTTYPE_CODE',
                 'DRUG_TEST_RESULT_FLAG': 'DRUG_TESTRESULT_CODE',
@@ -471,14 +432,14 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                         worksheet.write(row_no, element_no, self._get_person_uuid(row[element_no]))
                     elif element_no == header_list.index('VEHICLE_ID'):
                         worksheet.write(row_no, element_no, self._get_vehicle_uuid(row[element_no]))
-                    elif element_no == header_list.index('SEX'):
+                    elif element_no == header_list.index('SEX_CODE'):
                         worksheet.write(row_no, element_no, self._lookup_sex(row[element_no]))
 
                     # Other cases
                     elif isinstance(row[element_no], datetime.datetime):
                         worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
                     else:
-                        worksheet.write(row_no, element_no, row[element_no])
+                        worksheet.write(row_no, element_no, self._standardize_value(row[element_no]))
 
                 row_no += 1
 
@@ -492,7 +453,6 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                          EmsSanitized.EMS_TRANSPORT_TYPE_FLAG))
 
             worksheet = self.workbook.add_worksheet("EMS")
-            date_fmt = self.workbook.add_format({'num_format': 'mm/dd/yy'})
             key_subs = {'EMS_TRANSPORT_TYPE_FLAG': 'EMS_TRANSPORT_TYPE'}
 
             row_no = 0
@@ -508,11 +468,9 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
                 for element_no, _ in enumerate(row):
                     if isinstance(row[element_no], datetime.datetime):
-                        worksheet.write(row_no, element_no, row[element_no], date_fmt)
-                    elif isinstance(row[element_no], str) and row[element_no].isdigit():
-                        worksheet.write(row_no, element_no, int(row[element_no]))
+                        worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
                     else:
-                        worksheet.write(row_no, element_no, row[element_no])
+                        worksheet.write(row_no, element_no, self._standardize_value(row[element_no]))
                 row_no += 1
 
     def add_vehicle_worksheet(self) -> None:
@@ -586,7 +544,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                     elif isinstance(row[element_no], datetime.datetime):
                         worksheet.write(row_no, element_no, row[element_no], self.date_fmt)
                     else:
-                        worksheet.write(row_no, element_no, row[element_no])
+                        worksheet.write(row_no, element_no, self._standardize_value(row[element_no]))
 
                 row_no += 1
 
@@ -610,13 +568,13 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                         continue
 
                     if val is not None:
-                        self.vehicle_circum_ws.write_row(self.road_circum_ws_row, 0,
+                        self.vehicle_circum_ws.write_row(self.vehicle_circum_ws_row, 0,
                                                          (report_no,
                                                           'Vehicle',
                                                           contrib_code,
                                                           None,
                                                           self._get_vehicle_uuid(vehicle_id) if vehicle_id else None))
-                        self.road_circum_ws_row += 1
+                        self.vehicle_circum_ws_row += 1
 
     def add_road_circum(self) -> None:
         """ Populates the road sheet"""
@@ -643,6 +601,15 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
                                                        None))
                         self.road_circum_ws_row += 1
 
+    @staticmethod
+    def _standardize_value(val: str):
+        """Working with a few data cleanup things that happens for each insertion"""
+        if isinstance(val, str) and val.isdigit():
+            return int(val)
+        if val == 'A9.99':
+            return ''
+        return val
+
     def _validate_vehicle_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for vehicles """
         master_dict = {}
@@ -654,7 +621,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_person_value(self, val: str) -> str:
+    def _validate_person_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for persons. Will raise ValueError if val is not a valid person code. """
         master_dict = {}
         master_dict.update(TANG_PERSON)
@@ -665,7 +632,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_weather_value(self, val: str) -> str:
+    def _validate_weather_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for weather. Will raise ValueError if val is not a valid weather code. """
         master_dict = {}
         master_dict.update(TANG_WEATHER)
@@ -676,7 +643,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
 
         return ret
 
-    def _validate_road_value(self, val: str) -> str:
+    def _validate_road_value(self, val: str) -> Optional[str]:
         """ Validates circumstance values for road. Will raise ValueError if val is not a valid road code. """
         master_dict = {}
         master_dict.update(TANG_ROAD)
@@ -688,13 +655,13 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         return ret
 
     @staticmethod
-    def _validate_value(val: str, master_dict: Dict) -> str:
-        if val is None:
+    def _validate_value(val: str, master_dict: Dict) -> Optional[str]:
+        if val is None or val == 'A9.99':
             return None
 
         val = str(val)
         if val not in master_dict.keys():
-            raise ValueError("Unable to validate {}. Expected values {}".format(val, master_dict.keys()))
+            raise ValueError(f'Unable to validate {val}. Expected values {master_dict.keys()}')
         return val
 
     @staticmethod
@@ -724,17 +691,6 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
         if self.vehicle_id_dict.get(vehicle_id) is None:
             self.vehicle_id_dict[vehicle_id] = str(uuid.uuid4())
         return self.vehicle_id_dict[vehicle_id]
-
-
-if __name__ == '__main__':
-    ws_maker = WorksheetMaker(
-        conn_str="mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server")
-    with ws_maker:
-        ws_maker.add_crash_worksheet()
-        ws_maker.add_person_worksheet()
-        ws_maker.add_ems_worksheet()
-        ws_maker.add_vehicle_worksheet()
-        ws_maker.add_road_circum()
 
 
 if __name__ == '__main__':

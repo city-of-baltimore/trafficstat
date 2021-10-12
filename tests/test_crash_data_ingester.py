@@ -7,7 +7,7 @@ import tempfile
 from collections import OrderedDict
 from typing import Dict, List, Tuple, Union
 
-import decorator
+import decorator  # type: ignore
 import pytest
 from sqlalchemy import engine as enginetype, inspect  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
@@ -23,9 +23,8 @@ from . import constants_test_data
 def check_database_rows(session, model: DeclarativeMeta, expected_rows: int):
     """Does a simple check that the number of rows in the table is what we expect"""
     qry = session.query(model)
-    assert qry.count() == expected_rows, "Expected database {} to have {} rows. Actual: {}".format(
-        model.__tablename__, expected_rows, qry.count()
-    )
+    assert qry.count() == expected_rows, f'Expected database {model.__tablename__} to have {expected_rows} rows. ' \
+                                         f'Actual: {qry.count()}'
 
 
 def clean(model: Union[DeclarativeMeta, Tuple[DeclarativeMeta]]):
@@ -67,7 +66,7 @@ def verify_results(model: Base, engine: enginetype, expected: List[Dict]) -> Non
                     not CrashDataReader.is_element_nil(x)]
         act_cols = actual.column_descriptions[0]['type'].__table__.columns.keys()
         assert all(x in act_cols for x in exp_cols), \
-            "All expected columns were not in the results.\nExpected: {}\nActual: {}\n".format(exp_cols, act_cols)
+            'All expected columns were not in the results.\nExpected: {exp_cols}\nActual: {act_cols}\n'
 
         for exp in expected:
             args = {}
@@ -78,8 +77,9 @@ def verify_results(model: Base, engine: enginetype, expected: List[Dict]) -> Non
             assert act.count() == 1  # if its a primary key, there should be exactly one result
             for col in exp_cols:
                 exp_val = exp[col]
-                assert act[0].__dict__[col] == exp_val, "Failed on column {}\nExpected: {}\nActual: {}".format(
-                    col, exp_val, act[0].__dict__[col])
+                assert act[0].__dict__[col] == exp_val, f'Failed on column {col}\n' \
+                                                        f'Expected: {exp_val}\n' \
+                                                        f'Actual: {act[0].__dict__[col]}'
 
 
 def check_single_entries(_session, i, checks=None):
@@ -582,21 +582,20 @@ def test_get_single_attr(crash_data_reader):
 
 def test_file_move(crash_data_reader, tmpdir):
     """Test _file_move"""
-    file = tempfile.NamedTemporaryFile(delete=False)
-    file.close()
-    tmp_file_name = "{}X".format(file.name)  # temp filename so we can copy the original for each iteration
+    with tempfile.NamedTemporaryFile(delete=False) as file:
+        tmp_file_name = f'{file.name}X'  # temp filename so we can copy the original for each iteration
 
-    for _ in range(6):
+        for _ in range(6):
+            shutil.copyfile(file.name, tmp_file_name)
+            assert crash_data_reader._file_move(tmp_file_name, tmpdir)
+
         shutil.copyfile(file.name, tmp_file_name)
-        assert crash_data_reader._file_move(tmp_file_name, tmpdir)
-
-    shutil.copyfile(file.name, tmp_file_name)
-    assert not crash_data_reader._file_move(tmp_file_name, tmpdir)
+        assert not crash_data_reader._file_move(tmp_file_name, tmpdir)
 
     assert os.path.exists(os.path.join(tmpdir, os.path.basename(tmp_file_name)))
-    assert os.path.exists(os.path.join(tmpdir, '{}_1'.format(os.path.basename(tmp_file_name))))
-    assert os.path.exists(os.path.join(tmpdir, '{}_2'.format(os.path.basename(tmp_file_name))))
-    assert os.path.exists(os.path.join(tmpdir, '{}_3'.format(os.path.basename(tmp_file_name))))
-    assert os.path.exists(os.path.join(tmpdir, '{}_4'.format(os.path.basename(tmp_file_name))))
-    assert os.path.exists(os.path.join(tmpdir, '{}_5'.format(os.path.basename(tmp_file_name))))
-    assert not os.path.exists(os.path.join(tmpdir, '{}_6'.format(os.path.basename(tmp_file_name))))
+    assert os.path.exists(os.path.join(tmpdir, f'{os.path.basename(tmp_file_name)}_1'))
+    assert os.path.exists(os.path.join(tmpdir, f'{os.path.basename(tmp_file_name)}_2'))
+    assert os.path.exists(os.path.join(tmpdir, f'{os.path.basename(tmp_file_name)}_3'))
+    assert os.path.exists(os.path.join(tmpdir, f'{os.path.basename(tmp_file_name)}_4'))
+    assert os.path.exists(os.path.join(tmpdir, f'{os.path.basename(tmp_file_name)}_5'))
+    assert not os.path.exists(os.path.join(tmpdir, f'{os.path.basename(tmp_file_name)}_6'))

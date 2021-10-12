@@ -20,6 +20,7 @@ class GUID(TypeDecorator):
     Copy/paste from https://docs.sqlalchemy.org/en/14/core/custom_types.html#backend-agnostic-guid-type
     """
     impl = CHAR
+    cache_ok = False
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
@@ -34,10 +35,10 @@ class GUID(TypeDecorator):
             return str(value)
 
         if not isinstance(value, uuid.UUID):
-            return "%.32x" % uuid.UUID(value).int
+            return f'{uuid.UUID(value).int:032x}'
 
         # hexstring
-        return "%.32x" % value.int
+        return f'{value.int:032x}'
 
     def process_result_value(self, value, dialect):
         if value is None:
