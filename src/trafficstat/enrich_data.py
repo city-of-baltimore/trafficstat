@@ -12,12 +12,10 @@ import re
 from typing import List, Optional, Tuple
 
 import pyodbc  # type: ignore
+from arcgis.geocoding import geocode, reverse_geocode  # type: ignore
+from arcgis.gis import GIS  # type: ignore
 from loguru import logger
 from tqdm import tqdm  # type: ignore
-
-from balt_geocoder.geocoder import APIFatalError, Geocoder
-from balt_geocoder.geocodio_types import GeocodeResult
-from .creds import GAPI
 
 
 class Enrich:
@@ -38,23 +36,18 @@ class Enrich:
         """)
 
         data: List[Tuple[str, str]] = []
-        geocoder: Geocoder = Geocoder(GAPI)
-        with geocoder:
+        for row in tqdm(self.cursor.fetchall()):
             try:
-                for row in tqdm(self.cursor.fetchall()):
-                    try:
-                        geocode_result: Optional[GeocodeResult] = geocoder.reverse_geocode(row[1], row[2])
-                    except RuntimeError as err:
-                        logger.error("Runtime error: {err}", err=err)
-                        continue
+                geocode_result = reverse_geocode(row[1], row[2])
+            except RuntimeError as err:
+                logger.error("Runtime error: {err}", err=err)
+                continue
 
-                    if geocode_result is not None and geocode_result.get('census_tract'):
-                        data.append((geocode_result['census_tract'], row[0]))
-                        continue
+            if geocode_result is not None and geocode_result.get('census_tract'):
+                data.append((geocode_result['census_tract'], row[0]))
+                continue
 
-                    logger.warning('No census tract for sanitized roadway: {row}', row=row)
-            except APIFatalError as apierr:
-                logger.error("API error: {apierr}", apierr=apierr)
+            logger.warning('No census tract for sanitized roadway: {row}', row=row)
 
         if data:
             self.cursor.executemany("""
