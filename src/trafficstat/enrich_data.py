@@ -9,13 +9,15 @@ ROAD_NAME_CLEAN (nvarchar(50)),
 REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
 import re
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import pyodbc  # type: ignore
-from arcgis.geocoding import geocode, reverse_geocode  # type: ignore
+from arcgis.geocoding import reverse_geocode  # type: ignore
 from arcgis.gis import GIS  # type: ignore
 from loguru import logger
 from tqdm import tqdm  # type: ignore
+
+GIS()
 
 
 class Enrich:

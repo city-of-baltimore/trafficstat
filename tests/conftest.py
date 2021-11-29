@@ -17,17 +17,10 @@ def pytest_addoption(parser):
     parser.addoption('--geocodio-key', action='store')
 
 
-@pytest.fixture(name='geocodio_api')
-def fixture_geocodio_key(request):
-    """The API key for Geocodio"""
-    return request.config.getoption('--geocodio-key')
-
-
 @pytest.fixture(name='crash_data_reader')
-def crash_data_reader_fixture(tmpdir, geocodio_api):
+def crash_data_reader_fixture(tmpdir):
     """Fixture for the CrashDataReader class"""
-    yield CrashDataReader(conn_str=f'sqlite:///{os.path.join(tmpdir, "crashdatareaderfixture.db")}',
-                          geocodio_api_key=geocodio_api)
+    yield CrashDataReader(conn_str=f'sqlite:///{os.path.join(tmpdir, "crashdatareaderfixture.db")}')
 
 
 @pytest.fixture(name='conn_str_sanitized')
