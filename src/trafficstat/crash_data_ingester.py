@@ -281,7 +281,7 @@ class CrashDataReader:
         if not (latitude and longitude):
             logger.error('Unable to get latitude and longitude')
         else:
-            geo = reverse_geocode(float(latitude), float(longitude))
+            geo = reverse_geocode([float(latitude), float(longitude)])
             if not geo:
                 logger.error(f'Unable to reverse geocode {latitude}/{longitude}')
             else:

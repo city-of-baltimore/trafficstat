@@ -40,7 +40,7 @@ class Enrich:
         data: List[Tuple[str, str]] = []
         for row in tqdm(self.cursor.fetchall()):
             try:
-                geocode_result = reverse_geocode(row[1], row[2])
+                geocode_result = reverse_geocode([row[1], row[2]])
             except RuntimeError as err:
                 logger.error("Runtime error: {err}", err=err)
                 continue
