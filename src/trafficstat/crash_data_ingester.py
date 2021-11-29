@@ -12,7 +12,8 @@ from typing import List, Mapping, Optional, Union
 from xml.parsers.expat import ExpatError
 
 import xmltodict  # type: ignore
-from balt_geocoder import Geocoder
+from arcgis.geocoding import reverse_geocode  # type: ignore
+from arcgis.gis import GIS  # type: ignore
 from loguru import logger
 from pandas import to_datetime  # type: ignore
 from pandas.errors import OutOfBoundsDatetime  # type: ignore
@@ -31,8 +32,9 @@ from .crash_data_types import ApprovalDataType, CrashDataType, CircumstanceType,
     CommercialVehicleType, CrashDiagramType, DamagedAreaType, DriverType, EmsType, EventType, NonMotoristType, \
     PassengerType, PdfReportDataType, PersonType, ReportDocumentType, ReportPhotoType, RoadwayType, TowedUnitType, \
     VehicleType, VehicleUseType, WitnessType
-from .creds import GAPI
 from .xmlsanitizer import sanitize_xml_str
+
+GIS()
 
 
 @sqlalchemyevent.listens_for(Engine, "connect")
@@ -70,8 +72,7 @@ def check_and_log(check_dict: str):
 class CrashDataReader:
     """ Reads a directory of ACRS crash data files"""
 
-    def __init__(self, conn_str: str, geocodio_api_key: Optional[str] = None, pickle_filename: str = 'geo.pickle',
-                 pickle_filename_rev: str = 'geo_rev.pickle'):
+    def __init__(self, conn_str: str):
         """
         Reads a directory of XML ACRS crash files, and returns an iterator of the parsed data
         :param conn_str: sqlalchemy connection string (IE sqlite:///crash.db)
@@ -81,12 +82,6 @@ class CrashDataReader:
 
         with self.engine.begin() as connection:
             Base.metadata.create_all(connection)
-
-        if geocodio_api_key is None:
-            geocodio_api_keys: List[str] = GAPI
-        else:
-            geocodio_api_keys = [geocodio_api_key]
-        self.geocoder = Geocoder(geocodio_api_keys, pickle_filename, pickle_filename_rev) if geocodio_api_keys else None
 
     def _insert_or_update(self, insert_obj: DeclarativeMeta, identity_insert=False):
         """
@@ -286,14 +281,11 @@ class CrashDataReader:
         if not (latitude and longitude):
             logger.error('Unable to get latitude and longitude')
         else:
-            if not self.geocoder:
-                logger.error('Unable to geocode because the geocoder is invalid')
+            geo = reverse_geocode([float(latitude), float(longitude)])
+            if not geo:
+                logger.error(f'Unable to reverse geocode {latitude}/{longitude}')
             else:
-                geo = self.geocoder.reverse_geocode(float(latitude), float(longitude))
-                if not geo:
-                    logger.error(f'Unable to reverse geocode {latitude}/{longitude}')
-                else:
-                    census_tract = geo.get('census_tract')
+                census_tract = geo.get('census_tract')
 
         self._insert_or_update(
             Crash(
