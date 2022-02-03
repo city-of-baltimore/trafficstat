@@ -234,7 +234,7 @@ class WorksheetMaker:  # pylint:disable=too-many-instance-attributes
     """Creates XLSX files with crash data from the DOT_DATA table for MS2"""
 
     def __init__(self, conn_str: str, workbook_name: str = 'BaltimoreCrash.xlsx'):
-        logger.info("Creating db with connection string: {}", conn_str)
+        logger.info(f'Creating db with connection string: {conn_str}')
         self.engine = create_engine(conn_str, echo=True, future=True)
 
         with self.engine.begin() as connection:

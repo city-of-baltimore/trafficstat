@@ -9,36 +9,37 @@ ROAD_NAME_CLEAN (nvarchar(50)),
 REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
 import re
-from typing import List, Tuple
 
 import pyodbc  # type: ignore
 from arcgis.geocoding import reverse_geocode  # type: ignore
 from arcgis.gis import GIS  # type: ignore
 from loguru import logger
-from tqdm import tqdm  # type: ignore
+from sqlalchemy import create_engine # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
+
+from ._merge import insert_or_update
+from .crash_data_schema import RoadwaySanitized
 
 GIS()
 
 
 class Enrich:
     """Handles data enrichment of the sanitized crash data from the Maryland State Highway Administration"""
-    def __init__(self):
-        conn = pyodbc.connect(r'Driver={SQL Server};Server=balt-sql311-prd;Database=DOT_DATA;Trusted_Connection=yes;')
-        self.cursor = conn.cursor()
+    def __init__(self, conn_str: str):
+        logger.info(f"Creating db with connection string: {conn_str}")
+        self.engine = create_engine(conn_str, echo=True, future=True)
 
     def geocode_acrs_sanitized(self) -> None:
         """
         Fills in the CENSUS_TRACT column in acrs_roadway_sanitized
         :return: None
         """
-        self.cursor.execute("""
-        SELECT [REPORT_NO], [X_COORDINATES], [Y_COORDINATES]
-        FROM [acrs_roadway_sanitized]
-        WHERE [CENSUS_TRACT] IS NULL
-        """)
+        with Session(self.engine) as session:
+            qry = session.query(RoadwaySanitized.REPORT_NO,
+                                RoadwaySanitized.X_COORDINATES,
+                                RoadwaySanitized.Y_COORDINATES).filter(RoadwaySanitized.CENSUS_TRACT.is_(None))
 
-        data: List[Tuple[str, str]] = []
-        for row in tqdm(self.cursor.fetchall()):
+        for row in qry.all():
             try:
                 geocode_result = reverse_geocode([row[1], row[2]])
             except RuntimeError as err:
@@ -46,32 +47,24 @@ class Enrich:
                 continue
 
             if geocode_result is not None and geocode_result.get('census_tract'):
-                data.append((geocode_result['census_tract'], row[0]))
-                continue
-
-            logger.warning('No census tract for sanitized roadway: {row}', row=row)
-
-        if data:
-            self.cursor.executemany("""
-                    UPDATE [acrs_roadway_sanitized]
-                    SET CENSUS_TRACT = ?
-                    WHERE REPORT_NO = ?
-                    """, data)
-            self.cursor.commit()
+                insert_or_update(RoadwaySanitized(
+                    REPORT_NO=row[0],
+                    CENSUS_TRACT=geocode_result['census_tract'],
+                ), self.engine)
+            else:
+                logger.warning('No census tract for sanitized roadway: {row}', row=row)
 
     def clean_road_names(self) -> None:
         """
         Cleans and standarizes the road names
         :return:
         """
-        self.cursor.execute("""
-        SELECT [REPORT_NO], [ROAD_NAME], [REFERENCE_ROAD_NAME]
-        FROM [acrs_roadway_sanitized]
-        WHERE [ROAD_NAME_CLEAN] IS NULL
-        """)
+        with Session(self.engine) as session:
+            qry = session.query(RoadwaySanitized.REPORT_NO,
+                                RoadwaySanitized.ROAD_NAME,
+                                RoadwaySanitized.REFERENCE_ROAD_NAME).filter(RoadwaySanitized.ROAD_NAME_CLEAN.is_(None))
 
-        data: List[Tuple[str, str, str]] = []
-        for row in tqdm(self.cursor.fetchall()):
+        for row in qry.all():
             road_name_clean = ''
             ref_road_name_clean = ''
             if isinstance(row[1], str):
@@ -82,15 +75,11 @@ class Enrich:
                 ref_road_name_clean = self._word_replacer(road.group(4)) if road is not None else ''
 
             if road_name_clean or ref_road_name_clean:
-                data.append((road_name_clean, ref_road_name_clean, row[0]))
-
-        if data:
-            self.cursor.executemany("""
-                UPDATE [acrs_roadway_sanitized]
-                SET ROAD_NAME_CLEAN = ?, REFERENCE_ROAD_NAME_CLEAN = ?
-                WHERE REPORT_NO = ?
-                """, data)
-            self.cursor.commit()
+                insert_or_update(RoadwaySanitized(
+                    ROAD_NAME_CLEAN=road_name_clean,
+                    REFERENCE_ROAD_NAME_CLEAN=ref_road_name_clean,
+                    REPORT_NO=row[0]
+                ), self.engine)
 
     @staticmethod
     def _word_replacer(address: str) -> str:
