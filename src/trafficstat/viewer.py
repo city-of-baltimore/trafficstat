@@ -59,7 +59,8 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--output_dir', default=os.getcwd(), help='Directory to write the file to.')
     parser.add_argument('-c', '--conn_str',
                         default='mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server',
-                        help='Custom database connection string (default: sqlite:///crash.db)')
+                        help='Custom database connection string (default: '
+                             'mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server)')
 
     args = parser.parse_args()
 

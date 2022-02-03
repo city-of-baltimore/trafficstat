@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session  # type: ignore
 
 from trafficstat.crash_data_ingester import CrashDataReader
 from trafficstat.crash_data_schema import Base as CDBase, Crash, CrashDiagram, PdfReport, Roadway
+from trafficstat.enrich_data import Enrich
 from trafficstat.ms2generator_schema import Base as Ms2Base, CircumstanceSanitized, CitationCodeSanitized, \
     CrashSanitized, EmsSanitized, PersonSanitized, RoadwaySanitized, TrailerSanitized, VehicleSanitized
 
@@ -21,6 +22,12 @@ def pytest_addoption(parser):
 def crash_data_reader_fixture(tmpdir):
     """Fixture for the CrashDataReader class"""
     yield CrashDataReader(conn_str=f'sqlite:///{os.path.join(tmpdir, "crashdatareaderfixture.db")}')
+
+
+@pytest.fixture(name='enrich')
+def enrich_fixture():
+    """Fixture for Enrich class"""
+    return Enrich()
 
 
 @pytest.fixture(name='conn_str_sanitized')

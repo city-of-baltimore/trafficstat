@@ -376,3 +376,6 @@ The ACRS files ship with personally identifiable information that should not be 
 `python -m trafficstat.xmlsanitizer --input_dir <INPUTDIR> --output_dir <OUTPUTDIR>`
 
 To sanitize the data as its inserted into the database, pass the `-s` flag to the `python -m trafficstat.crash_data_ingester` command. For more information about the crash_data_ingester command, see [that section](#parse-xml-files) 
+
+## Testing 
+To run the test suites and linters, run `tox` in the root directory
