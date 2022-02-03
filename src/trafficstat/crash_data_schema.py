@@ -8,7 +8,8 @@ from sqlalchemy.dialects.postgresql import UUID  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.ext.declarative import declarative_base  # type: ignore
 from sqlalchemy.orm import relationship  # type: ignore
-from sqlalchemy.types import Boolean, CHAR, Date, DateTime, Float, Integer, String, Time, TypeDecorator  # type: ignore
+from sqlalchemy.types import Boolean, CHAR, Date, DateTime, Float, Integer, Numeric, String, Time, \
+    TypeDecorator  # type: ignore
 
 Base: DeclarativeMeta = declarative_base()
 REPORTNUMBER_LEN = 14
@@ -600,3 +601,43 @@ class VehicleUse(Base):
     ID = Column(Integer, primary_key=True, autoincrement=False)  # <xs:element type="xs:int" name="ID"/>
     VEHICLEID = Column(GUID, ForeignKey('acrs_vehicle.VEHICLEID'))  # <xs:element type="xs:string" name="VEHICLEID"/>
     VEHICLEUSECODE = Column(Integer)  # <xs:element name="VEHICLEUSECODE"> (restricted to 00, 01, 02, and 03)
+
+
+###########################################################
+# Sanitized data
+###########################################################
+
+##################################
+#     acrs_roadway_sanitized     #
+##################################
+# Table for the sanitized roadway data
+class RoadwaySanitized(Base):
+    REPORT_NO = Column(String, nullable=False)
+    ROUTE_NUMBER = Column(Numeric(5, 0))
+    ROUTE_TYPE_CODE = Column(String)
+    ROUTE_SUFFIX = Column(String)
+    LOG_MILE = Column(Numeric(6, 3))
+    RD_CHAR_CODE = Column(String)
+    RD_DIV_CODE = Column(String)
+    LOGMILE_DIR_FLAG = Column(String)
+    ROAD_NAME = Column(String)
+    DISTANCE = Column(Numeric(6, 3))
+    FEET_MILES_FLAG = Column(String)
+    DISTANCE_DIR_FLAG = Column(String)
+    FINAL_LOG_MILE = Column(Numeric(6, 3))
+    REFERENCE_NUMBER = Column(Numeric(5, 0))
+    REFERENCE_TYPE_CODE = Column(String)
+    REFERENCE_SUFFIX = Column(String)
+    REFERENCE_ROAD_NAME = Column(String)
+    ACC_DATE = Column(DateTime)
+    X_COORDINATES = Column(Float)
+    Y_COORDINATES = Column(Float)
+    RD_ALIGNMENT_CODE = Column(String)
+    RD_GRADE_CODE = Column(String)
+    OFF_ROAD_TXT = Column(String)
+    FINAL_X_COORDINATES = Column(Float)
+    FINAL_Y_COORDINATES = Column(Float)
+    DS_KEY = Column(String)
+    CENSUS_TRACT = Column(String)
+    ROAD_NAME_CLEAN = Column(String)
+    REFERENCE_ROAD_NAME_CLEAN = Column(String)

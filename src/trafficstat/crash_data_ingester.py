@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session  # type: ignore
 from sqlalchemy.sql import text  # type: ignore
 from pyvin import DecodedVIN, VIN  # type: ignore
 
+from ._merge import insert_or_update
 from .crash_data_schema import Approval, Base, Crash, Circumstance, CitationCode, CommercialVehicle, \
     CrashDiagram, DamagedArea, Ems, Event, PdfReport, Person, PersonInfo, Roadway, TowedUnit, Vehicle, VehicleUse, \
     Witness
@@ -82,60 +83,6 @@ class CrashDataReader:
 
         with self.engine.begin() as connection:
             Base.metadata.create_all(connection)
-
-    def _insert_or_update(self, insert_obj: DeclarativeMeta, identity_insert=False):
-        """
-        A safe way for the sqlalchemy
-        :param insert_obj:
-        :param identity_insert:
-        :return:
-        """
-        with Session(bind=self.engine, future=True) as session:
-            if identity_insert:
-                session.execute(text(f'SET IDENTITY_INSERT {insert_obj.__tablename__} ON'))
-
-            session.add(insert_obj)
-            try:
-                session.commit()
-                logger.debug('Successfully inserted object: {}', insert_obj)
-            except IntegrityError as insert_err:
-                session.rollback()
-
-                if '(544)' in insert_err.args[0]:
-                    # This is a workaround for an issue with sqlalchemy not properly setting IDENTITY_INSERT on for SQL
-                    # Server before we insert values in the primary key. The error is:
-                    # (pyodbc.IntegrityError) ('23000', "[23000] [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]
-                    # Cannot insert explicit value for identity column in table <table name> when IDENTITY_INSERT is set
-                    # to OFF. (544) (SQLExecDirectW)")
-                    self._insert_or_update(insert_obj, True)
-
-                elif '(2627)' in insert_err.args[0] or 'UNIQUE constraint failed' in insert_err.args[0]:
-                    # Error 2627 is the Sql Server error for inserting when the primary key already exists. 'UNIQUE
-                    # constraint failed' is the same for Sqlite
-                    cls_type = type(insert_obj)
-
-                    qry = session.query(cls_type)
-
-                    primary_keys = [i.key for i in sqlalchemyinspect(cls_type).primary_key]
-                    for primary_key in primary_keys:
-                        qry = qry.filter(cls_type.__dict__[primary_key] == insert_obj.__dict__[primary_key])
-
-                    update_vals = {k: v for k, v in insert_obj.__dict__.items()
-                                   if not k.startswith('_') and k not in primary_keys}
-                    if update_vals:
-                        qry.update(update_vals)
-                        try:
-                            session.commit()
-                            logger.debug('Successfully inserted object: {}', insert_obj)
-                        except IntegrityError as update_err:
-                            logger.error('Unable to insert object: {}\nError: {}', insert_obj, update_err)
-
-                else:
-                    raise AssertionError(f'Expected error 2627 or "UNIQUE constraint failed". '
-                                         f'Got {insert_err}') from insert_err
-            finally:
-                if identity_insert:
-                    session.execute(text(f'SET IDENTITY_INSERT {insert_obj.__tablename__} OFF'))
 
     def read_crash_data(self, dir_name: Optional[str] = None,  # pylint:disable=too-many-arguments
                         recursive: bool = False, file_name: Optional[str] = None, copy: bool = True,
@@ -287,7 +234,7 @@ class CrashDataReader:
             else:
                 census_tract = geo.get('census_tract')
 
-        self._insert_or_update(
+        insert_or_update(
             Crash(
                 ACRSREPORTTIMESTAMP=self.to_datetime_sql(self.get_single_attr('ACRSREPORTTIMESTAMP', crash_dict)),
                 AGENCYIDENTIFIER=self.get_single_attr('AGENCYIDENTIFIER', crash_dict),
@@ -365,7 +312,7 @@ class CrashDataReader:
         Populates the acrs_approval table
         :param approval_dict: The ordereddict contained in the APPROVALDATA tag
         """
-        self._insert_or_update(
+        insert_or_update(
             Approval(
                 AGENCY=self.get_single_attr('AGENCY', approval_dict),
                 APPROVALDATE=self.to_datetime_sql(self.get_single_attr('APPROVALDATE', approval_dict)),
@@ -393,7 +340,7 @@ class CrashDataReader:
         :param circumstance_dict: List of CIRCUMSTANCE tags contained in the CIRCUMSTANCES tag
         """
         for circumstance in circumstance_dict:
-            self._insert_or_update(
+            insert_or_update(
                 Circumstance(
                     CIRCUMSTANCECODE=self.get_single_attr('CIRCUMSTANCECODE', circumstance),
                     CIRCUMSTANCEID=self.get_single_attr('CIRCUMSTANCEID', circumstance),
@@ -411,7 +358,7 @@ class CrashDataReader:
             if isinstance(citation_no, str):
                 citation_no = citation_no.upper()
             if not citation_no == 'PENDING':
-                self._insert_or_update(
+                insert_or_update(
                     CitationCode(
                         CITATIONNUMBER=citation_no,
                         PERSONID=self._validate_uniqueidentifier(self.get_single_attr('PERSONID', citation)),
@@ -424,7 +371,7 @@ class CrashDataReader:
         Populates the acrs_crash_diagrams table
         :param crash_diagram_dict: OrderedDict from the DIAGRAM tag
         """
-        self._insert_or_update(
+        insert_or_update(
             CrashDiagram(
                 CRASHDIAGRAM=self.get_single_attr('CRASHDIAGRAM', crash_diagram_dict),
                 CRASHDIAGRAMNATIVE=self.get_single_attr('CRASHDIAGRAMNATIVE', crash_diagram_dict),
@@ -438,7 +385,7 @@ class CrashDataReader:
         :param ems_dict: List of OrderedDicts contained in the EMSes tag
         """
         for ems in ems_dict:
-            self._insert_or_update(
+            insert_or_update(
                 Ems(
                     EMSTRANSPORTATIONTYPE=self.get_single_attr('EMSTRANSPORTATIONTYPE', ems),
                     EMSUNITNUMBER=self.get_single_attr('EMSUNITNUMBER', ems),
@@ -454,7 +401,7 @@ class CrashDataReader:
         :param commvehicle_dict: The dictionary of the ACRSVEHICLE
         :return:
         """
-        self._insert_or_update(
+        insert_or_update(
             CommercialVehicle(
                 BODYTYPE=self.get_single_attr('BODYTYPE', commvehicle_dict),
                 BUSUSE=self.get_single_attr('BUSUSE', commvehicle_dict),
@@ -487,7 +434,7 @@ class CrashDataReader:
         :param event_dict: The dictionary of the ACRSVEHICLE
         """
         for event in event_dict:
-            self._insert_or_update(
+            insert_or_update(
                 Event(
                     EVENTID=self.get_single_attr('EVENTID', event),
                     EVENTSEQUENCE=self.get_single_attr('EVENTSEQUENCE', event),
@@ -502,7 +449,7 @@ class CrashDataReader:
         :param pdfreport_dict: List of OrderedDicts from the PDFREPORTs tag
         """
         for report in pdfreport_dict:
-            self._insert_or_update(
+            insert_or_update(
                 PdfReport(
                     CHANGEDBY=self.get_single_attr('CHANGEDBY', report),
                     DATESTATUSCHANGED=self.to_datetime_sql(self.get_single_attr('DATESTATUSCHANGED', report)),
@@ -519,7 +466,7 @@ class CrashDataReader:
         :param person_dict: OrderedDict from the PERSON, OWNER, PASSENGER, or NONMOTORIST tags
         """
         for person in person_dict:
-            self._insert_or_update(
+            insert_or_update(
                 Person(
                     ADDRESS=self.get_single_attr('ADDRESS', person),
                     CITY=self.get_single_attr('CITY', person),
@@ -575,7 +522,7 @@ class CrashDataReader:
             if person_type is None:
                 logger.warning('Unable to determine person_type')
 
-            self._insert_or_update(
+            insert_or_update(
                 PersonInfo(
                     AIRBAGDEPLOYED=self.get_single_attr('AIRBAGDEPLOYED', person),
                     ALCOHOLTESTINDICATOR=self.get_single_attr('ALCOHOLTESTINDICATOR', person),
@@ -626,7 +573,7 @@ class CrashDataReader:
         Populates the acrs_roadway table. Expects the ROADWAY tag contents
         :param roadway_dict: OrderedDict from the ROADWAY tag
         """
-        self._insert_or_update(
+        insert_or_update(
             Roadway(
                 COUNTY=self.get_single_attr('COUNTY', roadway_dict),
                 LOGMILE_DIR=self.get_single_attr('LOGMILE_DIR', roadway_dict),
@@ -655,7 +602,7 @@ class CrashDataReader:
             if towed_unit.get('OWNER'):
                 self._read_acrs_person_data([towed_unit['OWNER']])
 
-            self._insert_or_update(
+            insert_or_update(
                 TowedUnit(
                     INSURANCEPOLICYNUMBER=self.get_single_attr('INSURANCEPOLICYNUMBER', towed_unit),
                     INSURER=self.get_single_attr('INSURER', towed_unit),
@@ -688,7 +635,7 @@ class CrashDataReader:
                 # just to make the rest of the logic work when there is no return
                 vehicle_lookup = DecodedVIN({'Make': None, 'Model': None, 'ModelYear': None})
 
-            self._insert_or_update(
+            insert_or_update(
                 Vehicle(
                     CONTINUEDIRECTION=self.get_single_attr('CONTINUEDIRECTION', vehicle),
                     DAMAGEEXTENT=self.get_single_attr('DAMAGEEXTENT', vehicle),
@@ -756,7 +703,7 @@ class CrashDataReader:
         :param vehicleuse_dict: The dictionary of the ACRSVEHICLE from the VEHICLEUSEs tag
         """
         for vehicleuse in vehicleuse_dict:
-            self._insert_or_update(
+            insert_or_update(
                 VehicleUse(
                     ID=self.get_single_attr('ID', vehicleuse),
                     VEHICLEID=self._validate_uniqueidentifier(self.get_single_attr('VEHICLEID', vehicleuse)),
@@ -770,7 +717,7 @@ class CrashDataReader:
         :param damaged_dict: The dictionary of the ACRSVEHICLE
         """
         for damagedarea in damaged_dict:
-            self._insert_or_update(
+            insert_or_update(
                 DamagedArea(
                     DAMAGEID=self.get_single_attr('DAMAGEID', damagedarea),
                     IMPACTTYPE=self.get_single_attr('IMPACTTYPE', damagedarea),
@@ -787,7 +734,7 @@ class CrashDataReader:
             if witness.get('PERSON'):
                 self._read_acrs_person_data([witness['PERSON']])
 
-            self._insert_or_update(
+            insert_or_update(
                 Witness(
                     PERSONID=self._validate_uniqueidentifier(self.get_single_attr('PERSONID', witness)),
                     REPORTNUMBER=self.get_single_attr('REPORTNUMBER', witness)
