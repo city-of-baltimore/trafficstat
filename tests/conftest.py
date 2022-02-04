@@ -18,22 +18,27 @@ def pytest_addoption(parser):
     parser.addoption('--geocodio-key', action='store')
 
 
+@pytest.fixture(scope='session', name='conn_str')
+def fixture_conn_str(tmp_path_factory):
+    """Fixture for the WorksheetMaker class"""
+    return f'sqlite:///{str(tmp_path_factory.mktemp("data") / "crash.db")}'
+
+
 @pytest.fixture(name='crash_data_reader')
-def crash_data_reader_fixture(tmpdir):
+def crash_data_reader_fixture(conn_str):
     """Fixture for the CrashDataReader class"""
-    yield CrashDataReader(conn_str=f'sqlite:///{os.path.join(tmpdir, "crashdatareaderfixture.db")}')
+    yield CrashDataReader(conn_str=conn_str)
 
 
 @pytest.fixture(name='enrich')
-def enrich_fixture():
+def enrich_fixture(conn_str):
     """Fixture for Enrich class"""
-    return Enrich()
+    return Enrich(conn_str)
 
 
 @pytest.fixture(name='conn_str_sanitized')
-def unsanitized_crash_database(tmpdir):
+def unsanitized_crash_database(conn_str):
     """Fixture for the WorksheetMaker class"""
-    conn_str = f'sqlite:///{os.path.join(tmpdir, "crashdatabase.db")}'
 
     # Make the database
     engine = create_engine(conn_str, echo=True, future=True)
@@ -784,7 +789,7 @@ def unsanitized_crash_database(tmpdir):
 
 
 @pytest.fixture(name='conn_str_unsanitized')
-def sanitized_crash_database(tmpdir):
+def sanitized_crash_database(tmpdir, conn_str):
     """Fixture for the WorksheetMaker class"""
     conn_str = f"sqlite:///{os.path.join(tmpdir, 'crashdatabase.db')}"
 

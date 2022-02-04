@@ -614,7 +614,7 @@ class RoadwaySanitized(Base):
     """Sqlalchemy: Data for table acrs_roadway_sanitized"""
     __tablename__ = "acrs_roadway_sanitized"
 
-    REPORT_NO = Column(String, nullable=False)
+    REPORT_NO = Column(String, primary_key=True)
     ROUTE_NUMBER = Column(Numeric(5, 0))
     ROUTE_TYPE_CODE = Column(String)
     ROUTE_SUFFIX = Column(String)
