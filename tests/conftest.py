@@ -18,7 +18,7 @@ def pytest_addoption(parser):
     parser.addoption('--geocodio-key', action='store')
 
 
-@pytest.fixture(scope='session', name='conn_str')
+@pytest.fixture(name='conn_str')
 def fixture_conn_str(tmp_path_factory):
     """Fixture for the WorksheetMaker class"""
     return f'sqlite:///{str(tmp_path_factory.mktemp("data") / "crash.db")}'

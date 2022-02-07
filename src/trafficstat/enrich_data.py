@@ -94,9 +94,12 @@ class Enrich:
         road_name_clean = ''
         ref_road_name_clean = ''
         if isinstance(road_name, str):
+            # We need two rounds of cleaning just because of instances like '1900 BLK OF W PRATT ST'
+            road_name = self._word_replacer(road_name)
             road = re.search(r'(\d+\s+)?([NnEeSsWw](\.\s|\s|\.))?([^(]*)?', road_name)
             road_name_clean = self._word_replacer(road.group(4)) if road is not None else ''
         if isinstance(ref_road_name, str):
+            ref_road_name = self._word_replacer(ref_road_name)
             road = re.search(r'(\d+\s+)?([NnEeSsWw](\.\s|\s|\.))?([^(]*)?', ref_road_name)
             ref_road_name_clean = self._word_replacer(road.group(4)) if road is not None else ''
 

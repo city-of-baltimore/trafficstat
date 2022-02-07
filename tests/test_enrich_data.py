@@ -8,8 +8,8 @@ def test_geocode_acrs_sanitized(enrich):
 
 def test_clean_road_names(enrich):
     """Test for clean_road_names"""
-    assert enrich.clean_road_names('1100 NORTH AVE', 'HOWARD ST') == 'NORTH', 'HOWARD'
-    assert enrich.clean_road_names('300 S. GILMORE ST', '1600 BLK W PRATT ST') == 'GILMORE', 'PRATT'
+    assert enrich.clean_road_names('1100 NORTH AVE', 'HOWARD ST') == ('NORTH AVE', 'HOWARD ST')
+    assert enrich.clean_road_names('300 S. GILMORE ST', '1600 BLK W PRATT ST') == ('GILMORE ST', 'PRATT ST')
 
 
 def test_get_cleaned_location(enrich):
