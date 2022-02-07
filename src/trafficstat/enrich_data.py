@@ -10,13 +10,13 @@ REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
 import argparse
 import re
+from typing import Tuple
 
 from arcgis.geocoding import reverse_geocode  # type: ignore
 from arcgis.gis import GIS  # type: ignore
 from loguru import logger
 from sqlalchemy import create_engine  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
-from typing import Tuple
 
 from ._merge import insert_or_update
 from .crash_data_schema import RoadwaySanitized
