@@ -4,9 +4,9 @@ pyodbc~=4.0.32
 tqdm~=4.62.3
 XlsxWriter~=3.0.1
 xmltodict~=0.12.0
-loguru
+loguru~=0.6.0
 sqlalchemy~=1.4.25
 openpyxl~=3.0.9
-numpy~=1.22.1
-arcgis~=1.9.1
+numpy~=1.22.2
+arcgis~=2.0.0
 git+https://github.com/city-of-baltimore/Geocoder@v1.0.4#egg=balt-geocoder

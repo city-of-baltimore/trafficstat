@@ -1,5 +1,7 @@
 """Test suite for enrich_data"""
+from sqlalchemy.orm import Session  # type: ignore
 
+from trafficstat.ms2generator_schema import RoadwaySanitized
 
 def test_geocode_acrs_sanitized(enrich):
     """Test for geocode_acrs_sanitized"""
@@ -14,7 +16,26 @@ def test_clean_road_names(enrich):
 
 def test_get_cleaned_location(enrich):
     """Test for get_cleaned_location"""
-    assert enrich.get_cleaned_location('295 NORTHBOUND', 'DUMMYTEXT') == '2700 Waterview'
-    assert enrich.get_cleaned_location('ENT TO FT MCHENRY', 'DUMMYTEXT') == '1200 Frankfurst'
-    assert enrich.get_cleaned_location('1100 NORTH AVE', 'NORTH AVE') == '1100 NORTH AVE'
-    assert enrich.get_cleaned_location('300 S. GILMORE ST', '1600 BLK W PRATT ST') == 'GILMORE', 'PRATT'
+    with Session(bind=enrich.engine) as session:
+        session.add_all([
+            RoadwaySanitized(REPORT_NO=1, ROAD_NAME='295 NORTHBOUND', REFERENCE_ROAD_NAME='DUMMYTEXT'),
+            RoadwaySanitized(REPORT_NO=2, ROAD_NAME='ENT TO FT MCHENRY', REFERENCE_ROAD_NAME='DUMMYTEXT'),
+            RoadwaySanitized(REPORT_NO=3, ROAD_NAME='1100 NORTH AVE', REFERENCE_ROAD_NAME='NORTH AVE'),
+            RoadwaySanitized(REPORT_NO=4, ROAD_NAME='300 S. GILMORE ST', REFERENCE_ROAD_NAME='1600 BLK W PRATT ST')])
+        session.commit()
+
+    enrich.get_cleaned_location()
+
+    expected = {1: ('2700 Waterview Ave', None),
+                2: ('1200 Frankfurst Ave', None),
+                3: ('1100 NORTH AVE', None),
+                4: ('GILMORE ST', 'PRATT ST')}
+
+    with Session(enrich.engine) as session:
+        for report_no, cleaned in expected.items():
+
+            qry = session.query(RoadwaySanitized.ROAD_NAME_CLEAN,
+                                RoadwaySanitized.REFERENCE_ROAD_NAME_CLEAN).\
+                filter(RoadwaySanitized.REPORT_NO.is_(report_no))
+            assert qry.first()[0] == cleaned[0]
+            assert qry.first()[1] == cleaned[1]

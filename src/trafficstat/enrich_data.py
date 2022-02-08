@@ -19,7 +19,7 @@ from sqlalchemy import create_engine  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from ._merge import insert_or_update
-from .crash_data_schema import RoadwaySanitized
+from .crash_data_schema import Base, RoadwaySanitized
 
 GIS()
 
@@ -30,6 +30,9 @@ class Enrich:
     def __init__(self, conn_str: str):
         logger.info(f"Creating db with connection string: {conn_str}")
         self.engine = create_engine(conn_str, echo=True, future=True)
+
+        with self.engine.begin() as connection:
+            Base.metadata.create_all(connection)
 
     def geocode_acrs_sanitized(self) -> None:
         """
@@ -70,7 +73,7 @@ class Enrich:
                 ref_road_name_clean = None
             elif row[1] in ('295', '295 SOUTH', '295 NORTH', '295 NB', '295 SB', '295 NORTH BOUND', '295 NORTHBOUND',
                             '295 SOUTH BOUND', '295 SOUTHBOUND'):
-                road_name_clean = '2700 Waterview'
+                road_name_clean = '2700 Waterview Ave'
                 ref_road_name_clean = None
             else:
                 road_name_clean, ref_road_name_clean = self.clean_road_names(row[1], row[2])
