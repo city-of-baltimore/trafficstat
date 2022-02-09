@@ -1,7 +1,8 @@
 """Test suite for enrich_data"""
 from sqlalchemy.orm import Session  # type: ignore
 
-from trafficstat.ms2generator_schema import RoadwaySanitized
+from trafficstat.ms2generator_schema import CrashSanitized, RoadwaySanitized
+
 
 def test_geocode_acrs_sanitized(enrich):
     """Test for geocode_acrs_sanitized"""
@@ -18,6 +19,8 @@ def test_get_cleaned_location(enrich):
     """Test for get_cleaned_location"""
     with Session(bind=enrich.engine) as session:
         session.add_all([
+            CrashSanitized(REPORT_NO=1), CrashSanitized(REPORT_NO=2),
+            CrashSanitized(REPORT_NO=3), CrashSanitized(REPORT_NO=4),
             RoadwaySanitized(REPORT_NO=1, ROAD_NAME='295 NORTHBOUND', REFERENCE_ROAD_NAME='DUMMYTEXT'),
             RoadwaySanitized(REPORT_NO=2, ROAD_NAME='ENT TO FT MCHENRY', REFERENCE_ROAD_NAME='DUMMYTEXT'),
             RoadwaySanitized(REPORT_NO=3, ROAD_NAME='1100 NORTH AVE', REFERENCE_ROAD_NAME='NORTH AVE'),

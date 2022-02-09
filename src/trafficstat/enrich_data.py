@@ -19,7 +19,7 @@ from sqlalchemy import create_engine  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from ._merge import insert_or_update
-from .crash_data_schema import Base, RoadwaySanitized
+from .ms2generator_schema import Base, RoadwaySanitized
 
 GIS()
 
