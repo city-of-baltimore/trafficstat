@@ -9,4 +9,3 @@ sqlalchemy~=1.4.25
 openpyxl~=3.0.9
 numpy~=1.22.2
 arcgis~=2.0.0
-git+https://github.com/city-of-baltimore/Geocoder@v1.0.4#egg=balt-geocoder
