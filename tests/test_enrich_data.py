@@ -6,7 +6,28 @@ from trafficstat.ms2generator_schema import CrashSanitized, RoadwaySanitized
 
 def test_geocode_acrs_sanitized(enrich):
     """Test for geocode_acrs_sanitized"""
+    with Session(bind=enrich.engine) as session:
+        session.add_all([
+            CrashSanitized(REPORT_NO=11), CrashSanitized(REPORT_NO=12),
+            CrashSanitized(REPORT_NO=13), CrashSanitized(REPORT_NO=14),
+            RoadwaySanitized(REPORT_NO=11, X_COORDINATES=-76.6147012764419, Y_COORDINATES=39.2662592254051),
+            RoadwaySanitized(REPORT_NO=12, X_COORDINATES=-76.6145704472065, Y_COORDINATES=39.3054704684803),
+            RoadwaySanitized(REPORT_NO=13, X_COORDINATES=-76.6316923284531, Y_COORDINATES=39.3069128837032),
+            RoadwaySanitized(REPORT_NO=14, X_COORDINATES=-76.6728773204327, Y_COORDINATES=39.2810172044491)])
+        session.commit()
+
     enrich.geocode_acrs_sanitized()
+
+    expected = {11: None,
+                12: '110100',
+                13: '140200',
+                14: '200800'}
+
+    with Session(enrich.engine) as session:
+        for report_no, census_tract in expected.items():
+            qry = session.query(RoadwaySanitized.CENSUS_TRACT). \
+                filter(RoadwaySanitized.REPORT_NO.is_(report_no))
+            assert qry.first()[0] == census_tract
 
 
 def test_clean_road_names(enrich):

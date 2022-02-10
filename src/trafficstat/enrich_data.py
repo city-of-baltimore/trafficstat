@@ -10,6 +10,7 @@ REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
 import argparse
 import re
+import requests
 from typing import Tuple
 
 from arcgis.geocoding import reverse_geocode  # type: ignore
@@ -51,10 +52,19 @@ class Enrich:
                 logger.error(f"Runtime error: {err}")
                 continue
 
-            if geocode_result is not None and geocode_result.get('census_tract'):
+            address = geocode_result.get('address').get('Address')
+            city = geocode_result.get('address').get('City')
+            state = geocode_result.get('address').get('Region')
+            req = requests.get(f"https://geocoding.geo.census.gov/geocoder/geographies/address?"
+                               f"street={address}&city={city}&state={state}&benchmark=Public_AR_Census2020&"
+                               f"vintage=Census2020_Census2020&layers=10&format=json")
+            if not req.json():
+                continue
+
+            if req.json().get('result').get('addressMatches'):
                 insert_or_update(RoadwaySanitized(
                     REPORT_NO=row[0],
-                    CENSUS_TRACT=geocode_result['census_tract'],
+                    CENSUS_TRACT=req.json().get('result').get('addressMatches')[0].get('geographies').get('Census Blocks')[0].get('TRACT'),
                 ), self.engine)
             else:
                 logger.warning('No census tract for sanitized roadway: {row}', row=row)
