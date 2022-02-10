@@ -241,6 +241,7 @@ class RoadwaySanitized(Base):
     CENSUS_TRACT = Column(String(length=25), nullable=True)
     ROAD_NAME_CLEAN = Column(String(length=50), nullable=True)
     REFERENCE_ROAD_NAME_CLEAN = Column(String(length=50), nullable=True)
+    CRASH_LOCATION = Column(String, nullable=True)
 
 
 ####################################

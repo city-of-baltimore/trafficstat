@@ -50,16 +50,14 @@ def test_get_cleaned_location(enrich):
 
     enrich.get_cleaned_location()
 
-    expected = {1: ('2700 Waterview Ave', None),
-                2: ('1200 Frankfurst Ave', None),
-                3: ('1100 NORTH AVE', None),
-                4: ('GILMORE ST', 'PRATT ST')}
+    expected = {1: '2700 Waterview Ave',
+                2: '1200 Frankfurst Ave',
+                3: '1100 NORTH AVE',
+                4: 'GILMORE ST & PRATT ST'}
 
     with Session(enrich.engine) as session:
         for report_no, cleaned in expected.items():
 
-            qry = session.query(RoadwaySanitized.ROAD_NAME_CLEAN,
-                                RoadwaySanitized.REFERENCE_ROAD_NAME_CLEAN).\
+            qry = session.query(RoadwaySanitized.CRASH_LOCATION).\
                 filter(RoadwaySanitized.REPORT_NO.is_(report_no))
-            assert qry.first()[0] == cleaned[0]
-            assert qry.first()[1] == cleaned[1]
+            assert qry.first()[0] == cleaned

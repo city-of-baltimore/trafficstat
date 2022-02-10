@@ -10,9 +10,9 @@ REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
 """
 import argparse
 import re
-import requests
 from typing import Tuple
 
+import requests
 from arcgis.geocoding import reverse_geocode  # type: ignore
 from arcgis.gis import GIS  # type: ignore
 from loguru import logger
@@ -64,7 +64,8 @@ class Enrich:
             if req.json().get('result').get('addressMatches'):
                 insert_or_update(RoadwaySanitized(
                     REPORT_NO=row[0],
-                    CENSUS_TRACT=req.json().get('result').get('addressMatches')[0].get('geographies').get('Census Blocks')[0].get('TRACT'),
+                    CENSUS_TRACT=req.json().get('result').get('addressMatches')[0].get('geographies').get(
+                        'Census Blocks')[0].get('TRACT'),
                 ), self.engine)
             else:
                 logger.warning('No census tract for sanitized roadway: {row}', row=row)
@@ -92,10 +93,15 @@ class Enrich:
                 road_name_clean = row[1]
                 ref_road_name_clean = None
 
+            cleaned_location = road_name_clean \
+                if ref_road_name_clean is None \
+                else f"{road_name_clean} & {ref_road_name_clean}"
+
             if road_name_clean or ref_road_name_clean:
                 insert_or_update(RoadwaySanitized(
                     ROAD_NAME_CLEAN=road_name_clean,
                     REFERENCE_ROAD_NAME_CLEAN=ref_road_name_clean,
+                    CRASH_LOCATION=cleaned_location,
                     REPORT_NO=row[0]
                 ), self.engine)
 
@@ -149,4 +155,4 @@ if __name__ == '__main__':
 
     enricher = Enrich(args.conn_str)
     enricher.geocode_acrs_sanitized()
-    enricher.clean_road_names()
+    enricher.get_cleaned_location()

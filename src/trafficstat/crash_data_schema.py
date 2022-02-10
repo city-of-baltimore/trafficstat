@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID  # type: ignore
 from sqlalchemy.ext.declarative import DeclarativeMeta  # type: ignore
 from sqlalchemy.ext.declarative import declarative_base  # type: ignore
 from sqlalchemy.orm import relationship  # type: ignore
-from sqlalchemy.types import Boolean, CHAR, Date, DateTime, Float, Integer, Numeric, String, Time, TypeDecorator  # type: ignore
+from sqlalchemy.types import Boolean, CHAR, Date, DateTime, Float, Integer, String, Time, TypeDecorator  # type: ignore
 
 Base: DeclarativeMeta = declarative_base()
 REPORTNUMBER_LEN = 14
