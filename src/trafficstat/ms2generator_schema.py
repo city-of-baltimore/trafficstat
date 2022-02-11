@@ -219,8 +219,6 @@ class RoadwaySanitized(Base):
     RD_DIV_CODE = Column(String(length=5), nullable=True)
     LOGMILE_DIR_FLAG = Column(String(length=1), nullable=True)
     ROAD_NAME = Column(String(length=50), nullable=True)
-    FUNCTIONAL_CLASS_NO = Column(Numeric(precision=2, scale=0), nullable=True)
-    TC_CODE = Column(String(length=3), nullable=True)
     DISTANCE = Column(Numeric(precision=6, scale=3), nullable=True)
     FEET_MILES_FLAG = Column(String(length=1), nullable=True)
     DISTANCE_DIR_FLAG = Column(String(length=1), nullable=True)

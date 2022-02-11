@@ -263,7 +263,8 @@ This applies to the sanitized data that the State Highway Administration
         [DS_KEY] nvarchar(20),
         [CENSUS_TRACT] nvarchar(25),
         [ROAD_NAME_CLEAN] nvarchar(50),
-        [REFERENCE_ROAD_NAME_CLEAN] nvarchar(50)
+        [REFERENCE_ROAD_NAME_CLEAN] nvarchar(50),
+        [CRASH_LOCATION] nvarchar(max)
     )
     ```
 

@@ -7,6 +7,7 @@ To use this, the acrs_roadway_sanitized database needs to have the following col
 CENSUS_TRACT (nvarchar(25)),
 ROAD_NAME_CLEAN (nvarchar(50)),
 REFERENCE_ROAD_NAME_CLEAN (nvarchar(50))
+CRASH_LOCATION (nvarchar(max))
 """
 import argparse
 import re
@@ -46,6 +47,10 @@ class Enrich:
                                 RoadwaySanitized.Y_COORDINATES).filter(RoadwaySanitized.CENSUS_TRACT.is_(None))
 
         for row in qry.all():
+            if not (row[1] and row[2]):
+                # we can't reverse geocode if we dont have lat/long
+                continue
+
             try:
                 geocode_result = reverse_geocode([row[1], row[2]])
             except RuntimeError as err:
@@ -78,6 +83,10 @@ class Enrich:
                                 RoadwaySanitized.REFERENCE_ROAD_NAME).filter(RoadwaySanitized.ROAD_NAME_CLEAN.is_(None))
 
         for row in qry.all():
+            if not row[1]:
+                # if there is no road_name, then we can't clean it
+                continue
+
             # Take care of special cases wth Ft Mchenry tunnel and 295, where we want to just dump them at spots
             if 'FORT MCHENRY' in row[1].upper() or 'FT MCHENRY' in row[1].upper():
                 road_name_clean = '1200 Frankfurst Ave'
