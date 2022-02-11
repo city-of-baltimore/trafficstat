@@ -89,11 +89,11 @@ class Enrich:
 
             # Take care of special cases wth Ft Mchenry tunnel and 295, where we want to just dump them at spots
             if 'FORT MCHENRY' in row[1].upper() or 'FT MCHENRY' in row[1].upper():
-                road_name_clean = '1200 Frankfurst Ave'
+                road_name_clean = '1200 FRANKFURST AVE'
                 ref_road_name_clean = None
             elif row[1] in ('295', '295 SOUTH', '295 NORTH', '295 NB', '295 SB', '295 NORTH BOUND', '295 NORTHBOUND',
                             '295 SOUTH BOUND', '295 SOUTHBOUND'):
-                road_name_clean = '2700 Waterview Ave'
+                road_name_clean = '2700 WATERVIEW AVE'
                 ref_road_name_clean = None
             else:
                 road_name_clean, ref_road_name_clean = self.clean_road_names(row[1], row[2])
