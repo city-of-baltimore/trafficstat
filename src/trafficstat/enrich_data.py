@@ -88,7 +88,8 @@ class Enrich:
                 continue
 
             # Take care of special cases wth Ft Mchenry tunnel and 295, where we want to just dump them at spots
-            if 'FORT MCHENRY' in row[1].upper() or 'FT MCHENRY' in row[1].upper():
+            road_name = row[1].upper()
+            if 'FORT MCHENRY' in road_name or 'FT MCHENRY' in road_name or 'HARBOR TUNNEL' in road_name:
                 road_name_clean = '1200 FRANKFURST AVE'
                 ref_road_name_clean = None
             elif row[1] in ('295', '295 SOUTH', '295 NORTH', '295 NB', '295 SB', '295 NORTH BOUND', '295 NORTHBOUND',
@@ -137,7 +138,8 @@ class Enrich:
     def _word_replacer(address: str) -> str:
         """Does some standard address cleanup"""
         address = address.upper()
-        for orig, repl in [(" CONNECOR", " CONNECTOR"),
+        for orig, repl in [("JONES FALLS EXPWY", "I-83"),
+                           (" CONNECOR", " CONNECTOR"),
                            (" STREET", " ST"),
                            (" PARKWAY", " PKWY"),
                            (" WAY", " WY"),
