@@ -50,8 +50,8 @@ def test_get_cleaned_location(enrich):
 
     enrich.get_cleaned_location()
 
-    expected = {1: '2700 Waterview Ave',
-                2: '1200 Frankfurst Ave',
+    expected = {1: '2700 WATERVIEW AVE',
+                2: '1200 FRANKFURST AVE',
                 3: '1100 NORTH AVE',
                 4: 'GILMORE ST & PRATT ST'}
 
