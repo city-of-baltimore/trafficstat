@@ -82,6 +82,10 @@ class Enrich:
                                 RoadwaySanitized.ROAD_NAME,
                                 RoadwaySanitized.REFERENCE_ROAD_NAME).filter(RoadwaySanitized.ROAD_NAME_CLEAN.is_(None))
 
+        tunnel_names = ('FORT MCHENRY', 'FT MCHENRY', 'HARBOR TUNNEL')
+        parkway_names = ('295', '295 SOUTH', '295 NORTH', '295 NB', '295 SB', '295 NORTH BOUND', '295 NORTHBOUND',
+                         '295 SOUTH BOUND', '295 SOUTHBOUND')
+
         for row in qry.all():
             if not row[1]:
                 # if there is no road_name, then we can't clean it
@@ -89,11 +93,12 @@ class Enrich:
 
             # Take care of special cases wth Ft Mchenry tunnel and 295, where we want to just dump them at spots
             road_name = row[1].upper()
-            if 'FORT MCHENRY' in road_name or 'FT MCHENRY' in road_name or 'HARBOR TUNNEL' in road_name:
+            ref_road_name = row[2].upper()
+
+            if any(x in y for x in tunnel_names for y in (road_name, ref_road_name)):
                 road_name_clean = '1200 FRANKFURST AVE'
                 ref_road_name_clean = None
-            elif row[1] in ('295', '295 SOUTH', '295 NORTH', '295 NB', '295 SB', '295 NORTH BOUND', '295 NORTHBOUND',
-                            '295 SOUTH BOUND', '295 SOUTHBOUND'):
+            elif any(x in y for x in parkway_names for y in (road_name, ref_road_name)):
                 road_name_clean = '2700 WATERVIEW AVE'
                 ref_road_name_clean = None
             else:
@@ -120,8 +125,8 @@ class Enrich:
         Cleans and standarizes the road names
         :return:
         """
-        road_name_clean = ''
-        ref_road_name_clean = ''
+        road_name_clean: str = ''
+        ref_road_name_clean: str = ''
         if isinstance(road_name, str):
             # We need two rounds of cleaning just because of instances like '1900 BLK OF W PRATT ST'
             road_name = self._word_replacer(road_name)
