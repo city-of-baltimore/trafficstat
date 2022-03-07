@@ -30,7 +30,7 @@ class Enrich:
     """Handles data enrichment of the sanitized crash data from the Maryland State Highway Administration"""
 
     def __init__(self, conn_str: str):
-        logger.info(f"Creating db with connection string: {conn_str}")
+        logger.info(f'Creating db with connection string: {conn_str}')
         self.engine = create_engine(conn_str, echo=True, future=True)
 
         with self.engine.begin() as connection:
@@ -54,19 +54,19 @@ class Enrich:
             try:
                 geocode_result = reverse_geocode([row[1], row[2]])
             except RuntimeError as err:
-                logger.error(f"Runtime error: {err}")
+                logger.error(f'Runtime error: {err}')
                 continue
 
             address = geocode_result.get('address').get('Address')
             city = geocode_result.get('address').get('City')
             state = geocode_result.get('address').get('Region')
-            req = requests.get(f"https://geocoding.geo.census.gov/geocoder/geographies/address?"
-                               f"street={address}&city={city}&state={state}&benchmark=Public_AR_Census2020&"
-                               f"vintage=Census2020_Census2020&layers=10&format=json")
+            req = requests.get(f'https://geocoding.geo.census.gov/geocoder/geographies/address?'
+                               f'street={address}&city={city}&state={state}&benchmark=Public_AR_Census2020&'
+                               f'vintage=Census2020_Census2020&layers=10&format=json')
             if not req.json():
                 continue
 
-            if req.json().get('result').get('addressMatches'):
+            if req.json().get('result') and req.json().get('result').get('addressMatches'):
                 insert_or_update(RoadwaySanitized(
                     REPORT_NO=row[0],
                     CENSUS_TRACT=req.json().get('result').get('addressMatches')[0].get('geographies').get(
@@ -110,7 +110,7 @@ class Enrich:
 
             cleaned_location = road_name_clean \
                 if ref_road_name_clean is None \
-                else f"{road_name_clean} & {ref_road_name_clean}"
+                else f'{road_name_clean} & {ref_road_name_clean}'
 
             if road_name_clean or ref_road_name_clean:
                 insert_or_update(RoadwaySanitized(
@@ -143,19 +143,19 @@ class Enrich:
     def _word_replacer(address: str) -> str:
         """Does some standard address cleanup"""
         address = address.upper()
-        for orig, repl in [("JONES FALLS EXPWY", "I-83"),
-                           (" CONNECOR", " CONNECTOR"),
-                           (" STREET", " ST"),
-                           (" PARKWAY", " PKWY"),
-                           (" WAY", " WY"),
-                           (" LANE", " LN"),
-                           (" AVENUE", " AVE"),
-                           (" ROAD", " RD"),
-                           (".", ""),
-                           ("UNIT BLK OF", ""), ("UNIT BLOCK OF", ""),
-                           ("UNIT BLK", ""), ("UNIT BLOCK", ""),
-                           ("BLK OF", ""), ("BLOCK OF", ""),
-                           ("BLK", ""), ("BLOCK", "")
+        for orig, repl in [('JONES FALLS EXPWY', 'I-83'),
+                           (' CONNECOR', ' CONNECTOR'),
+                           (' STREET', ' ST'),
+                           (' PARKWAY', ' PKWY'),
+                           (' WAY', ' WY'),
+                           (' LANE', ' LN'),
+                           (' AVENUE', ' AVE'),
+                           (' ROAD', ' RD'),
+                           ('.', ''),
+                           ('UNIT BLK OF', ''), ('UNIT BLOCK OF', ''),
+                           ('UNIT BLK', ''), ('UNIT BLOCK', ''),
+                           ('BLK OF', ''), ('BLOCK OF', ''),
+                           ('BLK', ''), ('BLOCK', '')
                            ]:
             address = address.replace(orig, repl)
 
