@@ -12,6 +12,7 @@ CRASH_LOCATION (nvarchar(max))
 import argparse
 import re
 from typing import Tuple
+from json.decoder import JSONDecodeError
 
 import requests
 from arcgis.geocoding import reverse_geocode  # type: ignore
@@ -56,6 +57,8 @@ class Enrich:
             except RuntimeError as err:
                 logger.error(f'Runtime error: {err}')
                 continue
+            except JSONDecodeError as err:
+                logger.error(f'Invalid response from geocoder: {err}')
 
             address = geocode_result.get('address').get('Address')
             city = geocode_result.get('address').get('City')
