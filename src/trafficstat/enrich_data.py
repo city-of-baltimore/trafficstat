@@ -50,8 +50,8 @@ class Enrich:
                 continue
 
             # Take care of special cases wth Ft Mchenry tunnel and 295, where we want to just dump them at spots
-            road_name = row[1].upper()
-            ref_road_name = row[2].upper()
+            road_name: str = row[1].upper()
+            ref_road_name: str = row[2].upper() if row[2] else ''
             tract = None
             cleaned_location = None
 
@@ -72,15 +72,16 @@ class Enrich:
                     if ref_road_name_clean is None \
                     else f'{road_name_clean} & {ref_road_name_clean}'
 
-                req = requests.get(f'https://geocoding.geo.census.gov/geocoder/geographies/address?'
-                                   f'street={urllib.parse.quote_plus(cleaned_location)}&city=Baltimore&'
-                                   f'state=MD&benchmark=Public_AR_Current&vintage=Current_Current&layers=10&format=json')
+                if cleaned_location:
+                    req = requests.get(f'https://geocoding.geo.census.gov/geocoder/geographies/address?'
+                                       f'street={urllib.parse.quote_plus(cleaned_location)}&city=Baltimore&state=MD&'
+                                       f'benchmark=Public_AR_Current&vintage=Current_Current&layers=10&format=json')
 
-                if req.json().get('result') and req.json().get('result').get('addressMatches'):
-                    tract = req.json().get('result').get('addressMatches')[0].get('geographies').get(
-                            'Census Block Groups')[0].get('TRACT')
-                else:
-                    logger.warning(f'No census tract for sanitized roadway: {row}')
+                    if req.json().get('result') and req.json().get('result').get('addressMatches'):
+                        tract = req.json().get('result').get('addressMatches')[0].get('geographies').get(
+                                'Census Block Groups')[0].get('TRACT')
+                    else:
+                        logger.warning(f'No census tract for sanitized roadway: {row}')
 
             if road_name_clean or ref_road_name_clean:
                 insert_or_update(RoadwaySanitized(
