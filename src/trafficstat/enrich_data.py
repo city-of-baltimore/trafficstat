@@ -89,7 +89,7 @@ class Enrich:
                     REFERENCE_ROAD_NAME_CLEAN=ref_road_name_clean,
                     CRASH_LOCATION=cleaned_location,
                     REPORT_NO=row[0],
-                    CENSUS_TRACT=tract
+                    CENSUS_TRACT=tract if tract else 'NA'
                 ), self.engine)
 
     def clean_road_names(self, road_name, ref_road_name) -> Tuple[str, str]:

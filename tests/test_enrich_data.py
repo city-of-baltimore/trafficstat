@@ -30,11 +30,11 @@ def test_get_cleaned_location(enrich):
 
     enrich.get_cleaned_location()
 
-    expected = {1: (None, None, None, None),
-                2: (None, None, None, None),
+    expected = {1: (None, None, None, 'NA'),
+                2: (None, None, None, 'NA'),
                 3: ('1100 NORTH AVE', '1100 NORTH AVE', None, '130300'),
                 4: ('GILMORE ST & PRATT ST', 'GILMORE ST', 'PRATT ST', '190300'),
-                5: (None, None, None, None),
+                5: (None, None, None, 'NA'),
                 }
 
     with Session(enrich.engine) as session:
