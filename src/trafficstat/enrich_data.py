@@ -83,14 +83,13 @@ class Enrich:
                     else:
                         logger.warning(f'No census tract for sanitized roadway: {row}')
 
-            if road_name_clean or ref_road_name_clean:
-                insert_or_update(RoadwaySanitized(
-                    ROAD_NAME_CLEAN=road_name_clean,
-                    REFERENCE_ROAD_NAME_CLEAN=ref_road_name_clean,
-                    CRASH_LOCATION=cleaned_location,
-                    REPORT_NO=row[0],
-                    CENSUS_TRACT=tract if tract else 'NA'
-                ), self.engine)
+            insert_or_update(RoadwaySanitized(
+                ROAD_NAME_CLEAN=road_name_clean,
+                REFERENCE_ROAD_NAME_CLEAN=ref_road_name_clean,
+                CRASH_LOCATION=cleaned_location,
+                REPORT_NO=row[0],
+                CENSUS_TRACT=tract if tract else 'NA'
+            ), self.engine)
 
     def clean_road_names(self, road_name, ref_road_name) -> Tuple[str, str]:
         """
