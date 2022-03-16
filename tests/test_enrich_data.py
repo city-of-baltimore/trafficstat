@@ -23,7 +23,7 @@ def test_get_cleaned_location(enrich):
             RoadwaySanitized(REPORT_NO=1, ROAD_NAME='295 NORTHBOUND', REFERENCE_ROAD_NAME='DUMMYTEXT'),
             RoadwaySanitized(REPORT_NO=2, ROAD_NAME='ENT TO FT MCHENRY', REFERENCE_ROAD_NAME='DUMMYTEXT'),
             RoadwaySanitized(REPORT_NO=3, ROAD_NAME='1100 NORTH AVE', REFERENCE_ROAD_NAME='NORTH AVE'),
-            RoadwaySanitized(REPORT_NO=4, ROAD_NAME='300 S. GILMORE ST', REFERENCE_ROAD_NAME='1600 BLK W PRATT ST'),
+            RoadwaySanitized(REPORT_NO=4, ROAD_NAME='1600 BLK W PRATT ST', REFERENCE_ROAD_NAME='300 S. GILMORE ST'),
             RoadwaySanitized(REPORT_NO=5, ROAD_NAME='RAMP 4 FR IS 895 NB', REFERENCE_ROAD_NAME='HARBOR TUNNEL THRUWAY'),
         ])
         session.commit()
@@ -33,7 +33,7 @@ def test_get_cleaned_location(enrich):
     expected = {1: (None, None, None, 'NA'),
                 2: (None, None, None, 'NA'),
                 3: ('1100 NORTH AVE', '1100 NORTH AVE', None, '130300'),
-                4: ('GILMORE ST & PRATT ST', 'GILMORE ST', 'PRATT ST', '190300'),
+                4: ('GILMORE ST & PRATT ST', 'PRATT ST', 'GILMORE ST', '190300'),
                 5: (None, None, None, 'NA'),
                 }
 

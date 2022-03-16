@@ -68,9 +68,12 @@ class Enrich:
                     road_name_clean = row[1]
                     ref_road_name_clean = None
 
-                cleaned_location = road_name_clean \
-                    if ref_road_name_clean is None \
-                    else f'{road_name_clean} & {ref_road_name_clean}'
+                if ref_road_name_clean is None:
+                    cleaned_location = road_name_clean
+                else:
+                    locs = [road_name_clean, ref_road_name_clean]
+                    locs.sort()
+                    cleaned_location = f'{locs[0]} & {locs[1]}'
 
                 if cleaned_location:
                     req = requests.get(f'https://geocoding.geo.census.gov/geocoder/geographies/address?'
