@@ -8,5 +8,5 @@ loguru
 sqlalchemy
 openpyxl
 numpy
-arcgis~=1.9.0
+arcgis
 requests
