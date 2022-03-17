@@ -24,5 +24,6 @@ setup(
         'numpy',
         'arcgis',
         'requests',
+        'pyvin'
     ]
 )
