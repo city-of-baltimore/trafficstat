@@ -9,4 +9,4 @@ sqlalchemy
 openpyxl
 numpy
 arcgis
-git+https://github.com/arpuffer/pyvin@f96b8cf50ed7c8427537fb7d6fbe7d06496db485#egg=pyvin
+git+https://github.com/cylussec/pyvin@5f29c63704debd47128ced71402631efe5b6ce3b#egg=pyvin
