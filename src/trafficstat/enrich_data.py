@@ -15,7 +15,7 @@ import urllib.parse
 from typing import Optional, Tuple
 
 import requests
-import pandas as pd
+import pandas as pd  # type: ignore
 from loguru import logger
 from sqlalchemy import create_engine  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
@@ -127,8 +127,8 @@ class Enrich:
         "REPORT_NO, INTERSECTION", and then each row should have the report number and the cleaned intersection.'
         :return:
         """
-        df = pd.read_csv(path, header=0)
-        for _, row in df.iterrows():
+        csv_file = pd.read_csv(path, header=0)
+        for _, row in csv_file.iterrows():
             insert_or_update(RoadwaySanitized(REPORT_NO=row.REPORT_NO, CRASH_LOCATION=row.INTERSECTION),
                              self.engine)
 
