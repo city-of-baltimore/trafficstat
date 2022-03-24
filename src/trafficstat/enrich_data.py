@@ -12,9 +12,10 @@ CRASH_LOCATION (nvarchar(max))
 import argparse
 import re
 import urllib.parse
-from typing import Tuple
+from typing import Optional, Tuple
 
 import requests
+import pandas as pd
 from loguru import logger
 from sqlalchemy import create_engine  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
@@ -68,7 +69,7 @@ class Enrich:
                     road_name_clean = row[1]
                     ref_road_name_clean = None
 
-                if ref_road_name_clean is None:
+                if not ref_road_name_clean:
                     cleaned_location = road_name_clean
                 else:
                     locs = [road_name_clean, ref_road_name_clean]
@@ -82,25 +83,31 @@ class Enrich:
 
                     if req.json().get('result') and req.json().get('result').get('addressMatches'):
                         tract = req.json().get('result').get('addressMatches')[0].get('geographies').get(
-                                'Census Block Groups')[0].get('TRACT')
+                            'Census Block Groups')[0].get('TRACT')
                     else:
                         logger.warning(f'No census tract for sanitized roadway: {row}')
 
             insert_or_update(RoadwaySanitized(
-                ROAD_NAME_CLEAN=road_name_clean,
-                REFERENCE_ROAD_NAME_CLEAN=ref_road_name_clean,
+                ROAD_NAME_CLEAN=road_name_clean if road_name_clean != '' else None,
+                REFERENCE_ROAD_NAME_CLEAN=ref_road_name_clean if ref_road_name_clean != '' else None,
                 CRASH_LOCATION=cleaned_location,
                 REPORT_NO=row[0],
                 CENSUS_TRACT=tract if tract else 'NA'
             ), self.engine)
 
-    def clean_road_names(self, road_name, ref_road_name) -> Tuple[str, str]:
+    def clean_road_names(self, road_name: str, ref_road_name: Optional[str] = None) -> Tuple[str, Optional[str]]:
         """
-        Cleans and standarizes the road names
+        Cleans and standarizes the road names. If there are two roads given, then it cleans it like an intersection name
+        (IE 500 Pratt St and 200 South St would be Pratt St and South St). If one road is given, then it treats it like
+        an address (IE 500 Pratt St and no reference road name would return 500 Pratt St)
+        :param road_name: The primary street name or address
+        :param ref_road_name: The optional secondary street name or address
         :return:
         """
         road_name_clean: str = ''
-        ref_road_name_clean: str = ''
+        ref_road_name_clean: Optional[str] = None
+
+        # First clean the road names
         if isinstance(road_name, str):
             # We need two rounds of cleaning just because of instances like '1900 BLK OF W PRATT ST'
             road_name = self._word_replacer(road_name)
@@ -112,6 +119,18 @@ class Enrich:
             ref_road_name_clean = self._word_replacer(road.group(4)) if road is not None else ''
 
         return road_name_clean, ref_road_name_clean
+
+    def add_cleaned_names(self, path):
+        """
+        Modifies the crash intersection field
+        :param path: Path to the CSV file with manually cleaned intersection names. The format should be header row:
+        "REPORT_NO, INTERSECTION", and then each row should have the report number and the cleaned intersection.'
+        :return:
+        """
+        df = pd.read_csv(path, header=0)
+        for _, row in df.iterrows():
+            insert_or_update(RoadwaySanitized(REPORT_NO=row.REPORT_NO, CRASH_LOCATION=row.INTERSECTION),
+                             self.engine)
 
     @staticmethod
     def _word_replacer(address: str) -> str:
@@ -141,7 +160,12 @@ if __name__ == '__main__':
                                                  ' can be run after the yearly data is imported.')
     parser.add_argument('-c', '--conn_str', help='Custom database connection string',
                         default='mssql+pyodbc://balt-sql311-prd/DOT_DATA?driver=ODBC Driver 17 for SQL Server')
+    parser.add_argument('-f', '--clean_file', help='CSV file with manually cleaned intersection names. The format '
+                                                   'should be header row: "REPORT_NO, INTERSECTION", and then each '
+                                                   'row should have the report number and the cleaned intersection.')
     args = parser.parse_args()
 
     enricher = Enrich(args.conn_str)
     enricher.get_cleaned_location()
+    if args.clean_file:
+        enricher.add_cleaned_names(args.clean_file)
